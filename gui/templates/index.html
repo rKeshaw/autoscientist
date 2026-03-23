@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAMER</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --bg:      #090b0e;
+  --bg2:     #0e1116;
+  --bg3:     #141820;
+  --border:  #1c2330;
+  --amber:   #e8a84c;
+  --amber2:  #7a5520;
+  --cyan:    #4cb8e8;
+  --green:   #4ce87a;
+  --red:     #e84c4c;
+  --purple:  #a04ce8;
+  --gold:    #f0d060;
+  --text:    #c0c8d4;
+  --dim:     #4a5568;
+  --bright:  #eef0f4;
+  --mono:    'Space Mono', monospace;
+  --serif:   'Libre Baskerville', serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* grid bg */
+body::before {
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(var(--border)44 1px,transparent 1px),
+    linear-gradient(90deg,var(--border)44 1px,transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;z-index:0;opacity:0.25;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  height:44px;flex-shrink:0;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 16px;gap:16px;
+  position:relative;z-index:10;
+}
+
+.logo {
+  font-family:var(--serif);font-style:italic;
+  font-size:17px;color:var(--amber);
+  letter-spacing:.04em;white-space:nowrap;
+}
+.logo sub{font-size:9px;color:var(--dim);font-style:normal;vertical-align:middle;letter-spacing:.12em;margin-left:6px;}
+
+/* nav */
+.nav { display:flex;gap:2px;margin-left:8px; }
+.nav-btn {
+  padding:5px 13px;
+  font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);background:transparent;
+  border:1px solid transparent;
+  cursor:pointer;transition:all .2s;
+}
+.nav-btn:hover{color:var(--text);border-color:var(--border);}
+.nav-btn.active{color:var(--amber);border-color:var(--amber2);background:var(--bg3);}
+
+/* phase pill */
+#phase-pill {
+  padding:3px 10px;font-size:9px;
+  letter-spacing:.12em;text-transform:uppercase;
+  border:1px solid;border-radius:2px;transition:all .3s;
+}
+.ph-idle        {color:var(--dim);border-color:var(--border);}
+.ph-dreaming    {color:var(--purple);border-color:var(--purple);box-shadow:0 0 8px #a04ce844;animation:pulse 2s infinite;}
+.ph-researching {color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px #4cb8e844;animation:pulse 2s infinite;}
+.ph-consolidating{color:var(--green);border-color:var(--green);box-shadow:0 0 8px #4ce87a44;animation:pulse 2s infinite;}
+.ph-ingesting   {color:var(--amber);border-color:var(--amber);box-shadow:0 0 8px var(--amber)44;animation:pulse 2s infinite;}
+.ph-sandbox     {color:var(--gold);border-color:var(--gold);box-shadow:0 0 8px var(--gold)44;animation:pulse 2s infinite;}
+
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+#status-msg{color:var(--dim);font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* stats */
+.hstats{display:flex;gap:18px;margin-left:auto;}
+.hs{text-align:right;}
+.hs-v{color:var(--amber);font-size:14px;font-weight:700;line-height:1.1;}
+.hs-l{color:var(--dim);font-size:9px;letter-spacing:.1em;text-transform:uppercase;}
+
+/* ── PAGES ── */
+#pages{flex:1;overflow:hidden;position:relative;z-index:1;}
+.page{position:absolute;inset:0;display:none;overflow:hidden;}
+.page.active{display:flex;}
+
+/* ── scrollbars ── */
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* ── GRAPH PAGE ── */
+#page-graph{flex-direction:column;}
+.graph-wrap{flex:1;position:relative;overflow:hidden;}
+#graph-svg{width:100%;height:100%;}
+
+.mission-banner{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:var(--bg2);border:1px solid var(--amber2);
+  padding:7px 16px;max-width:70%;font-family:var(--serif);
+  font-style:italic;font-size:12px;color:var(--amber);
+  text-align:center;line-height:1.5;z-index:20;
+  box-shadow:0 2px 16px #00000066;
+}
+.mission-banner b{font-style:normal;font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:2px;}
+
+.g-controls{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px;z-index:20;}
+.g-btn{background:var(--bg2);border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:10px;padding:5px 10px;cursor:pointer;transition:all .2s;}
+.g-btn:hover{color:var(--amber);border-color:var(--amber2);}
+
+.node-tip{position:absolute;background:var(--bg2);border:1px solid var(--border);padding:8px 12px;max-width:260px;pointer-events:none;display:none;z-index:30;box-shadow:0 4px 20px #00000088;}
+.tip-stmt{font-family:var(--serif);color:var(--bright);font-size:11px;line-height:1.5;margin-bottom:4px;}
+.tip-meta{color:var(--dim);font-size:9px;}
+
+.node-detail{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding:14px 16px;max-height:42%;overflow-y:auto;
+  transform:translateY(100%);transition:transform .3s ease;z-index:25;
+}
+.node-detail.open{transform:translateY(0);}
+.nd-close{position:absolute;top:10px;right:14px;color:var(--dim);cursor:pointer;font-size:14px;}
+.nd-close:hover{color:var(--amber);}
+.nd-stmt{font-family:var(--serif);font-size:13px;color:var(--bright);line-height:1.7;margin-bottom:10px;padding-right:20px;}
+.nd-edges{display:flex;flex-direction:column;gap:4px;}
+.nd-edge{display:flex;gap:8px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);}
+.et-badge{font-size:9px;padding:1px 5px;text-transform:uppercase;letter-spacing:.07em;flex-shrink:0;margin-top:1px;}
+.et-supports{background:var(--green)22;color:var(--green);border:1px solid var(--green)44;}
+.et-contradicts{background:var(--red)22;color:var(--red);border:1px solid var(--red)44;}
+.et-deep_isomorphism{background:var(--gold)22;color:var(--gold);border:1px solid var(--gold)44;}
+.et-structural_analogy{background:var(--cyan)22;color:var(--cyan);border:1px solid var(--cyan)44;}
+.et-surface_analogy{background:var(--dim)22;color:var(--dim);border:1px solid var(--dim)44;}
+.et-analogous_to{background:var(--cyan)11;color:var(--cyan)aa;border:1px solid var(--border);}
+.et-associated{background:var(--border);color:var(--dim);border:1px solid var(--border);}
+.et-toward_mission{background:var(--amber)22;color:var(--amber);border:1px solid var(--amber2);}
+.et-empirically_tested{background:var(--gold)22;color:var(--gold);border:1px solid var(--gold)44;}
+.et-causes{background:var(--amber)22;color:var(--amber);border:1px solid var(--amber2);}
+.nd-edge-info{flex:1;}
+.nd-edge-target{font-size:10px;color:var(--text);margin-bottom:2px;}
+.nd-edge-narr{font-size:10px;color:var(--dim);line-height:1.5;}
+.nd-edge-w{font-size:10px;color:var(--amber);flex-shrink:0;}
+
+/* graph legend */
+.g-legend{position:absolute;bottom:54px;left:12px;background:var(--bg2);border:1px solid var(--border);padding:7px 10px;font-size:9px;color:var(--dim);z-index:20;}
+.g-legend div{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.lg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+/* ── NOTEBOOK PAGE ── */
+#page-notebook{flex-direction:column;}
+.nb-header{padding:16px 24px 0;flex-shrink:0;}
+.nb-title{font-family:var(--serif);font-size:18px;color:var(--amber);font-style:italic;margin-bottom:4px;}
+.nb-mission{font-family:var(--serif);font-style:italic;font-size:11px;color:var(--dim);line-height:1.5;border-left:2px solid var(--amber2);padding-left:10px;margin-bottom:12px;}
+.nb-hypothesis-box{background:var(--bg3);border:1px solid var(--amber2);padding:14px 16px;margin-bottom:0;}
+.nb-hyp-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
+.nb-hyp-text{font-family:var(--serif);font-size:12px;color:var(--bright);line-height:1.8;}
+.nb-body{flex:1;overflow-y:auto;padding:16px 24px;}
+.nb-entry{padding:16px 0;border-bottom:1px solid var(--border);}
+.nb-entry-header{display:flex;gap:10px;align-items:center;margin-bottom:8px;}
+.nb-entry-type{font-size:9px;padding:2px 7px;text-transform:uppercase;letter-spacing:.1em;border:1px solid;}
+.et-morning{color:var(--purple);border-color:var(--purple)66;}
+.et-field_notes{color:var(--cyan);border-color:var(--cyan)66;}
+.et-evening{color:var(--green);border-color:var(--green)66;}
+.et-hypothesis{color:var(--amber);border-color:var(--amber2);}
+.et-breakthrough{color:var(--gold);border-color:var(--gold)66;}
+.nb-entry-cycle{font-size:9px;color:var(--dim);}
+.nb-entry-time{font-size:9px;color:var(--dim);margin-left:auto;}
+.nb-entry-content{font-family:var(--serif);font-size:12px;color:var(--text);line-height:1.9;white-space:pre-wrap;}
+
+/* ── STREAM PAGE ── */
+#page-stream{flex-direction:column;}
+.stream-header{padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:12px;align-items:center;}
+.stream-title{font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+.stream-clear{background:none;border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:10px;padding:3px 8px;cursor:pointer;}
+.stream-clear:hover{color:var(--amber);border-color:var(--amber2);}
+#stream-body{flex:1;overflow-y:auto;padding:8px 0;}
+.stream-event{padding:8px 16px;border-bottom:1px solid var(--border)11;display:flex;gap:12px;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px);}to{opacity:1;}}
+.se-time{color:var(--dim);font-size:10px;flex-shrink:0;width:60px;}
+.se-type{font-size:9px;padding:1px 6px;text-transform:uppercase;letter-spacing:.08em;flex-shrink:0;border:1px solid;}
+.se-dream_step   {color:var(--text);border-color:var(--border);}
+.se-insight      {color:var(--cyan);border-color:var(--cyan)44;}
+.se-mission_step {color:var(--amber);border-color:var(--amber2);}
+.se-answer       {color:var(--green);border-color:var(--green)44;}
+.se-emergence    {color:var(--purple);border-color:var(--purple)44;}
+.se-phase_change {color:var(--dim);border-color:var(--border);}
+.se-dream_complete{color:var(--cyan);border-color:var(--cyan)44;}
+.se-sandbox_result{color:var(--gold);border-color:var(--gold)44;}
+.se-error        {color:var(--red);border-color:var(--red)44;}
+.se-content{flex:1;font-size:11px;color:var(--text);line-height:1.5;}
+.se-content b{color:var(--bright);}
+.se-insight-depth{font-size:9px;padding:1px 5px;margin-left:6px;}
+.depth-isomorphism{color:var(--gold);background:var(--gold)11;border:1px solid var(--gold)44;}
+.depth-structural{color:var(--cyan);background:var(--cyan)11;border:1px solid var(--cyan)44;}
+.depth-surface{color:var(--dim);background:var(--border);}
+
+/* ── AGENDA PAGE ── */
+#page-agenda{flex-direction:row;}
+.ag-list{flex:1;overflow-y:auto;border-right:1px solid var(--border);}
+.ag-filters{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;}
+.ag-filter{background:none;border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:10px;padding:3px 8px;cursor:pointer;letter-spacing:.08em;}
+.ag-filter:hover{color:var(--text);}
+.ag-filter.active{color:var(--amber);border-color:var(--amber2);}
+.ag-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.ag-item:hover{background:var(--bg3);}
+.ag-item.resolved{opacity:.4;}
+.ag-text{font-family:var(--serif);font-size:11px;color:var(--text);line-height:1.5;margin-bottom:5px;}
+.ag-meta{display:flex;gap:8px;align-items:center;}
+.ag-badge{font-size:9px;padding:1px 5px;border:1px solid;text-transform:uppercase;letter-spacing:.07em;}
+.ag-q{color:var(--cyan);border-color:var(--cyan)66;}
+.ag-h{color:var(--purple);border-color:var(--purple)66;}
+.ag-r{color:var(--green);border-color:var(--green)66;}
+.ag-pr{color:var(--amber);border-color:var(--amber2);}
+.ag-pbar{height:2px;background:var(--border);flex:1;border-radius:1px;overflow:hidden;}
+.ag-pfill{height:100%;background:var(--amber);border-radius:1px;}
+.ag-age{font-size:9px;color:var(--dim);}
+/* controls sidebar */
+.ag-controls{width:280px;flex-shrink:0;display:flex;flex-direction:column;}
+.ctrl-section{padding:14px;border-bottom:1px solid var(--border);}
+.ctrl-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+.ctrl-btn{width:100%;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;cursor:pointer;text-align:left;transition:all .2s;margin-bottom:4px;display:flex;align-items:center;gap:8px;letter-spacing:.04em;}
+.ctrl-btn:hover{border-color:var(--amber2);color:var(--amber);}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed;}
+.cbdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dp{background:var(--purple);}
+.dc{background:var(--cyan);}
+.dg{background:var(--green);}
+.da{background:var(--amber);}
+.dy{background:var(--gold);}
+textarea,input[type=text]{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;resize:none;outline:none;transition:border-color .2s;}
+textarea:focus,input[type=text]:focus{border-color:var(--amber2);}
+textarea{width:100%;height:58px;}
+input[type=text]{flex:1;}
+.input-row{display:flex;gap:5px;margin-bottom:5px;}
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sl-lbl{font-size:10px;color:var(--dim);width:88px;flex-shrink:0;}
+input[type=range]{flex:1;accent-color:var(--amber);}
+.sl-val{font-size:11px;color:var(--amber);width:30px;text-align:right;}
+.brain-stats-detail{color:var(--dim);font-size:10px;line-height:2;}
+.mission-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--serif);font-size:11px;padding:8px;resize:none;width:100%;height:80px;outline:none;margin-bottom:5px;}
+.mission-input:focus{border-color:var(--amber2);}
+
+/* ── EMERGENCES PAGE ── */
+#page-emergences{flex-direction:column;}
+.em-list{flex:1;overflow-y:auto;}
+.em-item{padding:14px 18px;border-bottom:1px solid var(--border);animation:fadeIn .4s ease;}
+.em-signal{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--bright);line-height:1.6;margin-bottom:6px;}
+.em-meta{display:flex;gap:10px;font-size:9px;color:var(--dim);}
+.emt{text-transform:uppercase;letter-spacing:.08em;}
+.emt-recurring_question   {color:var(--amber);}
+.emt-cross_cluster_insight{color:var(--cyan);}
+.emt-contradiction_circled{color:var(--red);}
+.emt-incubation_resolved  {color:var(--green);}
+.emt-hypothesis_advanced  {color:var(--purple);}
+.emt-mission_advance      {color:var(--gold);}
+.emt-repeated_weak_edge   {color:var(--dim);}
+.emt-long_incubation      {color:var(--amber);}
+
+/* mission advances panel */
+.mission-advances-panel{width:320px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.map-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);}
+.map-body{flex:1;overflow-y:auto;}
+.ma-item{padding:10px 14px;border-bottom:1px solid var(--border);}
+.ma-expl{font-family:var(--serif);font-size:11px;color:var(--text);line-height:1.5;margin-bottom:4px;}
+.ma-meta{display:flex;gap:8px;font-size:9px;color:var(--dim);}
+.ma-str{color:var(--amber);}
+
+/* sandbox results */
+.sb-results{padding:10px 14px;border-top:1px solid var(--border);}
+.sb-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+.sb-result{padding:8px;background:var(--bg3);border:1px solid var(--border);margin-bottom:5px;}
+.sb-verdict{font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.v-supports{color:var(--green);}
+.v-contradicts{color:var(--red);}
+.v-inconclusive{color:var(--dim);}
+.v-error{color:var(--red);opacity:.6;}
+.sb-interp{font-size:10px;color:var(--dim);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="logo">DREAMER <sub>Cognitive Architecture Monitor</sub></div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showPage('graph',this)">Graph</button>
+    <button class="nav-btn" onclick="showPage('notebook',this)">Notebook</button>
+    <button class="nav-btn" onclick="showPage('stream',this)">Live Stream</button>
+    <button class="nav-btn" onclick="showPage('agenda',this)">Agenda</button>
+    <button class="nav-btn" onclick="showPage('emergences',this)">Emergences</button>
+  </nav>
+  <div id="phase-pill" class="ph-idle">IDLE</div>
+  <div id="status-msg">Standing by.</div>
+  <div class="hstats">
+    <div class="hs"><div class="hs-v" id="s-nodes">—</div><div class="hs-l">Nodes</div></div>
+    <div class="hs"><div class="hs-v" id="s-edges">—</div><div class="hs-l">Edges</div></div>
+    <div class="hs"><div class="hs-v" id="s-contra">—</div><div class="hs-l">Tensions</div></div>
+    <div class="hs"><div class="hs-v" id="s-adv">—</div><div class="hs-l">Advances</div></div>
+    <div class="hs"><div class="hs-v" id="s-res">—</div><div class="hs-l">Resolved</div></div>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div id="pages">
+
+  <!-- GRAPH -->
+  <div class="page active" id="page-graph">
+    <div class="graph-wrap">
+      <svg id="graph-svg"></svg>
+      <div class="mission-banner" id="mission-banner" style="display:none">
+        <b>Central Question</b>
+        <span id="mission-text"></span>
+      </div>
+      <div class="g-controls">
+        <button class="g-btn" onclick="resetZoom()">Reset</button>
+        <button class="g-btn" onclick="loadGraph()">Refresh</button>
+      </div>
+      <div class="g-legend">
+        <div><span class="lg-dot" style="background:var(--amber)"></span>concept</div>
+        <div><span class="lg-dot" style="background:var(--purple)"></span>hypothesis</div>
+        <div><span class="lg-dot" style="background:var(--cyan)"></span>synthesis</div>
+        <div><span class="lg-dot" style="background:var(--gold)"></span>empirical</div>
+        <div><span class="lg-dot" style="background:var(--dim);border:1px solid var(--dim)"></span>gap</div>
+      </div>
+      <div class="node-tip" id="node-tip">
+        <div class="tip-stmt" id="tt-stmt"></div>
+        <div class="tip-meta" id="tt-meta"></div>
+      </div>
+      <div class="node-detail" id="node-detail">
+        <div class="nd-close" onclick="closeND()">✕</div>
+        <div class="nd-stmt" id="nd-stmt"></div>
+        <div class="nd-edges" id="nd-edges"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTEBOOK -->
+  <div class="page" id="page-notebook">
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="nb-header">
+        <div class="nb-title">Research Journal</div>
+        <div class="nb-mission" id="nb-mission">Loading central question...</div>
+        <div class="nb-hypothesis-box" id="nb-hyp-box" style="display:none">
+          <div class="nb-hyp-label">★ Current Working Hypothesis</div>
+          <div class="nb-hyp-text" id="nb-hyp-text"></div>
+        </div>
+      </div>
+      <div class="nb-body" id="nb-body">
+        <div style="color:var(--dim);padding:20px;font-size:11px;">Loading notebook...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STREAM -->
+  <div class="page" id="page-stream">
+    <div class="stream-header">
+      <span class="stream-title">Live Activity Stream</span>
+      <button class="stream-clear" onclick="clearStream()">Clear</button>
+      <span id="stream-count" style="color:var(--dim);font-size:10px;margin-left:auto;">0 events</span>
+    </div>
+    <div id="stream-body"></div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="page" id="page-agenda">
+    <div class="ag-list">
+      <div class="ag-filters">
+        <button class="ag-filter active" onclick="filterAgenda('all',this)">All</button>
+        <button class="ag-filter" onclick="filterAgenda('open',this)">Open</button>
+        <button class="ag-filter" onclick="filterAgenda('resolved',this)">Resolved</button>
+        <button class="ag-filter" onclick="filterAgenda('hypothesis',this)">Hypotheses</button>
+      </div>
+      <div id="ag-list-body"></div>
+    </div>
+    <div class="ag-controls">
+      <div class="ctrl-section">
+        <div class="ctrl-label">Run Phase</div>
+        <button class="ctrl-btn" id="btn-dream" onclick="runPhase('dream')"><span class="cbdot dp"></span>Dream Cycle</button>
+        <button class="ctrl-btn" id="btn-research" onclick="runPhase('research')"><span class="cbdot dc"></span>Research Day</button>
+        <button class="ctrl-btn" id="btn-consolidation" onclick="runPhase('consolidation')"><span class="cbdot dg"></span>Consolidation</button>
+        <button class="ctrl-btn" id="btn-sandbox" onclick="runPhase('sandbox')"><span class="cbdot dy"></span>Run Sandbox</button>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">Set Mission</div>
+        <textarea class="mission-input" id="mission-input" placeholder="Central research question..."></textarea>
+        <button class="ctrl-btn" onclick="setMission()"><span class="cbdot da"></span>Set Mission</button>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">Ingest Text</div>
+        <textarea id="ingest-text" placeholder="Paste text to ingest..."></textarea>
+        <button class="ctrl-btn" onclick="ingestText()" style="margin-top:4px;"><span class="cbdot da"></span>Ingest</button>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">Seed Dream</div>
+        <div class="input-row">
+          <input type="text" id="seed-input" placeholder="Concept or question...">
+          <button class="ctrl-btn" onclick="seedDream()" style="width:auto;padding:6px 10px;margin:0;">→</button>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">Parameters</div>
+        <div class="slider-row">
+          <span class="sl-lbl">Scientificness</span>
+          <input type="range" min="0" max="1" step="0.05" value="0.7" id="sci-slider" oninput="updateSci(this.value)">
+          <span class="sl-val" id="sci-val">0.7</span>
+        </div>
+      </div>
+      <div class="ctrl-section" style="flex:1;overflow-y:auto;">
+        <div class="ctrl-label">Brain Stats</div>
+        <div class="brain-stats-detail" id="brain-stats-detail"></div>
+      </div>
+      <div class="sb-results" id="sb-results" style="display:none;">
+        <div class="sb-label">Recent Sandbox Results</div>
+        <div id="sb-results-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMERGENCES -->
+  <div class="page" id="page-emergences">
+    <div class="em-list" id="em-list"></div>
+    <div class="mission-advances-panel">
+      <div class="map-header">★ Mission Advances</div>
+      <div class="map-body" id="map-body"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentPage   = 'graph';
+let agendaFilter  = 'all';
+let graphData     = {nodes:[],edges:[]};
+let simulation    = null;
+let svg           = null;
+let zoomBeh       = null;
+let graphGroup    = null;
+let streamEvents  = [];
+let agendaData    = [];
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  currentPage = name;
+  if(name === 'notebook') loadNotebook();
+  if(name === 'emergences') loadEmergences();
+  if(name === 'agenda') loadAgenda();
+  if(name === 'stream') {};
+}
+
+// ── Status polling ─────────────────────────────────────────────────────────
+async function fetchStatus() {
+  try {
+    const d = await fetch('/api/status').then(r=>r.json());
+    document.getElementById('s-nodes').textContent = d.brain.nodes;
+    document.getElementById('s-edges').textContent = d.brain.edges;
+    document.getElementById('s-contra').textContent = d.brain.contradictions;
+    document.getElementById('s-adv').textContent = d.mission_advances;
+    document.getElementById('s-res').textContent = d.resolved + '/' + d.agenda;
+    document.getElementById('status-msg').textContent = d.message;
+    const pill = document.getElementById('phase-pill');
+    pill.className = 'ph-' + d.phase;
+    pill.textContent = d.phase.toUpperCase();
+    const busy = d.phase !== 'idle';
+    ['btn-dream','btn-research','btn-consolidation','btn-sandbox'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.disabled = busy;
+    });
+    // brain stats
+    const nt = d.brain.node_types || {};
+    document.getElementById('brain-stats-detail').innerHTML =
+      Object.entries(nt).map(([k,v]) =>
+        `<div style="display:flex;justify-content:space-between"><span>${k}</span><span style="color:var(--amber)">${v}</span></div>`
+      ).join('') +
+      `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:4px;"><span>hypotheticals</span><span style="color:var(--dim)">${d.brain.hypotheticals}</span></div>
+       <div style="display:flex;justify-content:space-between"><span>clusters</span><span style="color:var(--dim)">${d.brain.clusters}</span></div>`;
+    // analogy breakdown
+    const ab = d.brain.analogy_breakdown || {};
+    if(Object.keys(ab).length > 0) {
+      document.getElementById('brain-stats-detail').innerHTML +=
+        '<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:4px;color:var(--dim);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;">Analogy Edges</div>' +
+        Object.entries(ab).map(([k,v]) =>
+          `<div style="display:flex;justify-content:space-between"><span>${k.replace('_',' ')}</span><span style="color:var(--cyan)">${v}</span></div>`
+        ).join('');
+    }
+    // highlight active node in graph
+    if(d.active_node_id && svg) {
+      svg.selectAll('circle').classed('active-node', false);
+      svg.selectAll('circle')
+        .filter(dd => dd && dd.id === d.active_node_id)
+        .classed('active-node', true);
+    }
+  } catch(e) {}
+}
+
+// ── Mission ────────────────────────────────────────────────────────────────
+async function loadMission() {
+  try {
+    const m = await fetch('/api/mission').then(r=>r.json());
+    if(m.set) {
+      document.getElementById('mission-banner').style.display = '';
+      document.getElementById('mission-text').textContent = m.question;
+      document.getElementById('nb-mission').textContent = m.question;
+      document.getElementById('mission-input').value = m.question;
+    }
+  } catch(e) {}
+}
+
+async function setMission() {
+  const q = document.getElementById('mission-input').value.trim();
+  if(!q) return;
+  await fetch('/api/mission', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({question: q})
+  });
+  loadMission();
+  addStreamEvent('mission_set', {message: 'Mission set: ' + q.slice(0,80)});
+}
+
+// ── Graph ──────────────────────────────────────────────────────────────────
+async function loadGraph() {
+  try {
+    graphData = await fetch('/api/graph').then(r=>r.json());
+    renderGraph();
+  } catch(e) {}
+}
+
+function nodeColor(d) {
+  const m = {
+    concept:'var(--amber)', hypothesis:'var(--purple)',
+    synthesis:'var(--cyan)', gap:'var(--dim)',
+    mission:'var(--gold)', empirical:'var(--gold)',
+    answer:'var(--green)', question:'var(--cyan)'
+  };
+  return m[d.node_type] || 'var(--amber)';
+}
+
+function edgeColor(type) {
+  const m = {
+    supports:'#4ce87a', contradicts:'#e84c4c',
+    deep_isomorphism:'#f0d060', structural_analogy:'#4cb8e8',
+    surface_analogy:'#4a5568', analogous_to:'#3a6080',
+    associated:'#1c2330', toward_mission:'#e8a84c',
+    empirically_tested:'#f0d060', causes:'#e8a84c',
+    answers:'#4ce87a', partial:'#4ce87a88'
+  };
+  return m[type] || '#1c2330';
+}
+
+function renderGraph() {
+  const container = document.querySelector('.graph-wrap');
+  const W = container.clientWidth, H = container.clientHeight;
+  d3.select('#graph-svg').selectAll('*').remove();
+
+  svg = d3.select('#graph-svg').attr('width',W).attr('height',H);
+  const defs = svg.append('defs');
+  defs.append('marker').attr('id','arr')
+    .attr('viewBox','0 -4 8 8').attr('refX',14).attr('refY',0)
+    .attr('markerWidth',5).attr('markerHeight',5).attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','#2a3240');
+
+  // active node style
+  svg.append('style').text(
+    '.active-node{stroke:var(--amber)!important;stroke-width:2.5!important;filter:drop-shadow(0 0 6px var(--amber));}'
+  );
+
+  zoomBeh = d3.zoom().scaleExtent([0.05,5])
+    .on('zoom', e => graphGroup.attr('transform', e.transform));
+  svg.call(zoomBeh);
+  graphGroup = svg.append('g');
+
+  const nodeMap = {};
+  graphData.nodes.forEach(n => nodeMap[n.id] = n);
+  const MAX_NODES = 250;
+  const nodes = graphData.nodes.slice(0, MAX_NODES);
+  const nodeIds = new Set(nodes.map(n=>n.id));
+  const edges = graphData.edges.filter(e =>
+    nodeIds.has(e.source) && nodeIds.has(e.target) && e.source !== e.target
+  ).slice(0,600);
+
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d=>d.id)
+      .distance(d => d.type==='associated' ? 70 : d.type==='toward_mission' ? 120 : 55)
+      .strength(d => d.weight * 0.35))
+    .force('charge', d3.forceManyBody().strength(-55))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(11));
+
+  const edgeG = graphGroup.append('g');
+  const lines = edgeG.selectAll('line').data(edges).enter().append('line')
+    .attr('stroke', d => edgeColor(d.type))
+    .attr('stroke-opacity', d => d.type==='associated' ? 0.15 : d.type==='deep_isomorphism' ? 0.8 : 0.45)
+    .attr('stroke-width', d => {
+      if(d.type==='deep_isomorphism') return 2;
+      if(d.type==='toward_mission') return 1.5;
+      return Math.max(0.5, d.weight * 1.8);
+    })
+    .attr('stroke-dasharray', d => d.type==='toward_mission' ? '4,3' : null)
+    .attr('marker-end', 'url(#arr)');
+
+  const nodeG = graphGroup.append('g');
+  const circles = nodeG.selectAll('circle').data(nodes).enter().append('circle')
+    .attr('r', d => {
+      if(d.node_type==='mission') return 14;
+      if(d.node_type==='empirical') return 8;
+      return 3 + d.importance * 7;
+    })
+    .attr('fill', d => nodeColor(d))
+    .attr('fill-opacity', d => d.node_type==='gap' ? 0.3 : 0.85)
+    .attr('stroke', d => d.status==='contradicted' ? '#e84c4c' : 'none')
+    .attr('stroke-width', 1.5)
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{ if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x;d.fy=d.y; })
+      .on('drag', (e,d)=>{ d.fx=e.x;d.fy=e.y; })
+      .on('end',  (e,d)=>{ if(!e.active) simulation.alphaTarget(0); d.fx=null;d.fy=null; })
+    )
+    .on('mouseover',(e,d)=>{
+      const tt = document.getElementById('node-tip');
+      document.getElementById('tt-stmt').textContent = d.statement.slice(0,120)+(d.statement.length>120?'…':'');
+      document.getElementById('tt-meta').textContent = `${d.cluster} · ${d.node_type} · imp:${d.importance.toFixed(2)}`;
+      tt.style.display='block';
+      tt.style.left=(e.offsetX+14)+'px';tt.style.top=(e.offsetY-8)+'px';
+    })
+    .on('mouseout',()=>{ document.getElementById('node-tip').style.display='none'; })
+    .on('click',(e,d)=>{ e.stopPropagation(); openND(d.id); });
+
+  svg.on('click', ()=> closeND());
+
+  simulation.on('tick',()=>{
+    lines.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+         .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    circles.attr('cx',d=>d.x).attr('cy',d=>d.y);
+  });
+}
+
+function resetZoom() {
+  if(svg&&zoomBeh) svg.transition().duration(400).call(zoomBeh.transform,d3.zoomIdentity);
+}
+
+async function openND(id) {
+  try {
+    const node = await fetch(`/api/node/${id}`).then(r=>r.json());
+    document.getElementById('nd-stmt').textContent = node.statement;
+    const edgesEl = document.getElementById('nd-edges');
+    edgesEl.innerHTML = (node.edges_out||[]).map(e=>`
+      <div class="nd-edge">
+        <span class="et-badge et-${e.type}">${e.type.replace(/_/g,' ')}${e.analogy_depth?' ['+e.analogy_depth+']':''}</span>
+        <div class="nd-edge-info">
+          <div class="nd-edge-target">${e.target_label}</div>
+          <div class="nd-edge-narr">${e.narration}</div>
+        </div>
+        <div class="nd-edge-w">${e.weight.toFixed(2)}</div>
+      </div>
+    `).join('') || '<div style="color:var(--dim);font-size:11px;">No outgoing edges.</div>';
+    document.getElementById('node-detail').classList.add('open');
+  } catch(e) {}
+}
+function closeND() { document.getElementById('node-detail').classList.remove('open'); }
+
+// ── Notebook ───────────────────────────────────────────────────────────────
+async function loadNotebook() {
+  try {
+    const d = await fetch('/api/notebook').then(r=>r.json());
+    if(d.running_hypothesis) {
+      document.getElementById('nb-hyp-box').style.display = '';
+      document.getElementById('nb-hyp-text').textContent = d.running_hypothesis;
+    }
+    const body = document.getElementById('nb-body');
+    if(!d.entries || d.entries.length===0) {
+      body.innerHTML = '<div style="color:var(--dim);padding:20px;font-size:11px;font-family:var(--serif);font-style:italic;">No entries yet. Run a dream cycle to begin the journal.</div>';
+      return;
+    }
+    body.innerHTML = d.entries.map(e => `
+      <div class="nb-entry">
+        <div class="nb-entry-header">
+          <span class="nb-entry-type et-${e.type}">${e.type.replace('_',' ')}</span>
+          <span class="nb-entry-cycle">cycle ${e.cycle}</span>
+          <span class="nb-entry-time">${new Date(e.timestamp*1000).toLocaleDateString()}</span>
+        </div>
+        <div class="nb-entry-content">${e.content}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+// ── Stream (SSE) ───────────────────────────────────────────────────────────
+let streamCount = 0;
+const evSource = new EventSource('/api/stream');
+
+evSource.onmessage = (e) => {
+  try {
+    const ev = JSON.parse(e.data);
+    if(ev.type === 'heartbeat') return;
+    handleStreamEvent(ev);
+  } catch(err) {}
+};
+
+function handleStreamEvent(ev) {
+  addStreamEvent(ev.type, ev.data, ev.timestamp);
+}
+
+function addStreamEvent(type, data, ts) {
+  streamCount++;
+  document.getElementById('stream-count').textContent = streamCount + ' events';
+  const body = document.getElementById('stream-body');
+  const time = ts ? new Date(ts*1000).toLocaleTimeString() : new Date().toLocaleTimeString();
+  let content = '';
+  let displayType = type;
+
+  if(type === 'dream_step') {
+    displayType = data.is_insight ? 'insight' : (data.mission_advance ? 'mission_step' : 'dream_step');
+    const depthBadge = data.insight_depth ?
+      `<span class="se-insight-depth depth-${data.insight_depth}">${data.insight_depth}</span>` : '';
+    content = `<b>${data.edge_type||''}</b> ${(data.narration||'').slice(0,120)}${depthBadge}
+      ${data.question ? '<br><span style="color:var(--amber)">Q: ' + data.question.slice(0,100) + '</span>' : ''}`;
+  } else if(type === 'phase_change') {
+    content = `<b>${data.phase}</b> — ${data.message}`;
+  } else if(type === 'dream_complete') {
+    content = `<b>Cycle ${data.cycle}</b> — ${data.insights} insights, ${data.advances} mission advances<br><span style="color:var(--dim);font-size:10px;">${(data.summary||'').slice(0,150)}</span>`;
+  } else if(type === 'sandbox_result') {
+    content = `<b>${data.verdict}</b> (${(data.confidence||0).toFixed(2)}) — ${(data.hypothesis||'').slice(0,60)}<br><span style="color:var(--dim);font-size:10px;">${(data.interpretation||'').slice(0,120)}</span>`;
+  } else if(type === 'mission_set') {
+    content = `Mission updated: ${(data.question||data.message||'').slice(0,100)}`;
+  } else {
+    content = JSON.stringify(data).slice(0,150);
+  }
+
+  const div = document.createElement('div');
+  div.className = 'stream-event';
+  div.innerHTML = `
+    <span class="se-time">${time}</span>
+    <span class="se-type se-${displayType}">${displayType.replace(/_/g,' ')}</span>
+    <span class="se-content">${content}</span>
+  `;
+  body.insertBefore(div, body.firstChild);
+  // keep max 200 events visible
+  while(body.children.length > 200) body.removeChild(body.lastChild);
+}
+
+function clearStream() {
+  document.getElementById('stream-body').innerHTML = '';
+  streamCount = 0;
+  document.getElementById('stream-count').textContent = '0 events';
+}
+
+// ── Agenda ─────────────────────────────────────────────────────────────────
+async function loadAgenda() {
+  try {
+    agendaData = await fetch('/api/agenda').then(r=>r.json());
+    renderAgenda();
+  } catch(e) {}
+}
+
+function filterAgenda(f, btn) {
+  agendaFilter = f;
+  document.querySelectorAll('.ag-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAgenda();
+}
+
+function renderAgenda() {
+  let items = agendaData;
+  if(agendaFilter==='open') items = items.filter(i=>!i.resolved);
+  if(agendaFilter==='resolved') items = items.filter(i=>i.resolved);
+  if(agendaFilter==='hypothesis') items = items.filter(i=>i.type==='hypothesis');
+  const body = document.getElementById('ag-list-body');
+  body.innerHTML = items.slice(0,80).map(item=>`
+    <div class="ag-item ${item.resolved?'resolved':''}">
+      <div class="ag-text">${item.text.slice(0,160)}${item.text.length>160?'…':''}</div>
+      <div class="ag-meta">
+        <span class="ag-badge ${item.resolved?'ag-r':item.type==='hypothesis'?'ag-h':'ag-q'}">${item.resolved?(item.grade||'resolved'):item.type}</span>
+        <div class="ag-pbar"><div class="ag-pfill" style="width:${item.priority*100}%"></div></div>
+        ${item.incubation_age>0?`<span class="ag-age">age ${item.incubation_age}</span>`:''}
+      </div>
+    </div>
+  `).join('') || '<div style="padding:20px;color:var(--dim);font-size:11px;">No items.</div>';
+}
+
+// ── Emergences ─────────────────────────────────────────────────────────────
+async function loadEmergences() {
+  try {
+    const emData = await fetch('/api/emergences').then(r=>r.json());
+    document.getElementById('em-list').innerHTML = emData.map(e=>`
+      <div class="em-item">
+        <div class="em-signal">${e.signal}</div>
+        <div class="em-meta">
+          <span class="emt emt-${e.type}">${e.type.replace(/_/g,' ')}</span>
+          <span>cycle ${e.cycle}</span>
+          <span>${new Date(e.timestamp*1000).toLocaleDateString()}</span>
+        </div>
+      </div>
+    `).join('') || '<div style="padding:20px;color:var(--dim);font-size:11px;font-family:var(--serif);font-style:italic;">No emergences yet.</div>';
+
+    // mission advances
+    const mission = await fetch('/api/mission').then(r=>r.json());
+    if(mission.set && mission.advances) {
+      document.getElementById('map-body').innerHTML = mission.advances.map(a=>`
+        <div class="ma-item">
+          <div class="ma-expl">${a.explanation}</div>
+          <div class="ma-meta">
+            <span class="ma-str">★ ${(a.strength).toFixed(2)}</span>
+            <span>cycle ${a.cycle}</span>
+          </div>
+        </div>
+      `).join('') || '<div style="padding:14px;color:var(--dim);font-size:11px;">No advances yet.</div>';
+    }
+  } catch(e) {}
+}
+
+// ── Sandbox results ────────────────────────────────────────────────────────
+async function loadSandboxResults() {
+  try {
+    const data = await fetch('/api/sandbox').then(r=>r.json());
+    if(data.length === 0) return;
+    document.getElementById('sb-results').style.display = '';
+    document.getElementById('sb-results-body').innerHTML = data.slice(0,5).map(r=>`
+      <div class="sb-result">
+        <div class="sb-verdict v-${r.verdict}">${r.verdict.toUpperCase()} ${(r.confidence).toFixed(2)}</div>
+        <div style="font-size:9px;color:var(--dim);margin-bottom:3px;">${r.hypothesis.slice(0,70)}</div>
+        <div class="sb-interp">${r.interpretation.slice(0,120)}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+async function runPhase(phase) {
+  await fetch(`/api/run/${phase}`, {method:'POST'});
+}
+async function ingestText() {
+  const text = document.getElementById('ingest-text').value.trim();
+  if(!text) return;
+  await fetch('/api/ingest', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  document.getElementById('ingest-text').value = '';
+}
+async function seedDream() {
+  const concept = document.getElementById('seed-input').value.trim();
+  if(!concept) return;
+  await fetch('/api/seed', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({concept})});
+  document.getElementById('seed-input').value = '';
+}
+async function updateSci(val) {
+  document.getElementById('sci-val').textContent = parseFloat(val).toFixed(2);
+  await fetch('/api/scientificness', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:parseFloat(val)})});
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([fetchStatus(), loadMission(), loadGraph()]);
+  setInterval(fetchStatus, 3000);
+  setInterval(()=>{
+    if(currentPage==='agenda') loadAgenda();
+    if(currentPage==='emergences') loadEmergences();
+    if(currentPage==='notebook') loadNotebook();
+  }, 8000);
+  setInterval(loadGraph, 30000);
+  setInterval(loadSandboxResults, 15000);
+  loadSandboxResults();
+  loadAgenda();
+}
+
+init();
+</script>
+</body>
+</html>

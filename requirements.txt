@@ -1,0 +1,15 @@
+networkx
+numpy
+faiss-gpu
+sentence-transformers
+ollama
+requests
+duckduckgo-search
+arxiv
+apscheduler
+flask
+flask-socketio
+python-dotenv
+pydantic
+loguru
+pytest
