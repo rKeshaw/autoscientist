@@ -131,7 +131,7 @@ class Researcher:
             return [q for q in queries if isinstance(q, str)][:n]
         except (json.JSONDecodeError, ValueError):
             # fallback — use question directly
-            return [question[:80]]
+            return [question]
 
     # ── Web search ────────────────────────────────────────────────────────────
  
@@ -210,7 +210,7 @@ class Researcher:
             # quick relevance check
             check = self._llm(RELEVANCE_PROMPT.format(
                 question=question,
-                text=text[:500]
+                text=text
             ))
             if not check.lower().startswith('yes'):
                 continue
@@ -218,7 +218,7 @@ class Researcher:
             # extract only the relevant parts
             cleaned = self._llm(EXTRACTION_QUALITY_PROMPT.format(
                 question=question,
-                text=text[:1000]
+                text=text
             ))
             if cleaned.strip().upper() == "IRRELEVANT":
                 continue
@@ -232,7 +232,7 @@ class Researcher:
     def _research_question(self, question_text: str) -> ResearchEntry:
         entry = ResearchEntry(question=question_text)
  
-        print(f"\n  ── Researching: {question_text[:80]}...")
+        print(f"\n  ── Researching: {question_text}")
  
         n_queries = self.depth["queries_per_q"]
         queries   = self._generate_queries(question_text, n_queries)
@@ -249,7 +249,7 @@ class Researcher:
                 relevant    = self._filter_relevant(question_text, web_results)
                 all_findings.extend(relevant)
                 for title, text, source in relevant:
-                    print(f"     [web] {title[:60]}...")
+                    print(f"     [web] {title}...")
                     entry.sources.append(source)
                 time.sleep(2)
  
@@ -259,7 +259,7 @@ class Researcher:
                 relevant      = self._filter_relevant(question_text, arxiv_results)
                 all_findings.extend(relevant)
                 for title, text, source in relevant:
-                    print(f"     [arxiv] {title[:60]}...")
+                    print(f"     [arxiv] {title}...")
                     entry.sources.append(source)
  
         if not all_findings:
@@ -281,7 +281,7 @@ class Researcher:
  
         # check if question was resolved by these findings
         findings_summary = "\n".join(
-            f"- {text[:120]}" for _, text, _ in all_findings
+            f"- {text}" for _, text, _ in all_findings
         )
         raw = self._llm(RESOLUTION_CHECK_PROMPT.format(
             question=question_text,
@@ -299,7 +299,7 @@ class Researcher:
                     explanation=explanation,
                     grade=entry.resolved
                 )
-                print(f"     Resolution: [{entry.resolved}] {explanation[:70]}")
+                print(f"     Resolution: [{entry.resolved}] {explanation}")
  
         except (json.JSONDecodeError, ValueError):
             pass

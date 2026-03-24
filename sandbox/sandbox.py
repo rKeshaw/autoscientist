@@ -182,7 +182,7 @@ class Sandbox:
     def test_hypothesis(self, hypothesis: str,
                         node_id: str = "") -> SandboxResult:
         print(f"\n── Sandbox: testing hypothesis ──")
-        print(f"   {hypothesis[:80]}...")
+        print(f"   {hypothesis}")
 
         # step 1: testability
         testable, reason, approach = self.is_testable(hypothesis)
@@ -226,17 +226,17 @@ class Sandbox:
         stdout, stderr, duration = self._run_code(code)
         print(f"   Completed in {duration:.1f}s")
         if stdout:
-            print(f"   Output: {stdout[:200]}...")
+            print(f"   Output: {stdout}")
         if stderr:
-            print(f"   Errors: {stderr[:200]}...")
+            print(f"   Errors: {stderr}")
 
         # step 4: interpret
         raw = self._llm(RESULT_INTERPRETATION_PROMPT.format(
             hypothesis = hypothesis,
             mission    = self._mission(),
-            code       = code[:500],
-            output     = stdout[:500] or "no output",
-            errors     = stderr[:300] or "none"
+            code       = code,
+            output     = stdout or "no output",
+            errors     = stderr or "none"
         ))
         try:
             interp = json.loads(raw)
@@ -244,7 +244,7 @@ class Sandbox:
             interp = {
                 "verdict":        "inconclusive",
                 "confidence":     0.3,
-                "interpretation": raw[:300],
+                "interpretation": raw,
                 "implications":   ""
             }
 
@@ -254,7 +254,7 @@ class Sandbox:
         implications   = interp.get('implications', '')
 
         print(f"   Verdict: {verdict} (confidence={confidence:.2f})")
-        print(f"   {interpretation[:100]}")
+        print(f"   {interpretation}")
 
         # check for plot
         plot_path = ""
@@ -289,7 +289,7 @@ class Sandbox:
     def _integrate_result(self, result: SandboxResult,
                           hypothesis_node_id: str):
         statement = (
-            f"Computational test of: {result.hypothesis[:100]}. "
+            f"Computational test of: {result.hypothesis}. "
             f"Verdict: {result.verdict} (confidence={result.confidence:.2f}). "
             f"{result.interpretation}"
         )
@@ -303,7 +303,7 @@ class Sandbox:
                                 else NodeStatus.UNCERTAIN),
             importance       = result.confidence,
             empirical_result = result.interpretation,
-            empirical_code   = result.code[:500]
+            empirical_code   = result.code
         )
         nid = self.brain.add_node(node)
 
@@ -326,7 +326,7 @@ class Sandbox:
                 contra = Edge(
                     type         = EdgeType.CONTRADICTS,
                     narration    = (f"Computational test contradicts: "
-                                    f"{result.interpretation[:100]}"),
+                                    f"{result.interpretation}"),
                     weight       = result.confidence,
                     confidence   = result.confidence,
                     source       = EdgeSource.SANDBOX,
@@ -338,7 +338,7 @@ class Sandbox:
         if result.verdict not in ("error",) and result.confidence > 0.6:
             self.brain.link_to_mission(
                 nid,
-                f"Empirical result: {result.implications[:80]}",
+                f"Empirical result: {result.implications}",
                 strength=result.confidence * 0.7
             )
 
@@ -348,7 +348,7 @@ class Sandbox:
                 result.confidence > 0.65):
             self.observer.record_mission_advance(
                 nid,
-                f"Computational test supports: {result.implications[:80]}",
+                f"Computational test supports: {result.implications}",
                 result.confidence * 0.8
             )
 

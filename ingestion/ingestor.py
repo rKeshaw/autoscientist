@@ -208,12 +208,12 @@ class Ingestor:
                     self.research_agenda.record_answer(
                         item.text, node_id, explanation, grade='strong'
                     )
-                    print(f"  ✓ STRONG ANSWER to: {item.text[:70]}")
+                    print(f"  ✓ STRONG ANSWER to: {item.text}")
                 elif match == 'partial':
                     self.research_agenda.record_answer(
                         item.text, node_id, explanation, grade='partial'
                     )
-                    print(f"  ~ PARTIAL ANSWER to: {item.text[:70]}")
+                    print(f"  ~ PARTIAL ANSWER to: {item.text}")
             except (json.JSONDecodeError, ValueError):
                 continue
 
@@ -403,7 +403,7 @@ class Ingestor:
         )
         nid = self.brain.add_node(node)
         self._embedding_cache[nid] = stmt_emb
-        print(f"  Created {node_type.value} [{cluster}]: {stmt[:60]}...")
+        print(f"  Created {node_type.value} [{cluster}]: {stmt}")
 
         self._check_against_agenda(nid, stmt)
         self._check_mission_relevance(nid, stmt)

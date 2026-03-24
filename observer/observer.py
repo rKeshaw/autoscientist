@@ -176,7 +176,7 @@ class Observer:
                     self._flag_emergence(
                         type   = "recurring_question",
                         detail = (f"Question recurred {existing.count}x: "
-                                  f"{existing.text[:100]}"),
+                                  f"{existing.text}"),
                         cycle  = cycle
                     )
                 return existing
@@ -202,12 +202,12 @@ class Observer:
                 item.resolved         = True
                 item.resolution_grade = grade
                 item.answer_node_id   = answer_node_id
-                print(f"  ✓ Resolved [{grade}]: {question_text[:70]}")
+                print(f"  ✓ Resolved [{grade}]: {question_text}")
                 if item.incubation_age >= 2:
                     self._flag_emergence(
                         type     = "incubation_resolved",
                         detail   = (f"After {item.incubation_age} cycles: "
-                                    f"{question_text[:80]}"),
+                                    f"{question_text}"),
                         cycle    = self.cycle_count,
                         node_ids = [answer_node_id]
                     )
@@ -222,7 +222,7 @@ class Observer:
                         if adv.lower().startswith('yes'):
                             self._flag_emergence(
                                 type     = "hypothesis_advanced",
-                                detail   = f"Hypothesis advanced: {item.text[:80]}",
+                                detail   = f"Hypothesis advanced: {item.text}",
                                 cycle    = self.cycle_count,
                                 node_ids = [answer_node_id]
                             )
@@ -230,7 +230,7 @@ class Observer:
                 if answer_node_id not in item.partial_leads:
                     item.partial_leads.append(answer_node_id)
                 item.priority = min(1.0, item.priority + 0.1)
-                print(f"  ~ Partial lead: {question_text[:70]}")
+                print(f"  ~ Partial lead: {question_text}")
             break
 
     # ── Mission tracking ──────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ class Observer:
             self._flag_emergence(
                 type     = "mission_advance",
                 detail   = (f"Strong advance toward central question "
-                            f"(strength={strength:.2f}): {explanation[:80]}"),
+                            f"(strength={strength:.2f}): {explanation}"),
                 cycle    = self.cycle_count,
                 node_ids = [node_id]
             )
@@ -277,7 +277,7 @@ class Observer:
                         d = json.load(f)
                     for ins in d.get("insights", []):
                         if ins.get("depth") in ["structural", "isomorphism"]:
-                            insights.append(ins.get("narration", "")[:100])
+                            insights.append(ins.get("narration", ""))
         except Exception:
             pass
 
@@ -289,7 +289,7 @@ class Observer:
                 nv = self.brain.get_node(v)
                 if nu and nv:
                     contradictions.append(
-                        f"{nu['statement'][:60]} vs {nv['statement'][:60]}")
+                        f"{nu['statement']} vs {nv['statement']}")
                 if len(contradictions) >= 3:
                     break
 
@@ -298,7 +298,7 @@ class Observer:
             advances      = "\n".join(
                 f"- ({a.strength:.2f}) {a.explanation}"
                 for a in top_advances) or "none yet",
-            insights      = "\n".join(f"- {i}" for i in insights[:3]) or "none yet",
+            insights      = "\n".join(f"- {i}" for i in insights) or "none yet",
             contradictions= "\n".join(f"- {c}" for c in contradictions) or "none"
         ))
 
@@ -318,7 +318,7 @@ class Observer:
                     self._flag_emergence(
                         type   = "long_incubation",
                         detail = (f"Unresolved {item.incubation_age} cycles: "
-                                  f"{item.text[:100]}"),
+                                  f"{item.text}"),
                         cycle  = self.cycle_count
                     )
 
@@ -359,8 +359,8 @@ class Observer:
                 self._flag_emergence(
                     type     = "contradiction_circled",
                     detail   = (f"Contradiction circled: "
-                                f"{nu['statement'][:60]} vs "
-                                f"{nv['statement'][:60]}"),
+                                f"{nu['statement']} vs "
+                                f"{nv['statement']}"),
                     cycle    = cycle,
                     node_ids = [u, v]
                 )
@@ -391,7 +391,7 @@ class Observer:
                     type     = "cross_cluster_insight",
                     detail   = (f"[{nf['cluster']} ↔ {nt['cluster']}] "
                                 f"depth={step.insight_depth} "
-                                f"score={score:.2f}: {step.narration[:80]}"),
+                                f"score={score:.2f}: {step.narration}"),
                     cycle    = cycle,
                     node_ids = [step.from_id, step.to_id]
                 )

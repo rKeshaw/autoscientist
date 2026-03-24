@@ -316,12 +316,12 @@ class Consolidator:
                 # check against research agenda
                 if self.observer:
                     self.observer.add_to_agenda(
-                        text      = f"Explore synthesis: {stmt[:120]}",
+                        text      = f"Explore synthesis: {stmt}",
                         item_type = "question",
                         cycle     = self.observer.cycle_count
                     )
 
-                print(f"    Synthesis node created: {stmt[:70]}...")
+                print(f"    Synthesis node created: {stmt}")
         except (json.JSONDecodeError, ValueError) as e:
             print(f"    Synthesis parse error: {e}")
 
@@ -394,7 +394,7 @@ class Consolidator:
                             )
                             self.brain.add_edge(member_id, nid, edge)
 
-                    print(f"    Abstraction [{cluster}]: {stmt[:70]}...")
+                    print(f"    Abstraction [{cluster}]: {stmt}")
             except (json.JSONDecodeError, ValueError) as e:
                 print(f"    Abstraction parse error [{cluster}]: {e}")
 
@@ -481,7 +481,7 @@ class Consolidator:
                     # add gap to research agenda as high-priority question
                     if self.observer:
                         self.observer.add_to_agenda(
-                            text      = f"Fill gap: {stmt[:150]}",
+                            text      = f"Fill gap: {stmt}",
                             item_type = "question",
                             cycle     = self.observer.cycle_count,
                             node_id   = nid
@@ -492,7 +492,7 @@ class Consolidator:
                                 item.priority = 0.75
                                 break
 
-                    print(f"    Gap [{cluster}]: {stmt[:70]}...")
+                    print(f"    Gap [{cluster}]: {stmt}")
             except (json.JSONDecodeError, ValueError):
                 continue
 

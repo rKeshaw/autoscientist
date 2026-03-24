@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from sentence_transformers import SentenceTransformer
 from ollama import Client
 from graph.brain import (Brain, Edge, EdgeType, EdgeSource,
-                         NodeStatus, NodeType, ANALOGY_WEIGHTS)
+                         NodeStatus, NodeType, BrainMode, ANALOGY_WEIGHTS)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -19,14 +19,22 @@ VISITED_PENALTY     = 0.25
 QUESTION_DEDUP_HIGH = 0.90
 QUESTION_DEDUP_LOW  = 0.70
 
-# ── Dream Mode ────────────────────────────────────────────────────────────────
+# mode modifiers
+MODE_TEMP_BOOST = {
+    "transitional": 0.25,   # chaotic reorientation cycle
+    "wandering":    0.10,   # slightly freer than focused
+    "focused":      0.0,
+}
+MODE_STEPS_BOOST = {
+    "transitional": 8,      # more steps during transitional
+    "wandering":    0,
+    "focused":      0,
+}
 
 class DreamMode(str, Enum):
     WANDERING = "wandering"
     PRESSURE  = "pressure"
     SEEDED    = "seeded"
-
-# ── Dream Step ────────────────────────────────────────────────────────────────
 
 @dataclass
 class DreamStep:
@@ -38,29 +46,29 @@ class DreamStep:
     narration:       str
     question:        str  = ""
     is_insight:      bool = False
-    insight_depth:   str  = ""    # "surface"|"structural"|"isomorphism"
+    insight_depth:   str  = ""
     new_edge:        bool = False
     answer_match:    str  = "none"
     answer_detail:   str  = ""
     depth_triggered: bool = False
-    mission_advance: bool = False  # did this step advance the central question?
-
-# ── Dream Log ─────────────────────────────────────────────────────────────────
+    mission_advance: bool = False
 
 @dataclass
 class DreamLog:
-    mode:            str
-    started_at:      float = field(default_factory=time.time)
-    steps:           list  = field(default_factory=list)
-    questions:       list  = field(default_factory=list)
-    insights:        list  = field(default_factory=list)
-    answers:         list  = field(default_factory=list)
-    mission_advances: list = field(default_factory=list)
-    summary:         str   = ""
+    mode:             str
+    brain_mode:       str  = "focused"
+    started_at:       float = field(default_factory=time.time)
+    steps:            list  = field(default_factory=list)
+    questions:        list  = field(default_factory=list)
+    insights:         list  = field(default_factory=list)
+    answers:          list  = field(default_factory=list)
+    mission_advances: list  = field(default_factory=list)
+    summary:          str   = ""
 
     def to_dict(self):
         return {
             "mode":             self.mode,
+            "brain_mode":       self.brain_mode,
             "started_at":       self.started_at,
             "steps":            [s.__dict__ for s in self.steps],
             "questions":        self.questions,
@@ -72,55 +80,83 @@ class DreamLog:
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-NARRATION_PROMPT = """
+NARRATION_FOCUSED = """
 You are a dreaming scientific mind, moving between ideas.
 
 Central research question you are working on:
 "{mission}"
 
-You just moved from this idea:
-"{from_node}"
+From: "{from_node}"
+Via [{edge_type}]: "{edge_narration}"
+To: "{to_node}"
 
-Through a connection of type [{edge_type}]:
-"{edge_narration}"
+Narrate this mental journey in 2-4 sentences. Think like a scientist half-asleep —
+associative, curious. Let the central question color your thinking without forcing it.
 
-To this idea:
-"{to_node}"
+If something is unresolved, ask ONE question starting with "Q:"
 
-In 2-4 sentences, narrate this mental journey. Think like a scientist half-asleep —
-associative, curious, sometimes surprising. Let the central question color your thinking
-without forcing it.
-
-Then, if something feels unresolved, ask ONE question starting with "Q:"
-
-Classify any insight using these precise levels:
+Classify any insight:
 - INSIGHT: surface — shared vocabulary or theme only
-- INSIGHT: structural — same relational pattern between different domains
+- INSIGHT: structural — same relational pattern between domains
 - INSIGHT: isomorphism — formal mathematical or logical equivalence
+- INSIGHT: none
+"""
 
-If no insight, write: INSIGHT: none
+NARRATION_WANDERING = """
+You are a dreaming scientific mind — no particular agenda, just following curiosity.
+
+From: "{from_node}"
+Via [{edge_type}]: "{edge_narration}"
+To: "{to_node}"
+
+Narrate this mental journey in 2-4 sentences. Let your mind wander freely —
+no destination, just association. Be playful, unexpected, open.
+
+If something is intriguing, ask ONE question starting with "Q:"
+
+Classify any insight:
+- INSIGHT: surface
+- INSIGHT: structural
+- INSIGHT: isomorphism
+- INSIGHT: none
+"""
+
+NARRATION_TRANSITIONAL = """
+You are a dreaming scientific mind in a state of reorientation.
+A new central question has just arrived:
+"{mission}"
+
+The mind is reorganizing itself around this question, finding new connections
+everywhere. Everything seems to relate. Be chaotic, associative, surprising.
+
+From: "{from_node}"
+Via [{edge_type}]: "{edge_narration}"
+To: "{to_node}"
+
+Narrate in 2-4 sentences. Make unexpected connections. Be wild but coherent.
+
+If something sparks, ask ONE question starting with "Q:"
+
+Classify any insight:
+- INSIGHT: surface
+- INSIGHT: structural
+- INSIGHT: isomorphism
+- INSIGHT: none
 """
 
 MISSION_ADVANCE_PROMPT = """
 Central research question: "{mission}"
+New idea encountered: "{node}"
+Connection made: "{narration}"
 
-During a dream, the mind just encountered this idea:
-"{node}"
+Does this meaningfully advance the central question?
 
-And made this connection:
-"{narration}"
-
-Does this meaningfully advance the central research question — bringing it
-closer to resolution, revealing a new angle, or deepening the problem?
-
-Respond with a JSON object:
+Respond with JSON:
 {{
   "advances": true or false,
   "explanation": "one sentence",
-  "strength": a float 0.0 to 1.0
+  "strength": 0.0 to 1.0
 }}
-
-Respond ONLY with JSON.
 """
 
 ANSWER_CHECK_PROMPT = """
@@ -131,15 +167,13 @@ Does the current idea answer or significantly advance this question?
 
 Respond with JSON:
 {{
-  "match": one of ["none", "partial", "strong"],
+  "match": "none" | "partial" | "strong",
   "explanation": "one sentence"
 }}
-
-Respond ONLY with JSON.
 """
 
 QUESTION_SIMILAR_PROMPT = """
-Are these two questions essentially the same, even if worded differently?
+Are these two questions essentially the same?
 Q1: {q1}
 Q2: {q2}
 Respond ONLY "yes" or "no".
@@ -147,53 +181,72 @@ Respond ONLY "yes" or "no".
 
 DEPTH_NARRATION_PROMPT = """
 You are a scientific mind that found something significant while dreaming.
-
-Central research question: "{mission}"
-
+{mission_line}
 You landed on: "{node}"
-It connects to an open question: "{question}"
+It connects to: "{question}"
 Connection: {explanation}
 
-In 2-3 sentences, explore this deeply. What does it mean for the central question?
-End with one follow-up question starting with "Q:"
+Explore this in 2-3 sentences. End with one follow-up question starting with "Q:"
 """
 
-SUMMARY_PROMPT = """
-You are summarizing a dream cycle of a scientific mind.
+SUMMARY_FOCUSED = """
+You are summarizing a dream cycle. Brain mode: FOCUSED.
+Central question: "{mission}"
 
-Central research question: "{mission}"
+Dream steps: {steps}
+Answer matches: {answers}
+Mission advances: {mission_advances}
 
-Dream content:
-{steps}
-
-Answer matches found:
-{answers}
-
-Mission advances:
-{mission_advances}
-
-Write a 4-6 sentence morning notebook entry. Address:
+Write a 4-6 sentence morning notebook entry addressing:
 1. What the dream explored
 2. Key connections made
-3. Whether the central question was advanced — and how
-4. What questions remain most pressing
+3. Whether the central question was advanced
+4. Most pressing open questions
 
-Write it as a scientist's notebook entry — first person, specific, honest about uncertainty.
+First person. Sign off: — THE SCIENTIST
 """
 
-START_NODE_PROMPT = """
+SUMMARY_WANDERING = """
+You are summarizing a dream cycle. Brain mode: WANDERING (no mission — free association).
+
+Dream steps: {steps}
+
+Write a 4-6 sentence morning notebook entry:
+1. What the dream explored
+2. What surprised you
+3. Any unexpected connections
+4. What you find yourself curious about
+
+First person. Playful tone. Sign off: — THE SCIENTIST
+"""
+
+SUMMARY_TRANSITIONAL = """
+You are summarizing a dream cycle. Brain mode: TRANSITIONAL.
+A new question just arrived: "{mission}"
+The mind is reorganizing itself.
+
+Dream steps: {steps}
+
+Write a 4-6 sentence entry capturing the chaotic reorientation — ideas flying together,
+new connections forming rapidly, the mind finding its new gravitational center.
+Sign off: — THE SCIENTIST
+"""
+
+START_NODE_FOCUSED = """
 Central research question: "{mission}"
-
-Select a starting node for a dream that would most fruitfully explore the central question
-through unexpected associations — not the most obvious node, but the most generative.
-
-Nodes:
-{nodes}
-
+Select the most generative starting node for a dream exploring the central question
+through unexpected associations.
+Nodes: {nodes}
 Respond with ONLY the node ID.
 """
 
-# ── Dreamer ───────────────────────────────────────────────────────────────────
+START_NODE_WANDERING = """
+No mission — pure curiosity.
+Select the most interesting node to start a free-associative dream from.
+Favor nodes with unresolved tensions or underexplored connections.
+Nodes: {nodes}
+Respond with ONLY the node ID.
+"""
 
 class Dreamer:
     def __init__(self, brain: Brain, research_agenda=None):
@@ -216,14 +269,45 @@ class Dreamer:
         return float(np.dot(a, b))
 
     def _mission_text(self) -> str:
+        if self.brain.is_wandering():
+            return ""
         m = self.brain.get_mission()
-        return m['question'] if m else "No central question set."
+        return m['question'] if m else ""
+
+    def _narration_prompt(self, from_node, edge_type, edge_narration, to_node):
+        mission = self._mission_text()
+        mode    = self.brain.get_mode()
+        if mode == BrainMode.TRANSITIONAL.value:
+            return NARRATION_TRANSITIONAL.format(
+                mission=mission or "No mission yet",
+                from_node=from_node, edge_type=edge_type,
+                edge_narration=edge_narration, to_node=to_node)
+        elif mode == BrainMode.WANDERING.value or not mission:
+            return NARRATION_WANDERING.format(
+                from_node=from_node, edge_type=edge_type,
+                edge_narration=edge_narration, to_node=to_node)
+        else:
+            return NARRATION_FOCUSED.format(
+                mission=mission, from_node=from_node, edge_type=edge_type,
+                edge_narration=edge_narration, to_node=to_node)
+
+    def _summary_prompt(self, step_text, answer_text, mission_text):
+        mode    = self.brain.get_mode()
+        mission = self._mission_text()
+        if mode == BrainMode.TRANSITIONAL.value:
+            return SUMMARY_TRANSITIONAL.format(
+                mission=mission or "Newly set question",
+                steps=step_text)
+        elif mode == BrainMode.WANDERING.value or not mission:
+            return SUMMARY_WANDERING.format(steps=step_text)
+        else:
+            return SUMMARY_FOCUSED.format(
+                mission=mission, steps=step_text,
+                answers=answer_text, mission_advances=mission_text)
 
     # ── Question deduplication ────────────────────────────────────────────────
 
-    def _is_duplicate_question(self, new_q: str,
-                                existing: list,
-                                embeddings: list) -> bool:
+    def _is_duplicate_question(self, new_q, existing, embeddings):
         if not existing:
             return False
         new_emb = self._embed(new_q)
@@ -232,14 +316,12 @@ class Dreamer:
             if sim > QUESTION_DEDUP_HIGH:
                 return True
             if sim > QUESTION_DEDUP_LOW:
-                raw = self._llm(QUESTION_SIMILAR_PROMPT.format(
-                    q1=new_q, q2=eq))
+                raw = self._llm(QUESTION_SIMILAR_PROMPT.format(q1=new_q, q2=eq))
                 if raw.lower().startswith('yes'):
                     return True
         return False
 
-    def _add_question(self, q: str, questions: list,
-                      q_embeddings: list) -> bool:
+    def _add_question(self, q, questions, q_embeddings):
         if not q:
             return False
         if self._is_duplicate_question(q, questions, q_embeddings):
@@ -250,8 +332,7 @@ class Dreamer:
 
     # ── Node selection ────────────────────────────────────────────────────────
 
-    def _select_start_node(self, mode: DreamMode,
-                           seed_id: str = None) -> str:
+    def _select_start_node(self, mode, seed_id=None):
         nodes = self.brain.all_nodes()
         if not nodes:
             raise ValueError("Brain is empty")
@@ -259,72 +340,63 @@ class Dreamer:
         if mode == DreamMode.SEEDED and seed_id:
             return seed_id
 
-        if mode == DreamMode.PRESSURE:
-            # prefer nodes linked to mission + high incubation or contradiction
-            mission = self.brain.get_mission()
-            mission_id = mission['id'] if mission else None
-
-            candidates = [
-                (nid, data) for nid, data in nodes
-                if data.get('status') in [
-                    NodeStatus.CONTRADICTED.value,
-                    NodeStatus.UNCERTAIN.value
-                ] and data.get('node_type') != NodeType.MISSION.value
-            ]
-            if candidates:
-                def pressure_score(x):
-                    nid, data = x
-                    score = (data.get('incubation_age', 0) * 2 +
-                             self.brain.graph.degree(nid))
-                    # bonus for nodes linked to mission
-                    if mission_id and self.brain.graph.has_edge(nid, mission_id):
-                        score += 5
-                    return score
-                return max(candidates, key=pressure_score)[0]
-
-        if mode == DreamMode.WANDERING:
-            # exclude mission node from random sample
-            sample_pool = [(nid, d) for nid, d in nodes
-                           if d.get('node_type') != NodeType.MISSION.value]
-            sample = random.sample(sample_pool, min(8, len(sample_pool)))
-            node_list = "\n".join(
-                f"{nid}: {data['statement'][:100]}"
-                for nid, data in sample
-            )
-            chosen = self._llm(START_NODE_PROMPT.format(
-                mission=self._mission_text(),
-                nodes=node_list
-            )).strip()
-            if chosen in dict(nodes):
-                return chosen
-
         non_mission = [(nid, d) for nid, d in nodes
                        if d.get('node_type') != NodeType.MISSION.value]
+
+        if mode == DreamMode.PRESSURE:
+            mission_id = (self.brain.get_mission() or {}).get("id")
+            candidates = [
+                (nid, d) for nid, d in non_mission
+                if d.get('status') in [NodeStatus.CONTRADICTED.value,
+                                       NodeStatus.UNCERTAIN.value]
+            ]
+            if candidates:
+                def score(x):
+                    nid, d = x
+                    s = d.get('incubation_age', 0) * 2 + self.brain.graph.degree(nid)
+                    if mission_id and not self.brain.is_wandering():
+                        if self.brain.graph.has_edge(nid, mission_id):
+                            s += 5
+                    return s
+                return max(candidates, key=score)[0]
+
+        # wandering or focused — LLM picks
+        sample = random.sample(non_mission, min(8, len(non_mission)))
+        node_list = "\n".join(f"{nid}: {d['statement']}"
+                              for nid, d in sample)
+        mission = self._mission_text()
+        if mission and not self.brain.is_wandering():
+            prompt = START_NODE_FOCUSED.format(mission=mission, nodes=node_list)
+        else:
+            prompt = START_NODE_WANDERING.format(nodes=node_list)
+
+        chosen = self._llm(prompt).strip()
+        if chosen in dict(nodes):
+            return chosen
+
         return random.choice(non_mission)[0] if non_mission else nodes[0][0]
 
     # ── Edge scoring ──────────────────────────────────────────────────────────
 
-    def _score_edge(self, edge_data: dict, temperature: float,
-                    scientificness: float, visited: set,
-                    target_id: str) -> float:
+    def _score_edge(self, edge_data, temperature, scientificness, visited, target_id):
         weight = edge_data.get('weight', 0.5)
         etype  = edge_data.get('type', '')
 
-        # analogy type weighting — isomorphisms score higher
         if etype in ANALOGY_WEIGHTS:
-            weight = max(weight, ANALOGY_WEIGHTS.get(
-                EdgeType(etype) if etype in [e.value for e in EdgeType]
-                else EdgeType.ANALOGOUS_TO, 0.4))
+            try:
+                weight = max(weight, ANALOGY_WEIGHTS.get(EdgeType(etype), 0.4))
+            except ValueError:
+                pass
 
-        logical_types = {EdgeType.SUPPORTS.value, EdgeType.CAUSES.value,
-                         EdgeType.CONTRADICTS.value}
-        if etype in logical_types:
+        logical = {EdgeType.SUPPORTS.value, EdgeType.CAUSES.value,
+                   EdgeType.CONTRADICTS.value}
+        if etype in logical:
             weight += scientificness * 0.3
         if etype == EdgeType.ASSOCIATED.value:
             weight += (1 - scientificness) * 0.3
 
-        # mission edges get a bonus — dreaming toward the question
-        if etype == EdgeType.TOWARD_MISSION.value:
+        # mission edges only matter in focused/transitional
+        if etype == EdgeType.TOWARD_MISSION.value and not self.brain.is_wandering():
             weight += 0.3
 
         if target_id in visited:
@@ -335,8 +407,7 @@ class Dreamer:
 
     # ── Single hop ────────────────────────────────────────────────────────────
 
-    def _hop(self, current_id: str, temperature: float,
-             scientificness: float, visited: set) -> tuple:
+    def _hop(self, current_id, temperature, scientificness, visited):
         neighbors = self.brain.neighbors(current_id)
         if not neighbors:
             all_ids   = [nid for nid, _ in self.brain.all_nodes()]
@@ -361,44 +432,17 @@ class Dreamer:
             cumulative += score
             if cumulative >= roll:
                 return nid, edge
-
         return scored[-1][0], scored[-1][1]
-
-    # ── Parse narration ───────────────────────────────────────────────────────
-
-    def _parse_narration(self, raw: str) -> tuple:
-        question    = ""
-        is_insight  = False
-        insight_depth = ""
-        lines       = raw.strip().split('\n')
-        clean       = []
-
-        for line in lines:
-            if line.startswith("Q:"):
-                question = line[2:].strip()
-            elif line.upper().startswith("INSIGHT:"):
-                rest = line.split(":", 1)[1].strip().lower()
-                if rest == "none":
-                    is_insight = False
-                else:
-                    is_insight    = True
-                    insight_depth = rest  # "surface"|"structural"|"isomorphism"
-            else:
-                clean.append(line)
-
-        return " ".join(clean).strip(), question, is_insight, insight_depth
 
     # ── Answer detection ──────────────────────────────────────────────────────
 
-    def _check_answers(self, node_id: str, node_data: dict) -> tuple:
-        if not self.research_agenda:
+    def _check_answers(self, node_id, node_data):
+        if not self.research_agenda or self.brain.is_wandering():
             return "none", "", ""
         open_items = self.research_agenda.get_prioritized_questions(15)
         for item in open_items:
             raw = self._llm(ANSWER_CHECK_PROMPT.format(
-                current_node=node_data['statement'],
-                question=item.text
-            ))
+                current_node=node_data['statement'], question=item.text))
             try:
                 result = json.loads(raw)
                 match  = result.get('match', 'none')
@@ -409,18 +453,18 @@ class Dreamer:
                 continue
         return "none", "", ""
 
-    # ── Mission advance check ─────────────────────────────────────────────────
+    # ── Mission advance ───────────────────────────────────────────────────────
 
-    def _check_mission_advance(self, node_data: dict,
-                               narration: str) -> tuple:
+    def _check_mission_advance(self, node_data, narration):
+        if self.brain.is_wandering():
+            return False, "", 0.0
         mission = self.brain.get_mission()
         if not mission:
             return False, "", 0.0
         raw = self._llm(MISSION_ADVANCE_PROMPT.format(
-            mission  = mission['question'],
-            node     = node_data['statement'],
-            narration= narration
-        ))
+            mission=mission['question'],
+            node=node_data['statement'],
+            narration=narration))
         try:
             result = json.loads(raw)
             if result.get('advances') and result.get('strength', 0) > 0.5:
@@ -429,66 +473,67 @@ class Dreamer:
             pass
         return False, "", 0.0
 
+    # ── Parse narration ───────────────────────────────────────────────────────
+
+    def _parse_narration(self, raw):
+        question = ""
+        is_insight = False
+        insight_depth = ""
+        clean = []
+        for line in raw.strip().split('\n'):
+            if line.startswith("Q:"):
+                question = line[2:].strip()
+            elif line.upper().startswith("INSIGHT:"):
+                rest = line.split(":", 1)[1].strip().lower()
+                if rest != "none":
+                    is_insight = True
+                    insight_depth = rest.split()[0] if rest.split() else ""
+            else:
+                clean.append(line)
+        return " ".join(clean).strip(), question, is_insight, insight_depth
+
     # ── Depth exploration ─────────────────────────────────────────────────────
 
-    def _depth_explore(self, node_id: str, node_data: dict,
-                       question: str, explanation: str,
-                       temperature: float, scientificness: float,
-                       visited: set, log: DreamLog,
-                       questions: list, q_embeddings: list,
-                       step_offset: int) -> str:
+    def _depth_explore(self, node_id, node_data, question, explanation,
+                       temperature, scientificness, visited, log,
+                       questions, q_embeddings, step_offset):
         print(f"      ↳ Depth [{DEPTH_STEPS} steps]")
+        mission = self._mission_text()
+        mission_line = f"Central question: \"{mission}\"" if mission else ""
 
         raw = self._llm(DEPTH_NARRATION_PROMPT.format(
-            mission    = self._mission_text(),
-            node       = node_data['statement'],
-            question   = question,
-            explanation= explanation
-        ))
-        lines    = raw.strip().split('\n')
-        q_line   = next((l for l in lines if l.startswith('Q:')), "")
+            mission_line=mission_line,
+            node=node_data['statement'],
+            question=question,
+            explanation=explanation))
+        lines  = raw.strip().split('\n')
+        q_line = next((l for l in lines if l.startswith('Q:')), "")
         followup = q_line[2:].strip() if q_line else ""
         self._add_question(followup, questions, q_embeddings)
 
-        current_id   = node_id
-        current_data = node_data
-
+        current_id, current_data = node_id, node_data
         for d in range(DEPTH_STEPS):
             next_id, edge = self._hop(
                 current_id, temperature * 0.5, scientificness, visited)
             next_data = self.brain.get_node(next_id)
             if not next_data:
                 continue
-
             edge_type      = edge.get('type', 'associated') if edge else 'associated'
             edge_narration = edge.get('narration', '') if edge else ''
-
-            raw = self._llm(NARRATION_PROMPT.format(
-                mission        = self._mission_text(),
-                from_node      = current_data['statement'],
-                edge_type      = edge_type,
-                edge_narration = edge_narration,
-                to_node        = next_data['statement']
-            ))
+            raw = self._llm(self._narration_prompt(
+                current_data['statement'], edge_type,
+                edge_narration, next_data['statement']))
             narration, _, is_insight, depth = self._parse_narration(raw)
-
             ds = DreamStep(
-                step           = step_offset + d,
-                from_id        = current_id,
-                to_id          = next_id,
-                edge_type      = edge_type,
-                edge_narration = edge_narration,
-                narration      = narration,
-                is_insight     = is_insight,
-                insight_depth  = depth
-            )
+                step=step_offset+d, from_id=current_id, to_id=next_id,
+                edge_type=edge_type, edge_narration=edge_narration,
+                narration=narration, is_insight=is_insight,
+                insight_depth=depth)
             log.steps.append(ds)
             visited.add(next_id)
             self.brain.update_node(next_id, activated_at=time.time())
-            current_id   = next_id
-            current_data = next_data
-            print(f"      depth {d+1}: {next_data['statement'][:60]}...")
-
+            current_id, current_data = next_id, next_data
+            print(f"      depth {d+1}: {next_data['statement']}")
         return current_id
 
     # ── NREM ─────────────────────────────────────────────────────────────────
@@ -500,42 +545,47 @@ class Dreamer:
 
     # ── Main dream loop ───────────────────────────────────────────────────────
 
-    def dream(self,
-              mode:        DreamMode = DreamMode.WANDERING,
-              steps:       int       = DEFAULT_STEPS,
-              temperature: float     = DEFAULT_TEMP,
-              seed_id:     str       = None,
-              run_nrem:    bool      = True,
-              log_path:    str       = "logs/dream_latest.json") -> DreamLog:
+    def dream(self, mode=DreamMode.WANDERING, steps=DEFAULT_STEPS,
+              temperature=DEFAULT_TEMP, seed_id=None,
+              run_nrem=True, log_path="logs/dream_latest.json"):
 
-        scientificness = self.brain.scientificness
-        log            = DreamLog(mode=mode.value)
-        visited        = set()
-        questions      = []
-        q_embeddings   = []
-        mission        = self._mission_text()
+        brain_mode    = self.brain.get_mode()
+        scientificness= self.brain.scientificness
+
+        # mode modifiers
+        temperature += MODE_TEMP_BOOST.get(brain_mode, 0)
+        steps       += MODE_STEPS_BOOST.get(brain_mode, 0)
+
+        log          = DreamLog(mode=mode.value, brain_mode=brain_mode)
+        visited      = set()
+        questions    = []
+        q_embeddings = []
+        mission      = self._mission_text()
 
         if run_nrem:
             self.nrem_pass()
 
-        print(f"\n── REM [{mode.value}] steps={steps} temp={temperature} ──")
-        print(f"   Mission: {mission[:70]}...\n")
+        print(f"\n── REM [{mode.value}] [{brain_mode}] steps={steps} temp={temperature:.2f} ──")
+        if mission:
+            print(f"   Mission: {mission}")
+        else:
+            print(f"   Mode: WANDERING — free association")
+        print()
 
         current_id = self._select_start_node(mode, seed_id)
         current    = self.brain.get_node(current_id)
         visited.add(current_id)
-        print(f"   Start: {current['statement'][:80]}...\n")
+        print(f"   Start: {current['statement']}\n")
 
         step = 0
         while step < steps:
-            next_id, edge = self._hop(
-                current_id, temperature, scientificness, visited)
+            next_id, edge = self._hop(current_id, temperature,
+                                      scientificness, visited)
             next_node = self.brain.get_node(next_id)
             if not next_node:
                 step += 1
                 continue
 
-            # skip mission node — don't narrate it, just pass through
             if next_node.get('node_type') == NodeType.MISSION.value:
                 visited.add(next_id)
                 step += 1
@@ -544,23 +594,17 @@ class Dreamer:
             edge_type      = edge.get('type', 'associated') if edge else 'associated'
             edge_narration = edge.get('narration', '') if edge else ''
 
-            raw = self._llm(NARRATION_PROMPT.format(
-                mission        = mission,
-                from_node      = current['statement'],
-                edge_type      = edge_type,
-                edge_narration = edge_narration,
-                to_node        = next_node['statement']
-            ))
+            raw = self._llm(self._narration_prompt(
+                current['statement'], edge_type,
+                edge_narration, next_node['statement']))
             narration, question, is_insight, insight_depth = \
                 self._parse_narration(raw)
 
             self._add_question(question, questions, q_embeddings)
 
-            # answer detection
             match_grade, match_explanation, matched_q = \
                 self._check_answers(next_id, next_node)
 
-            # mission advance check
             mission_advance = False
             mission_explanation = ""
             mission_strength = 0.0
@@ -568,17 +612,16 @@ class Dreamer:
                 mission_advance, mission_explanation, mission_strength = \
                     self._check_mission_advance(next_node, narration)
 
-            # salience — depth on answer match
+            # depth
             depth_triggered = False
             if match_grade in ['partial', 'strong'] and matched_q:
                 depth_triggered = True
                 current_id = self._depth_explore(
                     next_id, next_node, matched_q, match_explanation,
                     temperature, scientificness, visited, log,
-                    questions, q_embeddings, step_offset=step + 1000)
+                    questions, q_embeddings, step + 1000)
                 current = self.brain.get_node(current_id)
                 visited.add(current_id)
-
             elif (is_insight or
                   next_node.get('status') == NodeStatus.CONTRADICTED.value or
                   next_node.get('incubation_age', 0) > 3 or
@@ -586,10 +629,10 @@ class Dreamer:
                 depth_triggered = True
                 current_id = self._depth_explore(
                     next_id, next_node,
-                    "An interesting connection worth deeper exploration.",
+                    "An interesting connection worth exploring.",
                     mission_explanation or "Insight or tension detected.",
                     temperature, scientificness, visited, log,
-                    questions, q_embeddings, step_offset=step + 1000)
+                    questions, q_embeddings, step + 1000)
                 current = self.brain.get_node(current_id)
                 visited.add(current_id)
 
@@ -602,130 +645,103 @@ class Dreamer:
                     "isomorphism": EdgeType.DEEP_ISOMORPHISM,
                 }
                 etype = type_map.get(insight_depth, EdgeType.STRUCTURAL_ANALOGY)
-
                 if not (self.brain.graph.has_edge(current_id, next_id) or
                         self.brain.graph.has_edge(next_id, current_id)):
                     dream_edge = Edge(
-                        type          = etype,
-                        narration     = narration,
-                        weight        = ANALOGY_WEIGHTS.get(etype, 0.4),
-                        confidence    = 0.45,
-                        source        = EdgeSource.DREAM,
-                        analogy_depth = insight_depth
-                    )
+                        type=etype, narration=narration,
+                        weight=ANALOGY_WEIGHTS.get(etype, 0.4),
+                        confidence=0.45, source=EdgeSource.DREAM,
+                        analogy_depth=insight_depth)
                     self.brain.add_edge(current_id, next_id, dream_edge)
                     new_edge = True
-
                 self.brain.restructure_around_insight(
                     current_id, next_id, narration, edge_type=etype.value)
                 log.insights.append({
-                    "step":          step,
-                    "from":          current['statement'][:80],
-                    "to":            next_node['statement'][:80],
-                    "narration":     narration,
-                    "depth":         insight_depth,
+                    "step": step, "from": current['statement'],
+                    "to": next_node['statement'],
+                    "narration": narration, "depth": insight_depth,
                     "mission_linked": mission_advance
                 })
 
             if match_grade != 'none':
                 log.answers.append({
-                    "step":        step,
-                    "node":        next_node['statement'][:80],
-                    "question":    matched_q[:80],
-                    "grade":       match_grade,
+                    "step": step, "node": next_node['statement'],
+                    "question": matched_q, "grade": match_grade,
                     "explanation": match_explanation
                 })
                 if self.research_agenda:
                     self.research_agenda.record_answer(
-                        matched_q, next_id,
-                        match_explanation, grade=match_grade)
+                        matched_q, next_id, match_explanation,
+                        grade=match_grade)
 
             if mission_advance:
                 self.brain.link_to_mission(
-                    next_id,
-                    f"Dream insight: {mission_explanation[:80]}",
+                    next_id, f"Dream insight: {mission_explanation}",
                     strength=mission_strength)
                 log.mission_advances.append({
-                    "step":        step,
-                    "node":        next_node['statement'][:80],
+                    "step": step, "node": next_node['statement'],
                     "explanation": mission_explanation,
-                    "strength":    mission_strength
+                    "strength": mission_strength
                 })
                 if self.research_agenda:
                     self.research_agenda.record_mission_advance(
                         next_id, mission_explanation, mission_strength)
 
             ds = DreamStep(
-                step           = step,
-                from_id        = current_id,
-                to_id          = next_id,
-                edge_type      = edge_type,
-                edge_narration = edge_narration,
-                narration      = narration,
-                question       = question,
-                is_insight     = is_insight,
-                insight_depth  = insight_depth,
-                new_edge       = new_edge,
-                answer_match   = match_grade,
-                answer_detail  = match_explanation,
-                depth_triggered= depth_triggered,
-                mission_advance= mission_advance
-            )
+                step=step, from_id=current_id, to_id=next_id,
+                edge_type=edge_type, edge_narration=edge_narration,
+                narration=narration, question=question,
+                is_insight=is_insight, insight_depth=insight_depth,
+                new_edge=new_edge, answer_match=match_grade,
+                answer_detail=match_explanation,
+                depth_triggered=depth_triggered,
+                mission_advance=mission_advance)
             log.steps.append(ds)
             self.brain.update_node(next_id, activated_at=time.time())
             visited.add(next_id)
 
-            # print
-            indicator = f"[{insight_depth[0].upper() if insight_depth else ''}]" if is_insight else ""
-            print(f"   Step {step+1:02d} [{edge_type[:8]}]: "
-                  f"{next_node['statement'][:55]}...")
-            if question:
-                print(f"            Q: {question[:65]}")
+            ind = ""
             if is_insight:
-                print(f"            ✦ INSIGHT:{insight_depth} {indicator}")
+                dep_sym = {"surface":"S","structural":"ST","isomorphism":"⊗"}.get(insight_depth,"?")
+                ind = f"✦[{dep_sym}]"
+            print(f"   Step {step+1:02d} [{edge_type}]: "
+                  f"{next_node['statement']} {ind}")
+            if question:
+                print(f"            Q: {question}")
             if match_grade != 'none':
-                print(f"            ◎ [{match_grade}]: {match_explanation[:55]}")
+                print(f"            ◎ [{match_grade}]: {match_explanation}")
             if mission_advance:
-                print(f"            ★ MISSION ({mission_strength:.2f}): "
-                      f"{mission_explanation[:55]}")
+                print(f"            ★ ({mission_strength:.2f}): {mission_explanation}")
             if depth_triggered:
                 print(f"            ↳ Depth")
 
             if not depth_triggered:
                 current_id = next_id
                 current    = next_node
-
             step += 1
 
         log.questions = questions
 
-        # summarize with mission awareness
-        step_text = "\n".join(
-            f"- {s.narration[:120]}" for s in log.steps if s.narration)
-        answer_text = "\n".join(
-            f"- [{a['grade']}] {a['explanation']}"
-            for a in log.answers) or "none"
-        mission_text = "\n".join(
-            f"- ({m['strength']:.2f}) {m['explanation']}"
-            for m in log.mission_advances) or "none"
+        step_text    = "\n".join(f"- {s.narration}" for s in log.steps if s.narration)
+        answer_text  = "\n".join(f"- [{a['grade']}] {a['explanation']}" for a in log.answers) or "none"
+        mission_text = "\n".join(f"- ({m['strength']:.2f}) {m['explanation']}" for m in log.mission_advances) or "none"
 
-        log.summary = self._llm(SUMMARY_PROMPT.format(
-            mission         = mission,
-            steps           = step_text,
-            answers         = answer_text,
-            mission_advances= mission_text
-        ))
+        log.summary = self._llm(self._summary_prompt(step_text, answer_text, mission_text))
 
         import os
         os.makedirs("logs", exist_ok=True)
         with open(log_path, 'w') as f:
             json.dump(log.to_dict(), f, indent=2)
 
-        print(f"\n── Dream complete ──")
+        print(f"\n── Dream complete [{brain_mode}] ──")
         print(f"   Steps:{len(log.steps)} Qs:{len(log.questions)} "
-              f"Insights:{len(log.insights)} "
-              f"Answers:{len(log.answers)} "
+              f"Insights:{len(log.insights)} Answers:{len(log.answers)} "
               f"Mission advances:{len(log.mission_advances)}")
         print(f"\n── Summary ──\n{log.summary}\n")
+
+        # after transitional cycle, move to focused
+        if self.brain.is_transitional():
+            self.brain.complete_transition()
+            print("── Transitional cycle complete — now FOCUSED ──")
 
         return log

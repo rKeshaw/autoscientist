@@ -197,7 +197,7 @@ class Notebook:
         ) or "none"
 
         insights = "\n".join(
-            f"- [{i['depth']}] {i['narration'][:100]}"
+            f"- [{i['depth']}] {i['narration']}"
             for i in dream_log.insights
         ) or "none"
 
@@ -208,7 +208,7 @@ class Notebook:
         content = self._llm(MORNING_ENTRY_PROMPT.format(
             name             = self.name,
             mission          = self._mission(),
-            dream_summary    = dream_log.summary[:600],
+            dream_summary    = dream_log.summary,
             mission_advances = mission_advances,
             insights         = insights,
             questions        = questions
@@ -225,12 +225,12 @@ class Notebook:
     def write_field_notes(self, research_log, cycle: int) -> str:
         """Write field notes after a research day."""
         findings = "\n".join(
-            f"- Q: {e.question[:80]}\n  Found: {', '.join(e.sources[:2])}"
+            f"- Q: {e.question}\n  Found: {', '.join(e.sources[:2])}"
             for e in research_log.entries
         ) or "none"
 
         resolved = "\n".join(
-            f"- [{e.resolved}] {e.question[:80]}"
+            f"- [{e.resolved}] {e.question}"
             for e in research_log.entries
             if e.resolved in ['partial', 'strong']
         ) or "none"
@@ -304,7 +304,7 @@ class Notebook:
                     for ins in d.get("insights", []):
                         if ins.get("depth") in ["structural", "isomorphism"]:
                             insights.append(
-                                f"[{ins['depth']}] {ins['narration'][:100]}")
+                                f"[{ins['depth']}] {ins['narration']}")
                 if len(insights) >= 5:
                     break
         except Exception:
@@ -314,7 +314,7 @@ class Notebook:
         # active hypotheses from graph
         hyp_nodes = self.brain.nodes_by_type(NodeType.HYPOTHESIS)
         hypotheses_text = "\n".join(
-            f"- {data['statement'][:100]}"
+            f"- {data['statement']}"
             for _, data in hyp_nodes[:5]
         ) or "none yet"
 
@@ -326,7 +326,7 @@ class Notebook:
                 nv = self.brain.get_node(v)
                 if nu and nv:
                     contradictions.append(
-                        f"{nu['statement'][:60]} ↔ {nv['statement'][:60]}")
+                        f"{nu['statement']} ↔ {nv['statement']}")
                 if len(contradictions) >= 3:
                     break
         contradictions_text = "\n".join(

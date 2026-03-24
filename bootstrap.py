@@ -304,7 +304,7 @@ def bootstrap():
     print(f"Agenda: {len(observer.agenda)} questions")
     print(f"Reading list: {reader.stats()['unread']} articles still unread")
     print(f"Mode: {brain.get_mode()}")
-    print(f"\nMission: {MISSION_QUESTION}")
+    print(f"\nMission: {MISSION_QUESTION}...")
     print("\nReady. Start the GUI with: python3 gui/app.py")
     print("="*60)
 
