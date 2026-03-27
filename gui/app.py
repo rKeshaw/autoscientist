@@ -1,47 +1,41 @@
 import json
 import os
-import sys
-import time
 import queue
+import sys
 import threading
-from flask import Flask, jsonify, request, render_template, Response
+import time
+
+from flask import Flask, Response, jsonify, render_template, request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 sys.path.insert(0, ROOT)
 
-from graph.brain import Brain, NodeType, EdgeType, BrainMode
-from observer.observer import Observer
-from ingestion.ingestor import Ingestor, EdgeSource
-from dreamer.dreamer import Dreamer, DreamMode
+from cognition.metrics import activation_entropy, contradiction_density
+from cognition.runtime import CognitiveRuntime
 from consolidator.consolidator import Consolidator
-from researcher.researcher import Researcher
-from reader.reader import Reader
+from dreamer.dreamer import DreamMode, Dreamer
+from graph.brain import Brain
+from memory.store import NetworkXMemoryStoreAdapter
 from notebook.notebook import Notebook
+from observer.observer import Observer
+from reader.reader import Reader
+from researcher.researcher import Researcher
 from sandbox.sandbox import Sandbox
 
-BRAIN_PATH    = "data/brain.json"
+BRAIN_PATH = "data/brain.json"
 OBSERVER_PATH = "data/observer.json"
 
-app = Flask(__name__, template_folder='templates')
-state = {
-    "phase":          "idle",
-    "message":        "Standing by.",
-    "cycle":          0,
-    "active_node_id": None,
-}
+app = Flask(__name__, template_folder="templates")
+_event_queue = queue.Queue(maxsize=500)
 
-# ── Event stream ──────────────────────────────────────────────────────────────
-
-_event_queue = queue.Queue(maxsize=400)
 
 def emit(event_type, data):
     try:
-        _event_queue.put_nowait({
-            "type": event_type, "data": data, "timestamp": time.time()
-        })
+        _event_queue.put_nowait({"type": event_type, "data": data, "timestamp": time.time()})
     except queue.Full:
         pass
+
 
 @app.route("/api/stream")
 def api_stream():
@@ -51,544 +45,219 @@ def api_stream():
                 event = _event_queue.get(timeout=20)
                 yield f"data: {json.dumps(event)}\n\n"
             except queue.Empty:
-                yield f"data: {json.dumps({'type':'heartbeat','data':{}})}\n\n"
-    return Response(generate(), mimetype='text/event-stream',
-        headers={'Cache-Control':'no-cache,no-transform',
-                 'X-Accel-Buffering':'no','Connection':'keep-alive'})
+                yield f"data: {json.dumps({'type': 'heartbeat', 'data': {}})}\n\n"
 
-# ── Load components ───────────────────────────────────────────────────────────
+    return Response(generate(), mimetype="text/event-stream")
 
-brain    = Brain()
-observer = Observer(brain)
 
-try:    brain.load(BRAIN_PATH)
-except FileNotFoundError: pass
-try:    observer.load(OBSERVER_PATH)
-except Exception: pass
+brain = Brain()
+memory = NetworkXMemoryStoreAdapter(brain)
+observer = Observer(memory)
+try:
+    brain.load(BRAIN_PATH)
+except FileNotFoundError:
+    pass
+try:
+    observer.load(OBSERVER_PATH)
+except FileNotFoundError:
+    pass
 
-ingestor     = Ingestor(brain, research_agenda=observer)
-dreamer      = Dreamer(brain, research_agenda=observer)
-consolidator = Consolidator(brain, observer=observer)
-researcher   = Researcher(brain, observer=observer, depth="standard")
-notebook     = Notebook(brain, observer=observer)
-sandbox      = Sandbox(brain, observer=observer)
-reader       = Reader(brain, observer=observer, notebook=notebook)
+runtime = CognitiveRuntime(memory, observer=observer, seed=brain.global_state.rng_seed)
+dreamer = Dreamer(brain, research_agenda=observer)
+consolidator = Consolidator(memory, observer=observer)
+researcher = Researcher(memory, observer=observer)
+reader = Reader(memory, observer=observer)
+notebook = Notebook(brain, observer=observer)
+sandbox = Sandbox(memory, observer=observer)
+
+state = {"phase": "idle", "message": "Standing by", "cycle": 0, "active_node_id": None}
+
 
 def save_state():
     brain.save(BRAIN_PATH)
     observer.save(OBSERVER_PATH)
 
-# ── Status ────────────────────────────────────────────────────────────────────
-
-@app.route("/api/status")
-def api_status():
-    return jsonify({
-        "phase":          state["phase"],
-        "message":        state["message"],
-        "cycle":          state["cycle"],
-        "brain":          brain.stats(),
-        "brain_mode":     brain.get_mode(),
-        "agenda":         len(observer.agenda),
-        "resolved":       sum(1 for i in observer.agenda if i.resolved),
-        "emergences":     len(observer.emergence_feed),
-        "mission_advances": len(observer.mission_advances),
-        "active_node_id": state["active_node_id"],
-        "reading_list":   reader.stats(),
-    })
-
-# ── Graph ─────────────────────────────────────────────────────────────────────
-
-@app.route("/api/graph")
-def api_graph():
-    nodes, edges = [], []
-    for nid, data in brain.all_nodes():
-        nodes.append({
-            "id":         nid,
-            "statement":  data.get("statement",""),
-            "cluster":    data.get("cluster","unclustered"),
-            "node_type":  data.get("node_type","concept"),
-            "status":     data.get("status","uncertain"),
-            "importance": data.get("importance",0.5),
-            "incubation": data.get("incubation_age",0),
-        })
-    for u,v,data in brain.graph.edges(data=True):
-        edges.append({
-            "source":       u, "target": v,
-            "type":         data.get("type","associated"),
-            "weight":       data.get("weight",0.5),
-            "narration":    data.get("narration",""),
-            "analogy_depth":data.get("analogy_depth",""),
-        })
-    return jsonify({"nodes":nodes,"edges":edges})
-
-@app.route("/api/node/<node_id>")
-def api_node(node_id):
-    node = brain.get_node(node_id)
-    if not node: return jsonify({"error":"not found"}),404
-    edges_out = []
-    for nb in brain.neighbors(node_id):
-        e  = brain.get_edge(node_id,nb)
-        nd = brain.get_node(nb)
-        if e and nd:
-            edges_out.append({
-                "target_id":     nb,
-                "target_label":  nd.get("statement",""),
-                "type":          e.get("type",""),
-                "weight":        e.get("weight",0),
-                "narration":     e.get("narration",""),
-                "analogy_depth": e.get("analogy_depth",""),
-            })
-    return jsonify({**node, "edges_out":edges_out})
-
-# ── Agenda ────────────────────────────────────────────────────────────────────
-
-@app.route("/api/agenda")
-def api_agenda():
-    return jsonify([{
-        "text":           i.text,
-        "type":           i.item_type,
-        "priority":       round(i.priority,2),
-        "incubation_age": i.incubation_age,
-        "resolved":       i.resolved,
-        "grade":          i.resolution_grade,
-        "count":          i.count,
-    } for i in sorted(observer.agenda, key=lambda x:x.priority, reverse=True)])
-
-# ── Emergences ────────────────────────────────────────────────────────────────
-
-@app.route("/api/emergences")
-def api_emergences():
-    return jsonify([{
-        "signal":    e.signal, "type": e.type,
-        "cycle":     e.cycle,  "timestamp": e.timestamp,
-    } for e in reversed(observer.emergence_feed[-80:])])
-
-# ── Mission ───────────────────────────────────────────────────────────────────
-
-@app.route("/api/mission")
-def api_mission():
-    m = brain.get_mission()
-    advances = sorted(observer.mission_advances,
-                      key=lambda a:a.strength, reverse=True)[:10]
-    return jsonify({
-        "set":        bool(m),
-        "question":   m["question"] if m else "",
-        "context":    m.get("context","") if m else "",
-        "id":         m["id"] if m else "",
-        "mode":       brain.get_mode(),
-        "advances":   [{"explanation":a.explanation,"strength":a.strength,
-                        "cycle":a.cycle} for a in advances],
-    })
-
-@app.route("/api/mission", methods=["POST"])
-def api_set_mission():
-    data = request.json
-    q    = data.get("question","").strip()
-    ctx  = data.get("context","").strip()
-    if not q: return jsonify({"error":"no question"}),400
-    brain.set_mission(q,ctx)
-    save_state()
-    emit("mission_set",{"question":q,"mode":brain.get_mode()})
-    return jsonify({"status":"set","question":q,"mode":brain.get_mode()})
-
-@app.route("/api/mission/suspend", methods=["POST"])
-def api_suspend_mission():
-    brain.suspend_mission()
-    save_state()
-    emit("mode_change",{"mode":brain.get_mode(),"message":"Mission suspended — wandering mode"})
-    return jsonify({"status":"suspended","mode":brain.get_mode()})
-
-@app.route("/api/mission/resume", methods=["POST"])
-def api_resume_mission():
-    brain.resume_mission()
-    save_state()
-    emit("mode_change",{"mode":brain.get_mode(),"message":"Mission resumed — focused mode"})
-    return jsonify({"status":"resumed","mode":brain.get_mode()})
-
-# ── Notebook ──────────────────────────────────────────────────────────────────
-
-@app.route("/api/notebook")
-def api_notebook():
-    return jsonify({
-        "entries":            notebook.get_all_for_display(),
-        "running_hypothesis": notebook.running_hypothesis,
-    })
-
-# ── Sandbox ───────────────────────────────────────────────────────────────────
-
-@app.route("/api/sandbox")
-def api_sandbox():
-    return jsonify([{
-        "hypothesis":     r.hypothesis,
-        "verdict":        r.verdict,
-        "confidence":     r.confidence,
-        "interpretation": r.interpretation,
-        "implications":   r.implications,
-        "approach":       r.approach,
-        "plot_path":      r.plot_path,
-        "timestamp":      r.timestamp,
-    } for r in reversed(sandbox.results[-20:])])
-
-@app.route("/api/sandbox/run", methods=["POST"])
-def api_sandbox_run():
-    if state["phase"] != "idle":
-        return jsonify({"error":"already running"}),409
-    hyp = request.json.get("hypothesis","").strip()
-    if not hyp: return jsonify({"error":"no hypothesis"}),400
-    def run():
-        state["phase"]="sandbox"; state["message"]="Computing..."
-        emit("phase_change",{"phase":"sandbox","message":"Sandbox running..."})
-        try:
-            r = sandbox.test_hypothesis(hyp)
-            emit("sandbox_result",{"verdict":r.verdict,"confidence":r.confidence,
-                "interpretation":r.interpretation,"implications":r.implications,
-                "hypothesis":r.hypothesis,"plot_path":r.plot_path})
-        except Exception as e:
-            emit("error",{"message":str(e)})
-        finally:
-            save_state()
-            state["phase"]="idle"; state["message"]="Computation complete."
-            emit("phase_change",{"phase":"idle","message":"Computation complete."})
-    threading.Thread(target=run,daemon=True).start()
-    return jsonify({"status":"started"})
-
-# ── Reading list ──────────────────────────────────────────────────────────────
-
-@app.route("/api/reading-list")
-def api_reading_list():
-    return jsonify(reader.list_all())
-
-@app.route("/api/reading-list/add", methods=["POST"])
-def api_add_reading():
-    data   = request.json
-    url    = data.get("url","").strip()
-    title  = data.get("title","").strip()
-    stype  = data.get("source_type","web")
-    priority = float(data.get("priority",0.7))
-    if not url: return jsonify({"error":"no url"}),400
-    entry = reader.add_to_list(url=url,title=title,source_type=stype,
-                               priority=priority,added_by="user")
-    save_state()
-    return jsonify({"status":"added","entry":entry.to_dict()})
-
-@app.route("/api/reading-list/absorb", methods=["POST"])
-def api_absorb_now():
-    if state["phase"] != "idle":
-        return jsonify({"error":"already running"}),409
-    data  = request.json
-    entry_id = data.get("id","")
-    url   = data.get("url","").strip()
-
-    def run():
-        state["phase"]="ingesting"; state["message"]="Reading..."
-        emit("phase_change",{"phase":"ingesting","message":"Absorbing text..."})
-        try:
-            if entry_id:
-                entry = next((e for e in reader.reading_list if e.id==entry_id),None)
-                if entry:
-                    result = reader.absorb_entry(entry)
-                else:
-                    result = None
-            elif url:
-                result = reader.absorb_url(url)
-            else:
-                result = None
-
-            if result and result.success:
-                emit("absorption_complete",{
-                    "title":      result.title,
-                    "node_count": result.node_count,
-                    "summary":    result.summary,
-                })
-        except Exception as e:
-            emit("error",{"message":str(e)})
-        finally:
-            save_state()
-            state["phase"]="idle"; state["message"]="Reading complete."
-            emit("phase_change",{"phase":"idle","message":"Reading complete."})
-
-    threading.Thread(target=run,daemon=True).start()
-    return jsonify({"status":"started"})
-
-@app.route("/api/reading-list/generate", methods=["POST"])
-def api_generate_reading_list():
-    if state["phase"] != "idle":
-        return jsonify({"error":"already running"}),409
-    def run():
-        state["phase"]="ingesting"; state["message"]="Generating reading list..."
-        try:
-            added = reader.generate_reading_list()
-            save_state()
-            emit("reading_list_updated",{"added":len(added)})
-        except Exception as e:
-            emit("error",{"message":str(e)})
-        finally:
-            state["phase"]="idle"; state["message"]="Reading list updated."
-    threading.Thread(target=run,daemon=True).start()
-    return jsonify({"status":"started"})
-
-@app.route("/api/reading-list/absorb-text", methods=["POST"])
-def api_absorb_text():
-    if state["phase"] != "idle":
-        return jsonify({"error":"already running"}),409
-    data  = request.json
-    text  = data.get("text","").strip()
-    title = data.get("title","Manual text").strip()
-    if not text: return jsonify({"error":"no text"}),400
-
-    def run():
-        state["phase"]="ingesting"; state["message"]="Absorbing text..."
-        emit("phase_change",{"phase":"ingesting","message":"Absorbing text..."})
-        try:
-            result = reader.add_text(text, title=title)
-            save_state()
-            emit("absorption_complete",{
-                "title":      title,
-                "node_count": getattr(result,"node_count",0),
-                "summary":    getattr(result,"summary",""),
-            })
-        except Exception as e:
-            emit("error",{"message":str(e)})
-        finally:
-            state["phase"]="idle"; state["message"]="Absorption complete."
-            emit("phase_change",{"phase":"idle","message":"Absorption complete."})
-
-    threading.Thread(target=run,daemon=True).start()
-    return jsonify({"status":"started"})
-
-# ── Dream log ─────────────────────────────────────────────────────────────────
-
-@app.route("/api/dreamlog")
-def api_dreamlog():
-    logs = []
-    if os.path.exists("logs"):
-        for fname in sorted(os.listdir("logs"),reverse=True):
-            if fname.startswith("dream_") and fname.endswith(".json"):
-                try:
-                    with open(os.path.join("logs",fname)) as f:
-                        d = json.load(f)
-                    logs.append({
-                        "file":     fname,
-                        "mode":     d.get("mode",""),
-                        "brain_mode": d.get("brain_mode",""),
-                        "summary":  d.get("summary",""),
-                        "questions":len(d.get("questions",[])),
-                        "insights": len(d.get("insights",[])),
-                        "answers":  len(d.get("answers",[])),
-                        "steps":    len(d.get("steps",[])),
-                        "mission_advances":len(d.get("mission_advances",[])),
-                        "started":  d.get("started_at",0),
-                    })
-                except Exception: continue
-    return jsonify(logs[:20])
-
-# ── Controls ──────────────────────────────────────────────────────────────────
-
-@app.route("/api/ingest", methods=["POST"])
-def api_ingest():
-    text = request.json.get("text","").strip()
-    if not text: return jsonify({"error":"no text"}),400
-    def run():
-        state["phase"]="ingesting"; state["message"]="Ingesting..."
-        emit("phase_change",{"phase":"ingesting","message":"Ingesting..."})
-        ingestor.ingest(text,source=EdgeSource.CONVERSATION)
-        save_state()
-        state["phase"]="idle"; state["message"]="Ingestion complete."
-        emit("phase_change",{"phase":"idle","message":"Ingestion complete."})
-    threading.Thread(target=run,daemon=True).start()
-    return jsonify({"status":"started"})
-
-@app.route("/api/seed", methods=["POST"])
-def api_seed():
-    concept = request.json.get("concept","").strip()
-    if not concept: return jsonify({"error":"no concept"}),400
-    item = observer.add_to_agenda(concept,cycle=observer.cycle_count)
-    item.priority = 0.95
-    save_state()
-    emit("seed_planted",{"concept":concept})
-    return jsonify({"status":"seeded"})
-
-@app.route("/api/run/<phase>", methods=["POST"])
-def api_run_phase(phase):
-    if state["phase"] != "idle":
-        return jsonify({"error":"already running"}),409
-    runners = {
-        "dream":         _run_dream,
-        "research":      _run_research,
-        "consolidation": _run_consolidation,
-        "sandbox":       _run_sandbox,
-        "reading":       _run_reading,
-    }
-    if phase not in runners:
-        return jsonify({"error":"unknown phase"}),400
-    threading.Thread(target=runners[phase],daemon=True).start()
-    return jsonify({"status":"started","phase":phase})
-
-@app.route("/api/scientificness", methods=["POST"])
-def api_scientificness():
-    val = float(request.json.get("value",0.7))
-    brain.scientificness = max(0.0,min(1.0,val))
-    save_state()
-    return jsonify({"scientificness":brain.scientificness})
-
-# ── Phase runners ─────────────────────────────────────────────────────────────
-
-def _run_dream():
-    state["cycle"] += 1
-    state["phase"]  = "dreaming"
-    brain_mode      = brain.get_mode()
-    state["message"]= f"Dreaming [{brain_mode}]..."
-    emit("phase_change",{"phase":"dreaming","message":f"Night cycle [{brain_mode}]..."})
-    try:
-        log1 = dreamer.dream(
-            mode=DreamMode.WANDERING, steps=15, temperature=0.7,
-            run_nrem=True,
-            log_path=f"logs/dream_cycle{state['cycle']}_wandering.json")
-        for step in log1.steps:
-            state["active_node_id"] = step.to_id
-            emit("dream_step",{
-                "step":      step.step, "from_id": step.from_id,
-                "to_id":     step.to_id, "edge_type": step.edge_type,
-                "narration": step.narration, "is_insight": step.is_insight,
-                "insight_depth": getattr(step,"insight_depth",""),
-                "mission_advance": getattr(step,"mission_advance",False),
-                "question":  step.question, "brain_mode": brain_mode,
-            })
-        observer.observe(log1)
-        notebook.write_morning_entry(log1, state["cycle"])
-
-        if not brain.is_wandering():
-            log2 = dreamer.dream(
-                mode=DreamMode.PRESSURE, steps=8, temperature=0.6,
-                run_nrem=False,
-                log_path=f"logs/dream_cycle{state['cycle']}_pressure.json")
-            for step in log2.steps:
-                state["active_node_id"] = step.to_id
-                emit("dream_step",{
-                    "step": step.step, "from_id": step.from_id,
-                    "to_id": step.to_id, "edge_type": step.edge_type,
-                    "narration": step.narration, "is_insight": step.is_insight,
-                    "insight_depth": getattr(step,"insight_depth",""),
-                    "mission_advance": getattr(step,"mission_advance",False),
-                    "question": step.question, "brain_mode": brain_mode,
-                })
-            observer.observe(log2)
-
-        emit("dream_complete",{
-            "cycle":      state["cycle"],
-            "brain_mode": brain.get_mode(),
-            "insights":   len(log1.insights),
-            "advances":   len(log1.mission_advances),
-            "summary":    log1.summary,
-        })
-        state["message"] = f"Dream cycle {state['cycle']} complete [{brain.get_mode()}]."
-    except Exception as e:
-        state["message"] = f"Dream error: {e}"
-        emit("error",{"message":str(e)})
-    finally:
-        state["active_node_id"] = None
-        save_state()
-        state["phase"] = "idle"
-        emit("phase_change",{"phase":"idle","message":state["message"],
-                              "mode":brain.get_mode()})
-
-def _run_research():
-    state["phase"]  = "researching"
-    state["message"]= "Research day..."
-    emit("phase_change",{"phase":"researching","message":"Research day..."})
-    try:
-        if brain.is_wandering():
-            state["message"] = "Wandering mode — no targeted research."
-            return
-        log = researcher.research_day(
-            max_questions=5,
-            log_path=f"logs/research_cycle{state['cycle']}.json")
-        notebook.write_field_notes(log, state["cycle"])
-        resolved = sum(1 for e in log.entries if e.resolved in ["partial","strong"])
-        state["message"] = f"Research complete. {resolved} questions advanced."
-        emit("research_complete",{"questions_researched":len(log.entries),
-                                   "resolved":resolved})
-    except Exception as e:
-        state["message"] = f"Research error: {e}"
-        emit("error",{"message":str(e)})
-    finally:
-        save_state()
-        state["phase"] = "idle"
-        emit("phase_change",{"phase":"idle","message":state["message"]})
-
-def _run_reading():
-    state["phase"]  = "ingesting"
-    state["message"]= "Reading..."
-    emit("phase_change",{"phase":"ingesting","message":"Afternoon reading..."})
-    try:
-        unread = len(reader.get_unread(20))
-        if unread < 3:
-            reader.generate_reading_list()
-        results  = reader.reading_day(max_items=2)
-        absorbed = sum(1 for r in results if r.success)
-        state["message"] = f"Reading complete. {absorbed} texts absorbed."
-        emit("reading_complete",{"absorbed":absorbed,
-            "summaries":[r.summary for r in results if r.success]})
-    except Exception as e:
-        state["message"] = f"Reading error: {e}"
-        emit("error",{"message":str(e)})
-    finally:
-        save_state()
-        state["phase"] = "idle"
-        emit("phase_change",{"phase":"idle","message":state["message"]})
-
-def _run_consolidation():
-    state["phase"]  = "consolidating"
-    state["message"]= "Consolidation..."
-    emit("phase_change",{"phase":"consolidating","message":"Evening consolidation..."})
-    try:
-        report = consolidator.consolidate(
-            save_path=f"logs/consolidation_cycle{state['cycle']}.json")
-        notebook.write_evening_entry(report, state["cycle"])
-        notebook.update_running_hypothesis(state["cycle"])
-        state["message"] = "Consolidation complete."
-        emit("consolidation_complete",{
-            "merges":report.merges, "syntheses":report.syntheses,
-            "abstractions":report.abstractions, "gaps":report.gaps,
-            "summary":report.summary})
-    except Exception as e:
-        state["message"] = f"Consolidation error: {e}"
-        emit("error",{"message":str(e)})
-    finally:
-        save_state()
-        state["phase"] = "idle"
-        emit("phase_change",{"phase":"idle","message":state["message"]})
-
-def _run_sandbox():
-    state["phase"]  = "sandbox"
-    state["message"]= "Running sandbox..."
-    emit("phase_change",{"phase":"sandbox","message":"Sandbox scanning..."})
-    try:
-        results = sandbox.scan_and_test(max_tests=3)
-        for r in results:
-            emit("sandbox_result",{
-                "verdict":r.verdict, "confidence":r.confidence,
-                "interpretation":r.interpretation, "implications":r.implications,
-                "hypothesis":r.hypothesis, "plot_path":r.plot_path})
-        state["message"] = f"Sandbox: {len(results)} tests complete."
-    except Exception as e:
-        state["message"] = f"Sandbox error: {e}"
-        emit("error",{"message":str(e)})
-    finally:
-        save_state()
-        state["phase"] = "idle"
-        emit("phase_change",{"phase":"idle","message":state["message"]})
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
+@app.route("/api/status")
+def api_status():
+    activations = {nid: (d.get("state") or {}).get("activation", 0.0) for nid, d in brain.all_nodes()}
+    contradiction_edges = sum(1 for _, _, _, d in brain.graph.edges(keys=True, data=True) if d.get("type") == "contradicts")
+    return jsonify(
+        {
+            "phase": state["phase"],
+            "message": state["message"],
+            "cycle": state["cycle"],
+            "brain": brain.stats(),
+            "brain_mode": brain.get_mode(),
+            "agenda": len(observer.agenda),
+            "resolved": sum(1 for i in observer.agenda if i.resolved),
+            "reading_list": reader.stats(),
+            "metrics": {
+                "activation_entropy": activation_entropy(activations),
+                "contradiction_density": contradiction_density(len(brain.graph.edges), contradiction_edges),
+                "recent_novelty": brain.last_novelty,
+                "uncertainty_mass": brain.stats().get("uncertainty_mass", 0.0),
+            },
+            "mode_transitions": observer.mode_history[-10:],
+            "decision_records": observer.decision_records[-20:],
+            "replay": {"seed": brain.global_state.rng_seed, "rng_cursor": brain.global_state.rng_cursor, "step_id": brain.global_state.step_id},
+        }
+    )
+
+
+@app.route("/api/graph")
+def api_graph():
+    nodes, edges = [], []
+    for nid, data in brain.all_nodes():
+        st = data.get("state", {})
+        nodes.append(
+            {
+                "id": nid,
+                "statement": data.get("content", {}).get("text", data.get("statement", "")),
+                "cluster": data.get("meta", {}).get("cluster", data.get("cluster", "")),
+                "node_type": data.get("node_type", data.get("type", "concept")),
+                "status": data.get("status", "uncertain"),
+                "confidence": data.get("confidence", 0.5),
+                "state": {
+                    "activation": st.get("activation", data.get("activation", 0.0)),
+                    "attention": st.get("attention", data.get("attention", 0.0)),
+                    "value": st.get("value", data.get("value", 0.0)),
+                    "uncertainty": st.get("uncertainty", data.get("uncertainty", 0.5)),
+                    "stability": st.get("stability", data.get("stability", 0.0)),
+                },
+            }
+        )
+    for u, v, k, data in brain.graph.edges(keys=True, data=True):
+        edges.append({"source": u, "target": v, "key": k, "type": data.get("type", "associated"), "weight": data.get("weight", 0.0), "confidence": data.get("confidence", 0.5), "narration": data.get("narration", "")})
+    return jsonify({"nodes": nodes, "edges": edges, "schema_version": 3})
+
+
+@app.route("/api/node/<node_id>")
+def api_node(node_id):
+    node = brain.get_node(node_id)
+    if not node:
+        return jsonify({"error": "not found"}), 404
+    edges_out = []
+    for nb in brain.neighbors(node_id):
+        e = brain.get_edge(node_id, nb)
+        nd = brain.get_node(nb)
+        if e and nd:
+            edges_out.append({"target_id": nb, "target_label": nd.get("content", {}).get("text", nd.get("statement", "")), "type": e.get("type", ""), "weight": e.get("weight", 0.0), "confidence": e.get("confidence", 0.5), "narration": e.get("narration", "")})
+    return jsonify({**node, "edges_out": edges_out})
+
+
+@app.route("/api/agenda")
+def api_agenda():
+    return jsonify([a.__dict__ for a in observer.get_prioritized_questions(100)])
+
+
+@app.route("/api/emergences")
+def api_emergences():
+    return jsonify([e.to_dict() for e in observer.emergence_feed[-120:]])
+
+
+@app.route("/api/notebook")
+def api_notebook():
+    return jsonify({"entries": notebook.get_all_for_display(), "running_hypothesis": notebook.running_hypothesis})
+
+
+@app.route("/api/sandbox")
+def api_sandbox():
+    return jsonify([r.to_dict() for r in sandbox.results[-30:]])
+
+
+@app.route("/api/mission", methods=["GET", "POST"])
+def api_mission():
+    if request.method == "POST":
+        data = request.json or {}
+        q = data.get("question", "").strip()
+        if not q:
+            return jsonify({"error": "no question"}), 400
+        brain.set_mission(q, data.get("context", ""))
+        save_state()
+        return jsonify({"status": "set", "question": q})
+    m = brain.get_mission()
+    return jsonify({"set": bool(m), "question": m["question"] if m else "", "mode": brain.get_mode()})
+
+
+@app.route("/api/run/<phase>", methods=["POST"])
+def api_run_phase(phase):
+    if state["phase"] != "idle":
+        return jsonify({"error": "already running"}), 409
+
+    def run():
+        try:
+            state["phase"] = phase
+            state["message"] = f"Running {phase}"
+            if phase == "dream":
+                state["cycle"] += 1
+                log = dreamer.dream(mode=DreamMode.WANDERING, steps=10, temperature=brain.cognitive_temperature, run_nrem=True, log_path=f"logs/dream_cycle{state['cycle']}.json")
+                observer.observe(log)
+                notebook.write_morning_entry(log, state["cycle"])
+            elif phase == "research":
+                log = researcher.research_day(max_questions=4, log_path=f"logs/research_cycle{state['cycle']}.json")
+                notebook.write_field_notes(log, state["cycle"])
+            elif phase == "consolidation":
+                report = consolidator.consolidate(save_path=f"logs/consolidation_cycle{state['cycle']}.json")
+                notebook.write_evening_entry(report, state["cycle"])
+            elif phase == "reading":
+                reader.reading_day(max_items=2)
+            elif phase == "sandbox":
+                sandbox.scan_and_test(max_tests=2)
+            elif phase == "runtime":
+                control = observer.decide()
+                for _ in range(10):
+                    step = runtime.step(control=control)
+                    emit("runtime_step", step.__dict__)
+            save_state()
+            emit("phase_complete", {"phase": phase})
+        except Exception as e:
+            emit("error", {"message": str(e)})
+        finally:
+            state["phase"] = "idle"
+            state["message"] = "Standing by"
+
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({"status": "started", "phase": phase})
+
+
+@app.route("/api/reading-list")
+def api_reading_list():
+    return jsonify(reader.list_all())
+
+
+@app.route("/api/reading-list/add", methods=["POST"])
+def api_reading_add():
+    d = request.json or {}
+    e = reader.add_to_list(url=d.get("url", ""), title=d.get("title", ""), source_type=d.get("source_type", "web"), priority=float(d.get("priority", 0.5)), added_by="user")
+    save_state()
+    return jsonify({"status": "added", "entry": e.to_dict()})
+
+
+@app.route("/api/ingest", methods=["POST"])
+def api_ingest():
+    text = (request.json or {}).get("text", "")
+    if not text:
+        return jsonify({"error": "no text"}), 400
+    reader.add_text(text, title="GUI text")
+    save_state()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/control/decisions")
+def api_control_decisions():
+    return jsonify(observer.decision_records[-200:])
+
+
+@app.route("/api/replay/meta")
+def api_replay_meta():
+    return jsonify({"seed": brain.global_state.rng_seed, "rng_cursor": brain.global_state.rng_cursor, "step_id": brain.global_state.step_id, "schema_version": brain.global_state.schema_version})
+
+
 if __name__ == "__main__":
-    os.makedirs("logs",exist_ok=True)
-    os.makedirs("data",exist_ok=True)
-    print(f"DREAMER GUI → http://0.0.0.0:5000")
-    print(f"Brain: {brain.stats()}")
-    print(f"Mode: {brain.get_mode()}")
-    if brain.get_mission():
-        print(f"Mission: {brain.get_mission()['question']}")
-    app.run(host="0.0.0.0",port=5000,debug=False,threaded=True)
+    app.run(host="0.0.0.0", port=8080, debug=False)

@@ -21,6 +21,7 @@ sys.path.insert(0, ROOT)
 
 from graph.brain import Brain, BrainMode
 from observer.observer import Observer
+from memory.store import NetworkXMemoryStoreAdapter
 from ingestion.ingestor import Ingestor, EdgeSource
 from dreamer.dreamer import Dreamer, DreamMode
 from consolidator.consolidator import Consolidator
@@ -215,9 +216,9 @@ def bootstrap():
 
     # initialise brain
     brain    = Brain()
-    observer = Observer(brain)
+    observer = Observer(NetworkXMemoryStoreAdapter(brain))
     notebook = Notebook(brain, observer=observer)
-    reader   = Reader(brain, observer=observer, notebook=notebook)
+    reader   = Reader(NetworkXMemoryStoreAdapter(brain), observer=observer, notebook=notebook)
     ingestor = Ingestor(brain)
 
     # ── Step 1: Set mission ───────────────────────────────────────────────────

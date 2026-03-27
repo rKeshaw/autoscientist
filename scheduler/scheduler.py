@@ -1,249 +1,185 @@
-import time
 import json
+import os
 import signal
 import sys
-from datetime import datetime
+import time
 from dataclasses import dataclass, field
+from datetime import datetime
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT)
+sys.path.insert(0, ROOT)
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from graph.brain import Brain, BrainMode
-from ingestion.ingestor import Ingestor, EdgeSource
-from dreamer.dreamer import Dreamer, DreamMode
-from observer.observer import Observer
+from cognition.runtime import CognitiveRuntime
 from consolidator.consolidator import Consolidator
-from researcher.researcher import Researcher
-from reader.reader import Reader
+from dreamer.dreamer import DreamMode, Dreamer
+from graph.brain import Brain, BrainMode
+from memory.store import NetworkXMemoryStoreAdapter
 from notebook.notebook import Notebook
+from observer.observer import Observer
+from reader.reader import Reader
+from researcher.researcher import Researcher
+from sandbox.sandbox import Sandbox
 
-# ── Config ────────────────────────────────────────────────────────────────────
-
-SCHEDULE = {
-    "nrem_rem":    "0 23 * * *",
-    "research":    "0 9  * * *",
-    "reading":     "0 14 * * *",   # afternoon reading
-    "consolidate": "0 20 * * *",
-}
-
-DREAM_STEPS          = 20
-DREAM_TEMPERATURE    = 0.7
-RESEARCH_QUESTIONS   = 5
-RESEARCH_DEPTH       = "standard"
-READING_ITEMS        = 2
-REGEN_LIST_THRESHOLD = 3   # regenerate reading list when fewer than this unread
-
-BRAIN_PATH    = "data/brain.json"
+SCHEDULE = {"cycle": "0 */6 * * *"}
+BRAIN_PATH = "data/brain.json"
 OBSERVER_PATH = "data/observer.json"
 
-# ── Cycle log ─────────────────────────────────────────────────────────────────
 
 @dataclass
 class CycleEntry:
-    cycle:      int
-    phase:      str
+    cycle: int
+    phase: str
     brain_mode: str
     started_at: float = field(default_factory=time.time)
-    ended_at:   float = 0.0
-    summary:    str   = ""
-    interrupted:bool  = False
+    ended_at: float = 0.0
+    summary: str = ""
+    interrupted: bool = False
+    manifest_path: str = ""
 
     def to_dict(self):
         return self.__dict__
 
+
 class CycleLog:
     def __init__(self, path="logs/cycle_log.json"):
-        self.path    = path
+        self.path = path
         self.entries = []
         self._load()
 
     def _load(self):
         try:
             with open(self.path) as f:
-                self.entries = json.load(f).get('entries', [])
+                self.entries = json.load(f).get("entries", [])
         except FileNotFoundError:
             self.entries = []
 
     def add(self, entry: CycleEntry):
-        self.entries.append(entry.to_dict())
-        import os
         os.makedirs("logs", exist_ok=True)
-        with open(self.path, 'w') as f:
+        self.entries.append(entry.to_dict())
+        with open(self.path, "w") as f:
             json.dump({"entries": self.entries}, f, indent=2)
 
     def current_cycle(self):
-        return max((e.get('cycle', 0) for e in self.entries), default=0)
+        return max((e.get("cycle", 0) for e in self.entries), default=0)
 
-# ── Scheduler ─────────────────────────────────────────────────────────────────
 
 class DreamerScheduler:
     def __init__(self):
         self.scheduler = BackgroundScheduler()
         self.cycle_log = CycleLog()
-        self._running  = False
+        self._running = False
 
-        self.brain    = Brain()
-        self.observer = Observer(self.brain)
+        self.brain = Brain()
+        self.memory = NetworkXMemoryStoreAdapter(self.brain)
+        self.observer = Observer(self.memory)
         self._load_state()
 
-        self.ingestor    = Ingestor(self.brain, research_agenda=self.observer)
-        self.dreamer     = Dreamer(self.brain, research_agenda=self.observer)
-        self.consolidator= Consolidator(self.brain, observer=self.observer)
-        self.researcher  = Researcher(self.brain, observer=self.observer,
-                                      depth=RESEARCH_DEPTH)
-        self.notebook    = Notebook(self.brain, observer=self.observer)
-        self.reader      = Reader(self.brain, observer=self.observer,
-                                  notebook=self.notebook)
+        self.runtime = CognitiveRuntime(self.memory, observer=self.observer, seed=self.brain.global_state.rng_seed)
+        self.dreamer = Dreamer(self.brain, research_agenda=self.observer)  # compatibility mode
+        self.consolidator = Consolidator(self.memory, observer=self.observer)
+        self.researcher = Researcher(self.memory, observer=self.observer)
+        self.reader = Reader(self.memory, observer=self.observer)
+        self.sandbox = Sandbox(self.memory, observer=self.observer)
+        self.notebook = Notebook(self.brain, observer=self.observer)
 
-        signal.signal(signal.SIGINT,  self._shutdown)
+        signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
 
     def _load_state(self):
         try:
             self.brain.load(BRAIN_PATH)
         except FileNotFoundError:
-            print("No brain state — starting fresh")
+            pass
         try:
             self.observer.load(OBSERVER_PATH)
-        except Exception:
-            print("No observer state — starting fresh")
+        except FileNotFoundError:
+            pass
 
     def _save_state(self):
         self.brain.save(BRAIN_PATH)
         self.observer.save(OBSERVER_PATH)
 
     def _shutdown(self, signum, frame):
-        print("\n── Shutdown signal — saving state ──")
         self._save_state()
         self.stop()
         sys.exit(0)
 
-    # ── Phase runners ─────────────────────────────────────────────────────────
+    def _write_manifest(self, cycle: int, control, steps, action_records):
+        os.makedirs("logs", exist_ok=True)
+        path = f"logs/run_manifest_cycle{cycle}.json"
+        payload = {
+            "cycle": cycle,
+            "timestamp": time.time(),
+            "control": {
+                "mode": control.mode,
+                "temperature": control.temperature,
+                "action_set": control.action_set,
+                "budgets": control.budgets,
+                "gains": control.gains,
+            },
+            "steps": [s.__dict__ for s in steps],
+            "actions": action_records,
+            "decision_record": self.observer.decision_records[-1] if self.observer.decision_records else {},
+            "rng": {"seed": self.brain.global_state.rng_seed, "cursor": self.brain.global_state.rng_cursor},
+        }
+        with open(path, "w") as f:
+            json.dump(payload, f, indent=2)
+        return path
 
-    def run_dream_phase(self):
-        cycle      = self.cycle_log.current_cycle() + 1
-        brain_mode = self.brain.get_mode()
-        entry      = CycleEntry(cycle=cycle, phase="dream", brain_mode=brain_mode)
-        print(f"\n{'='*60}")
-        print(f"DREAMER — Night Cycle {cycle} [{brain_mode.upper()}]")
-        print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-        print(f"{'='*60}")
+    def run_state_cycle(self):
+        cycle = self.cycle_log.current_cycle() + 1
+        control = self.observer.decide()
+        self.brain.set_mode(BrainMode(control.mode))
+        entry = CycleEntry(cycle=cycle, phase="state_cycle", brain_mode=control.mode)
+        actions = []
         try:
-            log1 = self.dreamer.dream(
-                mode=DreamMode.WANDERING, steps=DREAM_STEPS,
-                temperature=DREAM_TEMPERATURE, run_nrem=True,
-                log_path=f"logs/dream_cycle{cycle}_wandering.json")
-            self.observer.observe(log1)
-            self.notebook.write_morning_entry(log1, cycle)
+            steps = self.runtime.run_cycle(steps=control.budgets.get("steps", 12), control=control)
 
-            # pressure dream only in focused/transitional
-            if not self.brain.is_wandering():
-                log2 = self.dreamer.dream(
-                    mode=DreamMode.PRESSURE, steps=DREAM_STEPS//2,
-                    temperature=DREAM_TEMPERATURE-0.1, run_nrem=False,
-                    log_path=f"logs/dream_cycle{cycle}_pressure.json")
-                self.observer.observe(log2)
+            if "acquire" in control.action_set:
+                rlog = self.researcher.research_day(max_questions=control.budgets.get("external", 2), log_path=f"logs/research_cycle{cycle}.json")
+                self.notebook.write_field_notes(rlog, cycle)
+                actions.append({"type": "research", "count": len(rlog.entries)})
+                rr = self.reader.reading_day(max_items=1)
+                actions.append({"type": "reading", "count": len(rr)})
 
-            entry.summary = log1.summary
+            if "consolidate" in control.action_set:
+                rep = self.consolidator.consolidate(save_path=f"logs/consolidation_cycle{cycle}.json")
+                self.notebook.write_evening_entry(rep, cycle)
+                self.notebook.update_running_hypothesis(cycle)
+                actions.append({"type": "consolidation", "delta_objective": rep.delta_objective})
+
+            if "test" in control.action_set:
+                t = self.sandbox.scan_and_test(max_tests=control.budgets.get("tests", 1))
+                actions.append({"type": "test", "count": len(t)})
+
+            if "wander" in control.action_set or "focus" in control.action_set:
+                dlog = self.dreamer.dream(mode=DreamMode.WANDERING if control.mode == "wandering" else DreamMode.PRESSURE, steps=8, temperature=control.temperature, run_nrem=False, log_path=f"logs/dream_cycle{cycle}.json")
+                self.observer.observe(dlog)
+                self.notebook.write_morning_entry(dlog, cycle)
+                actions.append({"type": "dream", "steps": len(dlog.steps)})
+
+            manifest = self._write_manifest(cycle, control, steps, actions)
+            self.memory.snapshot(tag=f"cycle{cycle}")
+            entry.manifest_path = manifest
+            entry.summary = f"mode={control.mode}, steps={len(steps)}, actions={[a['type'] for a in actions]}"
         except Exception as e:
-            print(f"Dream error: {e}")
             entry.interrupted = True
+            entry.summary = str(e)
         finally:
             entry.ended_at = time.time()
             self.cycle_log.add(entry)
             self._save_state()
 
-    def run_research_phase(self):
-        """Research + reading in the day cycle."""
-        cycle      = self.cycle_log.current_cycle()
-        brain_mode = self.brain.get_mode()
-        entry      = CycleEntry(cycle=cycle, phase="research", brain_mode=brain_mode)
-        print(f"\n{'='*60}")
-        print(f"DREAMER — Research Day {cycle} [{brain_mode.upper()}]")
-        print(f"{'='*60}")
-        try:
-            # targeted research (skip in pure wandering — follow curiosity freely)
-            if not self.brain.is_wandering():
-                log = self.researcher.research_day(
-                    max_questions=RESEARCH_QUESTIONS,
-                    log_path=f"logs/research_cycle{cycle}.json")
-                self.notebook.write_field_notes(log, cycle)
-            else:
-                print("Wandering mode — skipping targeted research")
-        except Exception as e:
-            print(f"Research error: {e}")
-            entry.interrupted = True
-        finally:
-            entry.ended_at = time.time()
-            self.cycle_log.add(entry)
-            self._save_state()
+    def run_now(self, phase):
+        if phase in ("cycle", "dream", "research", "reading", "consolidation", "sandbox"):
+            self.run_state_cycle()
 
-    def run_reading_phase(self):
-        """Afternoon reading — autonomous absorption from reading list."""
-        cycle      = self.cycle_log.current_cycle()
-        brain_mode = self.brain.get_mode()
-        entry      = CycleEntry(cycle=cycle, phase="reading", brain_mode=brain_mode)
-        print(f"\n{'='*60}")
-        print(f"DREAMER — Reading [{brain_mode.upper()}]")
-        print(f"{'='*60}")
-        try:
-            # regenerate reading list if running low
-            unread = len(self.reader.get_unread(20))
-            if unread < REGEN_LIST_THRESHOLD:
-                print(f"Reading list low ({unread} items) — generating more...")
-                self.reader.generate_reading_list()
-
-            results = self.reader.reading_day(max_items=READING_ITEMS)
-            absorbed = sum(1 for r in results if r.success)
-            print(f"Reading day: {absorbed}/{len(results)} absorbed")
-            entry.summary = f"Absorbed {absorbed} texts."
-        except Exception as e:
-            print(f"Reading error: {e}")
-            entry.interrupted = True
-        finally:
-            entry.ended_at = time.time()
-            self.cycle_log.add(entry)
-            self._save_state()
-
-    def run_consolidation_phase(self):
-        cycle      = self.cycle_log.current_cycle()
-        brain_mode = self.brain.get_mode()
-        entry      = CycleEntry(cycle=cycle, phase="consolidation", brain_mode=brain_mode)
-        print(f"\n{'='*60}")
-        print(f"DREAMER — Consolidation {cycle} [{brain_mode.upper()}]")
-        print(f"{'='*60}")
-        try:
-            report = self.consolidator.consolidate(
-                save_path=f"logs/consolidation_cycle{cycle}.json")
-            self.notebook.write_evening_entry(report, cycle)
-            self.notebook.update_running_hypothesis(cycle)
-            entry.summary = report.summary
-        except Exception as e:
-            print(f"Consolidation error: {e}")
-            entry.interrupted = True
-        finally:
-            entry.ended_at = time.time()
-            self.cycle_log.add(entry)
-            self._save_state()
-
-    # ── Public interface ──────────────────────────────────────────────────────
-
-    def ingest(self, text, source=EdgeSource.CONVERSATION):
-        print(f"\n── Manual ingestion ──")
-        self.ingestor.ingest(text, source=source)
-        self._save_state()
-
-    def read_url(self, url, title="", source_type="web"):
-        print(f"\n── Reading URL: {url} ──")
-        result = self.reader.absorb_url(url, title, source_type)
-        self._save_state()
-        return result
-
-    def add_to_reading_list(self, url, title="", source_type="web", priority=0.7):
-        entry = self.reader.add_to_list(
-            url=url, title=title, source_type=source_type,
-            priority=priority, added_by="user")
-        self._save_state()
-        return entry
+    def run_full_cycle_now(self):
+        self.run_state_cycle()
 
     def set_mission(self, question, context=""):
         self.brain.set_mission(question, context)
@@ -262,106 +198,47 @@ class DreamerScheduler:
         item.priority = 0.95
         self._save_state()
 
-    def run_now(self, phase):
-        phases = {
-            "dream":         self.run_dream_phase,
-            "research":      self.run_research_phase,
-            "reading":       self.run_reading_phase,
-            "consolidation": self.run_consolidation_phase,
+    def status(self):
+        return {
+            "running": self._running,
+            "cycle": self.cycle_log.current_cycle(),
+            "brain_mode": self.brain.get_mode(),
+            "brain": self.brain.stats(),
+            "agenda": len(self.observer.agenda),
+            "resolved": sum(1 for i in self.observer.agenda if i.resolved),
+            "decision_records": len(self.observer.decision_records),
+            "reading_list": self.reader.stats(),
         }
-        if phase not in phases:
-            print(f"Unknown phase: {phase}")
-            return
-        phases[phase]()
-
-    def run_full_cycle_now(self):
-        print("\n── Running full cycle now ──")
-        self.run_dream_phase()
-        self.run_research_phase()
-        self.run_reading_phase()
-        self.run_consolidation_phase()
-        print("\n── Full cycle complete ──")
 
     def start(self, schedule=None):
-        s = schedule or SCHEDULE
-        self.scheduler.add_job(self.run_dream_phase,
-            CronTrigger.from_crontab(s["nrem_rem"]), id="dream",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_research_phase,
-            CronTrigger.from_crontab(s["research"]), id="research",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_reading_phase,
-            CronTrigger.from_crontab(s["reading"]), id="reading",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_consolidation_phase,
-            CronTrigger.from_crontab(s["consolidate"]), id="consolidation",
-            replace_existing=True)
+        sched = schedule or SCHEDULE
+        self.scheduler.add_job(self.run_state_cycle, CronTrigger.from_crontab(sched["cycle"]), id="cycle", replace_existing=True)
         self.scheduler.start()
         self._running = True
-
-        print(f"\n{'='*60}")
-        print(f"DREAMER is running | mode: {self.brain.get_mode().upper()}")
-        print(f"Brain: {self.brain.stats()['nodes']} nodes | "
-              f"{self.brain.stats()['edges']} edges")
-        if self.brain.get_mission():
-            print(f"Mission: {self.brain.get_mission()['question']}")
-        print(f"Reading list: {self.reader.stats()['unread']} unread")
-        print(f"{'='*60}")
-        print("Press Ctrl+C to stop.\n")
 
     def stop(self):
         if self._running:
             self.scheduler.shutdown(wait=False)
             self._running = False
 
-    def status(self):
-        return {
-            "running":      self._running,
-            "cycle":        self.cycle_log.current_cycle(),
-            "brain_mode":   self.brain.get_mode(),
-            "brain":        self.brain.stats(),
-            "agenda":       len(self.observer.agenda),
-            "resolved":     sum(1 for i in self.observer.agenda if i.resolved),
-            "emergences":   len(self.observer.emergence_feed),
-            "reading_list": self.reader.stats(),
-        }
-
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="DREAMER Scheduler")
-    parser.add_argument("--mode", choices=[
-        "auto","dream","research","reading","consolidation","cycle","status"
-    ], default="auto")
-    parser.add_argument("--ingest",  type=str, default=None)
-    parser.add_argument("--url",     type=str, default=None)
-    parser.add_argument("--seed",    type=str, default=None)
-    parser.add_argument("--depth",   type=str, default="standard",
-                        choices=["shallow","standard","deep"])
-    parser.add_argument("--suspend-mission", action="store_true")
-    parser.add_argument("--resume-mission",  action="store_true")
+
+    parser = argparse.ArgumentParser(description="Autodreamer scheduler")
+    parser.add_argument("--mode", choices=["auto", "cycle", "status"], default="auto")
     args = parser.parse_args()
 
-    RESEARCH_DEPTH = args.depth
     ds = DreamerScheduler()
-
-    if args.ingest:       ds.ingest(args.ingest)
-    if args.url:          ds.read_url(args.url)
-    if args.seed:         ds.seed_dream(args.seed)
-    if args.suspend_mission: ds.suspend_mission()
-    if args.resume_mission:  ds.resume_mission()
-
-    if args.mode == "auto":
-        ds.start()
-        try:
-            while True:
-                time.sleep(60)
-        except (KeyboardInterrupt, SystemExit):
-            pass
-    elif args.mode == "status":
-        import json
+    if args.mode == "status":
         print(json.dumps(ds.status(), indent=2))
     elif args.mode == "cycle":
         ds.run_full_cycle_now()
     else:
-        ds.run_now(args.mode)
+        ds.start()
+        print(f"Running state-driven scheduler at {datetime.now().isoformat()}")
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            ds.stop()
