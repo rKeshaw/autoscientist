@@ -1,17 +1,16 @@
 import json
 import time
 import numpy as np
-from ollama import Client
 from graph.brain import (Brain, Node, Edge, EdgeType, EdgeSource,
                          NodeStatus, NodeType, ANALOGY_WEIGHTS)
 from config import THRESHOLDS
 from embedding import embed as shared_embed
+from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
 SIMILARITY_THRESHOLD  = THRESHOLDS.MERGE_NODE
 WEAK_EDGE_THRESHOLD   = THRESHOLDS.WEAK_EDGE
-OLLAMA_MODEL          = "llama3.1:8b"
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -26,6 +25,14 @@ Rules:
 - Capture the perspective, not just the topic
 - If an idea contains a tension or uncertainty, include that in the statement
 - Aim for 3 to 8 nodes per passage. Quality over quantity.
+
+Example of a GOOD node:
+  "REM sleep appears to loosen associative constraints, allowing ideas that
+   were previously unrelated to form novel connections — this may explain why
+   insights often occur upon waking."
+
+Example of a BAD node (too vague/keyword-like):
+  "REM sleep and creativity" ← this is a topic label, not a conceptual statement.
 
 Respond ONLY with a JSON array of strings. No preamble. No markdown.
 
@@ -77,14 +84,30 @@ If they are related, respond with a JSON object:
   "type": one of ["supports", "causes", "contradicts", "analogy", "associated"],
   "analogy_depth": if type is "analogy", one of ["surface", "structural", "isomorphism"] — else omit,
   "narration": "one or two sentences explaining exactly how and why these ideas connect",
-  "weight": a float from 0.1 to 1.0,
-  "confidence": a float from 0.1 to 1.0
+  "weight": a float (see rubric below),
+  "confidence": a float (see rubric below)
 }}
+
+Weight rubric (how STRONG is the relationship?):
+- 0.1-0.3: Tangentially related, same broad topic but no direct logical link
+- 0.4-0.6: Meaningfully connected, one informs understanding of the other
+- 0.7-0.9: Strongly linked, one directly supports/contradicts/implies the other
+- 1.0: Definitionally equivalent or logically entailed — VERY rare
+
+Confidence rubric (how CERTAIN are you this relationship exists?):
+- 0.1-0.3: Speculative — you think there might be a connection but it's not clear
+- 0.4-0.6: Reasonable — the connection is plausible and you can articulate why
+- 0.7-0.9: Strong — the connection is clearly supported by the content
+- 1.0: Definitive — the text explicitly states this relationship
 
 Analogy depth guide:
 - surface: shared vocabulary, metaphor, or theme only. Example: "both involve networks"
 - structural: same relational pattern between different entities. Example: "A relates to B the same way X relates to Y"
 - isomorphism: formal mathematical or logical equivalence. Example: "the equations governing X are identical in form to those governing Y"
+
+IMPORTANT: Do NOT mark ideas as related just because they share a broad topic. 
+"The brain uses electricity" and "Lightning is electricity" are NOT meaningfully related
+even though both mention electricity. They must share a conceptual connection.
 
 If not meaningfully related:
 {{"related": false}}
@@ -94,12 +117,21 @@ Respond ONLY with JSON. No preamble.
 
 CLUSTER_PROMPT = """
 Given this conceptual statement, assign it to a single domain cluster.
-Use a short lowercase label like: neuroscience, physics, philosophy_of_science,
-mathematics, linguistics, economics, biology, computer_science, psychology, general.
+
+Use a short lowercase label. Choose from the following or create a similarly
+specific label if none fit:
+  neuroscience, physics, chemistry, biology, mathematics, computer_science,
+  psychology, philosophy_of_science, linguistics, economics, sociology,
+  cognitive_science, information_theory, systems_biology, ecology,
+  evolutionary_biology, quantum_mechanics, thermodynamics, genetics, general
+
+If the statement spans two domains, choose the MOST SPECIFIC one.
+Example: "Neural networks learn via gradient descent" → computer_science (not neuroscience)
+Example: "The brain's learning rule resembles backpropagation" → neuroscience (it's about the brain)
 
 Statement: {statement}
 
-Respond with ONLY the cluster label. No punctuation.
+Respond with ONLY the cluster label. No punctuation. No explanation.
 """
 
 CONTRADICTION_CHECK_PROMPT = """
@@ -115,6 +147,12 @@ Question/Hypothesis: {question}
 New idea: {candidate}
 
 Does the new idea answer, resolve, or significantly advance the question?
+
+Grading definitions:
+- "none": The idea is unrelated to the question, or only shares surface-level vocabulary.
+- "partial": The idea addresses PART of the question or provides indirect evidence,
+  but the core question remains open.
+- "strong": The idea directly answers or resolves the question, or provides definitive evidence.
 
 Respond with a JSON object:
 {{
@@ -133,10 +171,16 @@ New idea being added to the knowledge graph:
 
 Does this new idea meaningfully advance, inform, or relate to the central question?
 
+Strength rubric:
+- 0.1-0.3: Same broad domain but no direct logical connection to the question.
+- 0.4-0.6: Provides useful context, background, or a building block for answering the question.
+- 0.7-0.85: Directly addresses a sub-question or provides evidence that informs a possible answer.
+- 0.9-1.0: Fundamentally advances or answers the central question. VERY rare.
+
 Respond with a JSON object:
 {{
   "relevant": true or false,
-  "strength": a float 0.0 to 1.0 indicating how strongly it relates,
+  "strength": a float 0.0 to 1.0 (use rubric above),
   "narration": "one sentence explaining the connection, or 'not relevant'"
 }}
 
@@ -146,19 +190,16 @@ Respond ONLY with JSON.
 # ── Ingestor ──────────────────────────────────────────────────────────────────
 
 class Ingestor:
-    def __init__(self, brain: Brain, research_agenda=None):
+    def __init__(self, brain: Brain, research_agenda=None, embedding_index=None,
+                 insight_buffer=None):
         self.brain            = brain
-        self.llm              = Client()
         self._embedding_cache = {}
         self.research_agenda  = research_agenda
+        self.index            = embedding_index
+        self.insight_buffer   = insight_buffer
 
     def _llm(self, prompt: str, temperature: float = 0.7) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="precise")
 
     def _embed(self, text: str) -> np.ndarray:
         if text in self._embedding_cache:
@@ -171,6 +212,7 @@ class Ingestor:
         return float(np.dot(a, b))
 
     def _get_all_embeddings(self) -> dict:
+        """Fallback when no index is available."""
         result = {}
         for node_id, data in self.brain.all_nodes():
             if node_id in self._embedding_cache:
@@ -195,32 +237,29 @@ class Ingestor:
             raw = self._llm(ANSWER_MATCH_PROMPT.format(
                 question=item.text, candidate=statement
             ), temperature=0.1)
-            try:
-                result      = json.loads(raw)
-                match       = result.get('match', 'none')
-                explanation = result.get('explanation', '')
-                if match == 'strong':
-                    q_node_id = getattr(item, 'node_id', None)
-                    if q_node_id and self.brain.get_node(q_node_id):
-                        edge = Edge(
-                            type       = EdgeType.ANSWERS,
-                            narration  = explanation,
-                            weight     = 0.85,
-                            confidence = 0.75,
-                            source     = EdgeSource.RESEARCH
-                        )
-                        self.brain.add_edge(node_id, q_node_id, edge)
-                    self.research_agenda.record_answer(
-                        item.text, node_id, explanation, grade='strong'
+            result = require_json(raw, default={})
+            match       = result.get('match', 'none')
+            explanation = result.get('explanation', '')
+            if match == 'strong':
+                q_node_id = getattr(item, 'node_id', None)
+                if q_node_id and self.brain.get_node(q_node_id):
+                    edge = Edge(
+                        type       = EdgeType.ANSWERS,
+                        narration  = explanation,
+                        weight     = 0.85,
+                        confidence = 0.75,
+                        source     = EdgeSource.RESEARCH
                     )
-                    print(f"  ✓ STRONG ANSWER to: {item.text}")
-                elif match == 'partial':
-                    self.research_agenda.record_answer(
-                        item.text, node_id, explanation, grade='partial'
-                    )
-                    print(f"  ~ PARTIAL ANSWER to: {item.text}")
-            except (json.JSONDecodeError, ValueError):
-                continue
+                    self.brain.add_edge(node_id, q_node_id, edge)
+                self.research_agenda.record_answer(
+                    item.text, node_id, explanation, grade='strong'
+                )
+                print(f"  ✓ STRONG ANSWER to: {item.text}")
+            elif match == 'partial':
+                self.research_agenda.record_answer(
+                    item.text, node_id, explanation, grade='partial'
+                )
+                print(f"  ~ PARTIAL ANSWER to: {item.text}")
 
     # ── Mission relevance check ───────────────────────────────────────────────
 
@@ -232,17 +271,14 @@ class Ingestor:
             mission   = mission['question'],
             statement = statement
         ), temperature=0.1)
-        try:
-            result = json.loads(raw)
-            if result.get('relevant') and result.get('strength', 0) > 0.4:
-                self.brain.link_to_mission(
-                    node_id,
-                    result.get('narration', ''),
-                    strength=result.get('strength', 0.5)
-                )
-                print(f"  ↗ Mission link (strength={result['strength']:.2f})")
-        except (json.JSONDecodeError, ValueError):
-            pass
+        result = require_json(raw, default={})
+        if result.get('relevant') and result.get('strength', 0) > 0.4:
+            self.brain.link_to_mission(
+                node_id,
+                result.get('narration', ''),
+                strength=result.get('strength', 0.5)
+            )
+            print(f"  ↗ Mission link (strength={result['strength']:.2f})")
 
     # ── Core pipeline ─────────────────────────────────────────────────────────
 
@@ -251,9 +287,8 @@ class Ingestor:
 
         # extract concepts
         raw = self._llm(NODE_EXTRACTION_PROMPT.format(text=text))
-        try:
-            statements = json.loads(raw)
-        except json.JSONDecodeError:
+        statements = require_json(raw, default=[])
+        if not isinstance(statements, list):
             print(f"  Node extraction parse error")
             return []
 
@@ -261,15 +296,14 @@ class Ingestor:
 
         # extract hypotheses
         raw_hyp = self._llm(HYPOTHESIS_EXTRACTION_PROMPT.format(text=text))
-        try:
-            hypotheses = json.loads(raw_hyp)
-        except json.JSONDecodeError:
+        hypotheses = require_json(raw_hyp, default=[])
+        if not isinstance(hypotheses, list):
             hypotheses = []
 
         print(f"  Extracted {len(hypotheses)} hypotheses")
 
         new_node_ids      = []
-        existing_embeddings = self._get_all_embeddings()
+        existing_embeddings = None if self.index else self._get_all_embeddings()
 
         # process concepts
         for stmt in statements:
@@ -278,8 +312,9 @@ class Ingestor:
             )
             if nid:
                 new_node_ids.append(nid)
-                existing_embeddings[nid] = self._embedding_cache.get(
-                    nid, self._embed(stmt))
+                if existing_embeddings is not None:
+                    existing_embeddings[nid] = self._embedding_cache.get(
+                        nid, self._embed(stmt))
 
         # process hypotheses
         for hyp in hypotheses:
@@ -293,8 +328,9 @@ class Ingestor:
             )
             if nid:
                 new_node_ids.append(nid)
-                existing_embeddings[nid] = self._embedding_cache.get(
-                    nid, self._embed(stmt))
+                if existing_embeddings is not None:
+                    existing_embeddings[nid] = self._embedding_cache.get(
+                        nid, self._embed(stmt))
 
         # extract edges
         for i in range(len(new_node_ids)):
@@ -313,7 +349,7 @@ class Ingestor:
                     node_b=node_b['statement']
                 ))
                 try:
-                    ed = json.loads(raw_edge)
+                    ed = require_json(raw_edge, default={})
                     if ed.get('related'):
                         raw_type = ed.get('type', 'associated')
 
@@ -352,7 +388,7 @@ class Ingestor:
               f"{self.brain.stats()['edges']} edges ──\n")
         return new_node_ids
 
-    def _process_statement(self, stmt: str, existing_embeddings: dict,
+    def _process_statement(self, stmt: str, existing_embeddings,
                            source: EdgeSource, node_type: NodeType,
                            predicted_answer: str = "",
                            testable_by: str = "") -> str:
@@ -360,17 +396,26 @@ class Ingestor:
         best_match_id   = None
         best_similarity = 0.0
 
-        for nid, nemb in existing_embeddings.items():
-            sim = self._cosine(stmt_emb, nemb)
-            if sim > best_similarity:
-                best_similarity = sim
-                best_match_id   = nid
+        # ── Duplicate detection (indexed or fallback) ──
+        if self.index:
+            matches = self.index.query(stmt_emb, threshold=SIMILARITY_THRESHOLD, top_k=1)
+            if matches:
+                best_match_id, best_similarity = matches[0]
+        else:
+            for nid, nemb in existing_embeddings.items():
+                sim = self._cosine(stmt_emb, nemb)
+                if sim > best_similarity:
+                    best_similarity = sim
+                    best_match_id   = nid
 
         if best_similarity >= SIMILARITY_THRESHOLD:
             existing = self.brain.get_node(best_match_id)
             enriched = existing['statement'] + " | " + stmt
             self.brain.update_node(best_match_id, statement=enriched)
-            self._embedding_cache[best_match_id] = self._embed(enriched)
+            enriched_emb = self._embed(enriched)
+            self._embedding_cache[best_match_id] = enriched_emb
+            if self.index:
+                self.index.add(best_match_id, enriched_emb)
             # upgrade type if more specific
             if (node_type == NodeType.HYPOTHESIS and
                     existing.get('node_type') == NodeType.CONCEPT.value):
@@ -387,19 +432,48 @@ class Ingestor:
             CLUSTER_PROMPT.format(statement=stmt)
         ).strip().lower()
 
+        # ── Contradiction detection (indexed or fallback) ──
         status = NodeStatus.UNCERTAIN
         contradiction_ids = []
-        for nid, nemb in existing_embeddings.items():
-            sim = self._cosine(stmt_emb, nemb)
-            if sim > THRESHOLDS.CONTRADICTION:
+        if self.index:
+            contra_candidates = self.index.query(
+                stmt_emb, threshold=THRESHOLDS.CONTRADICTION, top_k=10
+            )
+            for cand_id, cand_sim in contra_candidates:
+                node_data = self.brain.get_node(cand_id)
+                if not node_data:
+                    continue
                 check = self._llm(CONTRADICTION_CHECK_PROMPT.format(
-                    existing=self.brain.get_node(nid)['statement'],
+                    existing=node_data['statement'],
                     new=stmt
                 ), temperature=0.1)
                 if check.lower().startswith('yes'):
                     status = NodeStatus.CONTRADICTED
-                    contradiction_ids.append(nid)
-                    print(f"  Contradiction with {nid[:8]}")
+                    contradiction_ids.append(cand_id)
+                    print(f"  Contradiction with {cand_id[:8]}")
+        else:
+            for nid, nemb in existing_embeddings.items():
+                sim = self._cosine(stmt_emb, nemb)
+                if sim > THRESHOLDS.CONTRADICTION:
+                    check = self._llm(CONTRADICTION_CHECK_PROMPT.format(
+                        existing=self.brain.get_node(nid)['statement'],
+                        new=stmt
+                    ), temperature=0.1)
+                    if check.lower().startswith('yes'):
+                        status = NodeStatus.CONTRADICTED
+                        contradiction_ids.append(nid)
+                        print(f"  Contradiction with {nid[:8]}")
+
+        # Source quality mapping
+        source_quality_map = {
+            EdgeSource.READING:       0.9,
+            EdgeSource.RESEARCH:      0.8,
+            EdgeSource.CONVERSATION:  0.7,
+            EdgeSource.CONSOLIDATION: 0.6,
+            EdgeSource.SANDBOX:       0.7,
+            EdgeSource.DREAM:         0.3,
+        }
+        sq = source_quality_map.get(source, 0.5)
 
         node = Node(
             statement        = stmt,
@@ -407,10 +481,14 @@ class Ingestor:
             cluster          = cluster,
             status           = status,
             predicted_answer = predicted_answer,
-            testable_by      = testable_by
+            testable_by      = testable_by,
+            source_quality   = sq,
+            last_verified    = time.time()
         )
         nid = self.brain.add_node(node)
         self._embedding_cache[nid] = stmt_emb
+        if self.index:
+            self.index.add(nid, stmt_emb)
         print(f"  Created {node_type.value} [{cluster}]: {stmt}")
         for contra_id in contradiction_ids:
             contra_edge = Edge(
@@ -429,25 +507,63 @@ class Ingestor:
         return nid
 
     def _add_weak_edges(self, new_ids: list, source: EdgeSource):
-        all_embeddings = self._get_all_embeddings()
+        from insight_buffer import BUFFER_LOW
         for nid in new_ids:
-            emb = all_embeddings.get(nid)
-            if emb is None:
-                continue
-            for other_id, other_emb in all_embeddings.items():
-                if other_id == nid:
+            if self.index:
+                emb = self.index.get_embedding(nid)
+                if emb is None:
+                    emb = self._embedding_cache.get(nid)
+                if emb is None:
                     continue
-                if (self.brain.graph.has_edge(nid, other_id) or
-                        self.brain.graph.has_edge(other_id, nid)):
+                # Query at BUFFER_LOW to capture near-misses
+                candidates = self.index.query(
+                    emb, threshold=BUFFER_LOW, top_k=20
+                )
+                for other_id, sim in candidates:
+                    if other_id == nid:
+                        continue
+                    if sim >= SIMILARITY_THRESHOLD:
+                        continue  # too similar = duplicate, not weak edge
+                    if (self.brain.graph.has_edge(nid, other_id) or
+                            self.brain.graph.has_edge(other_id, nid)):
+                        continue
+
+                    if sim >= WEAK_EDGE_THRESHOLD:
+                        # Strong enough for a weak edge
+                        edge = Edge(
+                            type       = EdgeType.ASSOCIATED,
+                            narration  = (f"Weak associative link "
+                                          f"(similarity={sim:.2f})"),
+                            weight     = sim * 0.4,
+                            confidence = sim,
+                            source     = source
+                        )
+                        self.brain.add_edge(nid, other_id, edge)
+                    elif self.insight_buffer and sim >= BUFFER_LOW:
+                        # Near-miss — save for delayed re-evaluation
+                        self.insight_buffer.add(nid, other_id, sim)
+            else:
+                all_embeddings = self._get_all_embeddings()
+                emb = all_embeddings.get(nid)
+                if emb is None:
                     continue
-                sim = self._cosine(emb, other_emb)
-                if WEAK_EDGE_THRESHOLD <= sim < SIMILARITY_THRESHOLD:
-                    edge = Edge(
-                        type       = EdgeType.ASSOCIATED,
-                        narration  = (f"Weak associative link "
-                                      f"(similarity={sim:.2f})"),
-                        weight     = sim * 0.4,
-                        confidence = sim,
-                        source     = source
-                    )
-                    self.brain.add_edge(nid, other_id, edge)
+                for other_id, other_emb in all_embeddings.items():
+                    if other_id == nid:
+                        continue
+                    if (self.brain.graph.has_edge(nid, other_id) or
+                            self.brain.graph.has_edge(other_id, nid)):
+                        continue
+                    sim = self._cosine(emb, other_emb)
+                    if WEAK_EDGE_THRESHOLD <= sim < SIMILARITY_THRESHOLD:
+                        edge = Edge(
+                            type       = EdgeType.ASSOCIATED,
+                            narration  = (f"Weak associative link "
+                                          f"(similarity={sim:.2f})"),
+                            weight     = sim * 0.4,
+                            confidence = sim,
+                            source     = source
+                        )
+                        self.brain.add_edge(nid, other_id, edge)
+                    elif (self.insight_buffer and
+                          BUFFER_LOW <= sim < WEAK_EDGE_THRESHOLD):
+                        self.insight_buffer.add(nid, other_id, sim)

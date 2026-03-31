@@ -5,15 +5,14 @@ import re
 import numpy as np
 from enum import Enum
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import (Brain, Edge, EdgeType, EdgeSource,
                          NodeStatus, NodeType, BrainMode, ANALOGY_WEIGHTS)
 from config import THRESHOLDS
 from embedding import embed as shared_embed
+from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL        = "llama3.1:8b"
 DEFAULT_STEPS       = 20
 DEFAULT_TEMP        = 0.7
 DEPTH_STEPS         = 3
@@ -151,12 +150,24 @@ Connection made: "{narration}"
 
 Does this meaningfully advance the central question?
 
+Strength rubric:
+- 0.1-0.3: Tangential — relates to the same broad topic but doesn't directly inform the question
+  Example: If question is "How does sleep aid creativity?" and idea is "The brain uses glucose" — tangential.
+- 0.4-0.6: Relevant — provides useful context or a building block, but doesn't answer the question
+  Example: "REM sleep involves heightened acetylcholine" — relevant context but not a direct advance.
+- 0.7-0.85: Advancing — directly informs a possible answer or resolves a sub-question
+  Example: "Studies show REM dreamers score higher on remote association tests" — a clear advance.
+- 0.9-1.0: Breakthrough — fundamentally changes understanding of the question. VERY rare.
+  Example: "A mechanism was identified where memory replay during REM loosens associative constraints" — breakthrough.
+
 Respond with JSON:
 {{
   "advances": true or false,
   "explanation": "one sentence",
-  "strength": 0.0 to 1.0
+  "strength": 0.0 to 1.0 (use rubric above)
 }}
+
+Respond ONLY with JSON. No preamble.
 """
 
 ANSWER_CHECK_PROMPT = """
@@ -165,17 +176,35 @@ Open question: {question}
 
 Does the current idea answer or significantly advance this question?
 
+Grading definitions:
+- "none": The idea is unrelated to the question, or only shares surface-level vocabulary.
+- "partial": The idea addresses PART of the question or provides indirect evidence.
+  Example: Question "What causes X?" — idea describes a correlated factor but not a cause.
+- "strong": The idea directly answers or resolves the question, or provides definitive evidence.
+  Example: Question "What causes X?" — idea identifies the specific mechanism causing X.
+
 Respond with JSON:
 {{
   "match": "none" | "partial" | "strong",
   "explanation": "one sentence"
 }}
+
+Respond ONLY with JSON. No preamble.
 """
 
 QUESTION_SIMILAR_PROMPT = """
-Are these two questions essentially the same?
+Are these two questions asking the SAME THING, even if worded differently?
+
+"Same" means: if one were fully answered, the other would also be fully answered.
+"Different" means: they could have separate answers, even if they cover related topics.
+
 Q1: {q1}
 Q2: {q2}
+
+Examples:
+- "How does sleep affect memory?" vs "What is sleep's role in memory consolidation?" → YES (same question)
+- "How does sleep affect memory?" vs "Does REM or NREM matter more for memory?" → NO (related but distinct)
+
 Respond ONLY "yes" or "no".
 """
 
@@ -251,17 +280,11 @@ Respond with ONLY the node ID.
 class Dreamer:
     def __init__(self, brain: Brain, research_agenda=None):
         self.brain           = brain
-        self.llm             = Client()
         self.research_agenda = research_agenda
         self._embedding_cache = {}
 
     def _llm(self, prompt: str, temperature: float = 0.7) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="creative")
 
     def _embed(self, text: str) -> np.ndarray:
         if text in self._embedding_cache:
@@ -347,6 +370,14 @@ class Dreamer:
 
         if mode == DreamMode.SEEDED and seed_id:
             return seed_id
+
+        # Working memory bias: 30% chance of starting from focused item
+        wm = self.brain.get_working_memory()
+        if wm and random.random() < 0.3:
+            wm_nid, wm_data = random.choice(wm)
+            if wm_data.get('node_type') != NodeType.MISSION.value:
+                print(f"   Starting from working memory: {wm_data['statement'][:60]}...")
+                return wm_nid
 
         non_mission = [(nid, d) for nid, d in nodes
                        if d.get('node_type') != NodeType.MISSION.value]
@@ -463,7 +494,7 @@ class Dreamer:
                 current_node=node_data['statement'], question=item.text
             ), temperature=0.1)
             try:
-                result = json.loads(raw)
+                result = require_json(raw, default={})
                 match  = result.get('match', 'none')
                 expl   = result.get('explanation', '')
                 if match in ['partial', 'strong']:
@@ -485,7 +516,7 @@ class Dreamer:
             node=node_data['statement'],
             narration=narration), temperature=0.4)
         try:
-            result = json.loads(raw)
+            result = require_json(raw, default={})
             if result.get('advances') and result.get('strength', 0) > 0.5:
                 return True, result.get('explanation', ''), result.get('strength', 0.5)
         except (json.JSONDecodeError, ValueError):

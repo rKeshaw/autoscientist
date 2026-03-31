@@ -4,14 +4,13 @@ import time
 import uuid
 import requests
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import Brain, EdgeSource
 from ingestion.ingestor import Ingestor
 from persistence import atomic_write_json
+from llm_utils import llm_call
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL      = "llama3.1:8b"
 READING_LIST_PATH = "data/reading_list.json"
 MAX_TEXT_CHARS    = 8000   # truncate very long pages
 MIN_TEXT_CHARS    = 200    # ignore tiny pages
@@ -123,18 +122,12 @@ class Reader:
         self.brain    = brain
         self.observer = observer
         self.notebook = notebook
-        self.llm      = Client()
         self.ingestor = Ingestor(brain, research_agenda=observer)
         self.reading_list: list[ReadingEntry] = []
         self._load_list()
 
     def _llm(self, prompt: str, temperature: float = 0.6) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="precise")
 
     # ── Reading list management ───────────────────────────────────────────────
 

@@ -14,3 +14,26 @@ class ThresholdConfig:
 
 THRESHOLDS = ThresholdConfig()
 
+
+class ModelConfig:
+    """
+    Per-role model selection.
+
+    Override any of these to use different models for different tasks:
+        MODELS.CREATIVE = "llama3.1:70b"   # bigger model for dreaming
+        MODELS.PRECISE  = "qwen2.5:7b"     # faster model for JSON extraction
+    """
+    # Creative tasks: dreaming, synthesis, analogies
+    CREATIVE     = "llama3.1:8b"
+    # Precise tasks: JSON extraction, factual answers
+    PRECISE      = "llama3.1:8b"
+    # Code generation: sandbox experiments
+    CODE         = "llama3.1:8b"
+    # Deliberate reasoning: thinker, chain-of-thought
+    REASONING    = "llama3.1:8b"
+    # Conversation: chat interface
+    CONVERSATION = "llama3.1:8b"
+
+
+MODELS = ModelConfig()
+

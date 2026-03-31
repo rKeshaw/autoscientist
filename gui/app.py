@@ -21,9 +21,14 @@ from researcher.researcher import Researcher
 from reader.reader import Reader
 from notebook.notebook import Notebook
 from sandbox.sandbox import Sandbox
+from embedding_index import EmbeddingIndex
+from embedding import embed as shared_embed
+from conversation.conversation import Conversationalist
+from thinker.thinker import Thinker
 
 BRAIN_PATH    = "data/brain.json"
 OBSERVER_PATH = "data/observer.json"
+INDEX_PATH    = "data/embedding_index"
 DAILY_LEDGER_PATH = "data/daily_new_nodes.json"
 
 app = Flask(__name__, template_folder='templates')
@@ -84,18 +89,29 @@ try:    observer.load(OBSERVER_PATH)
 except Exception: pass
 state["cycle"] = _restore_cycle()
 
-ingestor     = Ingestor(brain, research_agenda=observer)
+# ── Load or build embedding index ─────────────────────────────────────────────
+try:
+    emb_index = EmbeddingIndex.load(INDEX_PATH)
+except (FileNotFoundError, Exception):
+    emb_index = EmbeddingIndex.build_from_brain(brain, shared_embed)
+
+ingestor     = Ingestor(brain, research_agenda=observer, embedding_index=emb_index)
 dreamer      = Dreamer(brain, research_agenda=observer)
-consolidator = Consolidator(brain, observer=observer)
+consolidator = Consolidator(brain, observer=observer, embedding_index=emb_index)
 researcher   = Researcher(brain, observer=observer, depth="standard")
 notebook     = Notebook(brain, observer=observer)
 sandbox      = Sandbox(brain, observer=observer)
 reader       = Reader(brain, observer=observer, notebook=notebook)
+conversation = Conversationalist(
+    brain, observer=observer, embedding_index=emb_index, ingestor=ingestor
+)
+thinker = Thinker(brain, observer=observer, embedding_index=emb_index)
 
 def save_state():
     with state_lock:
         brain.save(BRAIN_PATH)
         observer.save(OBSERVER_PATH)
+        emb_index.save(INDEX_PATH)
 
 def append_daily_nodes(node_ids):
     if not node_ids:
@@ -475,7 +491,9 @@ def api_run_phase(phase):
     runners = {
         "dream":         _run_dream,
         "research":      _run_research,
+        "thinking":      _run_thinking,
         "consolidation": _run_consolidation,
+        "writing":       _run_writing,
         "sandbox":       _run_sandbox,
         "reading":       _run_reading,
     }
@@ -656,6 +674,75 @@ def _run_sandbox():
         save_state()
         state["phase"] = "idle"
         emit("phase_change",{"phase":"idle","message":state["message"]})
+
+# ── Thinking & Writing ────────────────────────────────────────────────────────
+
+def _run_thinking():
+    state["phase"]  = "thinking"
+    state["message"]= "Thinking session..."
+    emit("phase_change",{"phase":"thinking","message":"Deliberate reasoning..."})
+    try:
+        logs = thinker.think_session(num_rounds=3)
+        insights = [l.insight for l in logs if l.insight]
+        state["message"] = f"Thinking: {len(insights)} insights produced."
+        for log in logs:
+            emit("thinking_step",{
+                "pattern":log.pattern,"question":log.question,
+                "insight":log.insight,"duration":log.duration})
+    except Exception as e:
+        state["message"] = f"Thinking error: {e}"
+        emit("error",{"message":str(e)})
+    finally:
+        save_state()
+        state["phase"] = "idle"
+        emit("phase_change",{"phase":"idle","message":state["message"]})
+
+def _run_writing():
+    state["phase"]  = "writing"
+    state["message"]= "Writing synthesis..."
+    emit("phase_change",{"phase":"writing","message":"Writing synthesis essay..."})
+    try:
+        result = notebook.write_synthesis_essay(state.get("cycle",0))
+        # Ingest insights back into graph
+        from ingestion.ingestor import EdgeSource
+        for insight in result.get('insights', []):
+            if isinstance(insight, str) and len(insight) > 15:
+                ingestor.ingest(insight, source=EdgeSource.CONSOLIDATION)
+        for question in result.get('questions', []):
+            if isinstance(question, str) and len(question) > 10:
+                observer.add_to_agenda(text=question, item_type="question",
+                                       cycle=state.get("cycle",0))
+        state["message"] = f"Essay written, {len(result.get('insights',[]))} insights."
+    except Exception as e:
+        state["message"] = f"Writing error: {e}"
+        emit("error",{"message":str(e)})
+    finally:
+        save_state()
+        state["phase"] = "idle"
+        emit("phase_change",{"phase":"idle","message":state["message"]})
+
+# ── Conversation ──────────────────────────────────────────────────────────────
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    message = request.json.get("message", "").strip()
+    if not message:
+        return jsonify({"error": "no message"}), 400
+    try:
+        result = conversation.chat(message)
+        save_state()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/chat/reset", methods=["POST"])
+def api_chat_reset():
+    conversation.reset()
+    return jsonify({"status": "cleared"})
+
+@app.route("/api/chat/history")
+def api_chat_history():
+    return jsonify(conversation.get_history())
 
 @app.route("/")
 def index():

@@ -3,15 +3,15 @@ import time
 import os
 import numpy as np
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import (Brain, Node, Edge, EdgeType, EdgeSource,
                          NodeStatus, NodeType)
 from config import THRESHOLDS
 from embedding import embed as shared_embed
+from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL          = "llama3.1:8b"
+
 DUPLICATE_THRESHOLD   = THRESHOLDS.DUPLICATE_MERGE
 SYNTHESIS_SAMPLE      = 6      # how many recent nodes to check for synthesis
 ABSTRACTION_MIN_NODES = 3      # min cluster size to attempt abstraction
@@ -29,8 +29,20 @@ These ideas all arrived from research and conversation:
 {nodes}
 
 Do these ideas, taken together, imply something that none of them state explicitly?
-A synthesis is a new insight that emerges from the combination — not a summary,
-but something genuinely new that the combination reveals.
+A synthesis is a new insight that emerges from the COMBINATION — not a summary
+or paraphrase, but something genuinely new that the combination reveals.
+
+CRITICAL DISTINCTION:
+- A synthesis says something NEW that no individual node says.
+- A summary just restates what's already there in fewer words.
+
+Example of a BAD synthesis (this is just a summary):
+  Nodes: "Sleep deprivation impairs memory" + "Exercise improves sleep quality"
+  BAD: "Sleep and exercise both affect cognitive function" ← this is a summary, NOT a synthesis.
+
+Example of a GOOD synthesis (this is genuinely new):
+  Nodes: "Sleep deprivation impairs memory" + "Exercise improves sleep quality"
+  GOOD: "Exercise may serve as a cognitive enhancer specifically through its effect on sleep-dependent memory consolidation — suggesting a daily exercise → better sleep → improved memory pipeline."
 
 If a synthesis exists, respond with a JSON object:
 {{
@@ -40,7 +52,7 @@ If a synthesis exists, respond with a JSON object:
   "source_ids": [list of node IDs that contributed to this synthesis]
 }}
 
-If no meaningful synthesis emerges, respond with:
+If no meaningful synthesis emerges (be honest — most sets of ideas do NOT synthesize), respond with:
 {{"synthesis": false}}
 
 Respond ONLY with JSON. No preamble. No markdown.
@@ -52,8 +64,14 @@ You are looking for a higher-order pattern across a cluster of ideas.
 These ideas all belong to the same domain cluster:
 {nodes}
 
-Is there a unifying principle, generalization, or abstraction that sits above
+Is there a unifying principle, generalization, or abstraction that sits ABOVE
 all of these — something that explains why they all belong together?
+
+A real abstraction captures a META-PATTERN, not just a category.
+Bad: "These are all about neuroscience" ← that's just a label.
+Good: "All of these describe cases where noisy, imprecise signals paradoxically
+       produce more robust system-level behavior — suggesting a general principle
+       that biological systems exploit noise rather than merely tolerating it."
 
 If yes, respond with a JSON object:
 {{
@@ -62,7 +80,7 @@ If yes, respond with a JSON object:
   "cluster": "{cluster}"
 }}
 
-If no meaningful abstraction exists, respond with:
+If no meaningful abstraction exists (be honest), respond with:
 {{"abstraction": false}}
 
 Respond ONLY with JSON. No preamble.
@@ -75,9 +93,15 @@ Idea A: {node_a}
 Idea B: {node_b}
 Their relationship: {edge_narration}
 
-Does their connection imply a third idea that must exist between them —
-something that would explain or mediate their relationship, but is not
-yet stated anywhere?
+Does their connection REQUIRE a third idea that must logically exist between them —
+something that would explain or mediate their relationship, but is not yet stated?
+
+A gap is a MISSING LINK, not just a related topic.
+Bad: A="DNA stores information" B="Proteins do work" → "RNA" is NOT a gap, it's just another topic.
+Good: A="DNA stores information" B="Proteins do work" → "There must be a translation mechanism
+      that reads the stored information and converts it into functional proteins" IS a gap.
+
+The test: if the gap idea were true, would it make the A→B connection feel INEVITABLE?
 
 If yes, respond with a JSON object:
 {{
@@ -134,6 +158,8 @@ class ConsolidationReport:
     gaps:          int   = 0
     contradictions_updated: int = 0
     edges_decayed: int   = 0
+    insights_promoted: int  = 0
+    insights_pending:  int  = 0
     summary:       str   = ""
     new_node_ids:  list  = field(default_factory=list)
     synthesis_ids: list  = field(default_factory=list)
@@ -145,19 +171,16 @@ class ConsolidationReport:
 # ── Consolidator ──────────────────────────────────────────────────────────────
 
 class Consolidator:
-    def __init__(self, brain: Brain, observer=None):
+    def __init__(self, brain: Brain, observer=None, embedding_index=None,
+                 insight_buffer=None):
         self.brain    = brain
         self.observer = observer
-        self.llm      = Client()
         self._embedding_cache: dict = {}
+        self.index     = embedding_index
+        self.insight_buffer = insight_buffer
 
     def _llm(self, prompt: str, temperature: float = 0.6) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="precise")
 
     def _embed(self, text: str) -> np.ndarray:
         if text in self._embedding_cache:
@@ -183,46 +206,32 @@ class Consolidator:
         Merge them: combine statements, inherit all edges, delete the weaker node.
         """
         print("  [1/6] Near-duplicate cleanup...")
-        # snapshot before loop — deletions would corrupt iteration
-        nodes    = list(self.brain.all_nodes())
-        node_ids = [nid for nid, _ in nodes]
         merged   = set()
 
-        for i in range(len(node_ids)):
-            if node_ids[i] in merged:
-                continue
-            for j in range(i + 1, len(node_ids)):
-                if node_ids[j] in merged:
+        # Use index for O(n) pairwise scan if available, else fallback
+        if self.index:
+            pairs = self.index.all_pairwise_above(DUPLICATE_THRESHOLD)
+            for nid_i, nid_j, sim in pairs:
+                if nid_i in merged or nid_j in merged:
+                    continue
+                node_i = self.brain.get_node(nid_i)
+                node_j = self.brain.get_node(nid_j)
+                if not node_i or not node_j:
                     continue
 
-                emb_i = self._get_node_embedding(node_ids[i])
-                emb_j = self._get_node_embedding(node_ids[j])
-                if emb_i is None or emb_j is None:
-                    continue
-
-                sim = self._cosine(emb_i, emb_j)
-                if sim < DUPLICATE_THRESHOLD:
-                    continue
-
-                # merge j into i
-                node_i = self.brain.get_node(node_ids[i])
-                node_j = self.brain.get_node(node_ids[j])
-
-                # generate unified statement
                 unified = self._llm(MERGE_NARRATION_PROMPT.format(
                     node_a=node_i['statement'],
                     node_b=node_j['statement']
                 ), temperature=0.4)
-                self.brain.update_node(node_ids[i], statement=unified)
+                self.brain.update_node(nid_i, statement=unified)
 
-                # inherit edges from j — redirect to i
-                for neighbor in list(self.brain.graph.successors(node_ids[j])):
-                    if neighbor == node_ids[i]:
+                for neighbor in list(self.brain.graph.successors(nid_j)):
+                    if neighbor == nid_i:
                         continue
-                    edge_data = self.brain.get_edge(node_ids[j], neighbor)
+                    edge_data = self.brain.get_edge(nid_j, neighbor)
                     if edge_data and not (
-                        self.brain.graph.has_edge(node_ids[i], neighbor) or
-                        self.brain.graph.has_edge(neighbor, node_ids[i])
+                        self.brain.graph.has_edge(nid_i, neighbor) or
+                        self.brain.graph.has_edge(neighbor, nid_i)
                     ):
                         edge = Edge(
                             type       = EdgeType(edge_data['type']),
@@ -232,15 +241,15 @@ class Consolidator:
                             source     = EdgeSource(edge_data['source']),
                             decay_exempt = edge_data.get('decay_exempt', False)
                         )
-                        self.brain.add_edge(node_ids[i], neighbor, edge)
+                        self.brain.add_edge(nid_i, neighbor, edge)
 
-                for predecessor in list(self.brain.graph.predecessors(node_ids[j])):
-                    if predecessor == node_ids[i]:
+                for predecessor in list(self.brain.graph.predecessors(nid_j)):
+                    if predecessor == nid_i:
                         continue
-                    edge_data = self.brain.get_edge(predecessor, node_ids[j])
+                    edge_data = self.brain.get_edge(predecessor, nid_j)
                     if edge_data and not (
-                        self.brain.graph.has_edge(predecessor, node_ids[i]) or
-                        self.brain.graph.has_edge(node_ids[i], predecessor)
+                        self.brain.graph.has_edge(predecessor, nid_i) or
+                        self.brain.graph.has_edge(nid_i, predecessor)
                     ):
                         edge = Edge(
                             type       = EdgeType(edge_data['type']),
@@ -250,14 +259,88 @@ class Consolidator:
                             source     = EdgeSource(edge_data['source']),
                             decay_exempt = edge_data.get('decay_exempt', False)
                         )
-                        self.brain.add_edge(predecessor, node_ids[i], edge)
+                        self.brain.add_edge(predecessor, nid_i, edge)
 
-                # delete j
-                self.brain.graph.remove_node(node_ids[j])
-                merged.add(node_ids[j])
+                self.brain.graph.remove_node(nid_j)
+                self.index.remove(nid_j)
+                # Update the merged node's embedding in the index
+                unified_emb = self._embed(unified)
+                self.index.add(nid_i, unified_emb)
+                merged.add(nid_j)
                 report.merges += 1
-                print(f"    Merged {node_ids[j][:8]} → {node_ids[i][:8]} "
+                print(f"    Merged {nid_j[:8]} \u2192 {nid_i[:8]} "
                       f"(sim={sim:.2f})")
+        else:
+            # Original O(n\u00b2) fallback
+            nodes    = list(self.brain.all_nodes())
+            node_ids = [nid for nid, _ in nodes]
+
+            for i in range(len(node_ids)):
+                if node_ids[i] in merged:
+                    continue
+                for j in range(i + 1, len(node_ids)):
+                    if node_ids[j] in merged:
+                        continue
+
+                    emb_i = self._get_node_embedding(node_ids[i])
+                    emb_j = self._get_node_embedding(node_ids[j])
+                    if emb_i is None or emb_j is None:
+                        continue
+
+                    sim = self._cosine(emb_i, emb_j)
+                    if sim < DUPLICATE_THRESHOLD:
+                        continue
+
+                    node_i = self.brain.get_node(node_ids[i])
+                    node_j = self.brain.get_node(node_ids[j])
+
+                    unified = self._llm(MERGE_NARRATION_PROMPT.format(
+                        node_a=node_i['statement'],
+                        node_b=node_j['statement']
+                    ), temperature=0.4)
+                    self.brain.update_node(node_ids[i], statement=unified)
+
+                    for neighbor in list(self.brain.graph.successors(node_ids[j])):
+                        if neighbor == node_ids[i]:
+                            continue
+                        edge_data = self.brain.get_edge(node_ids[j], neighbor)
+                        if edge_data and not (
+                            self.brain.graph.has_edge(node_ids[i], neighbor) or
+                            self.brain.graph.has_edge(neighbor, node_ids[i])
+                        ):
+                            edge = Edge(
+                                type       = EdgeType(edge_data['type']),
+                                narration  = edge_data['narration'],
+                                weight     = edge_data['weight'],
+                                confidence = edge_data['confidence'],
+                                source     = EdgeSource(edge_data['source']),
+                                decay_exempt = edge_data.get('decay_exempt', False)
+                            )
+                            self.brain.add_edge(node_ids[i], neighbor, edge)
+
+                    for predecessor in list(self.brain.graph.predecessors(node_ids[j])):
+                        if predecessor == node_ids[i]:
+                            continue
+                        edge_data = self.brain.get_edge(predecessor, node_ids[j])
+                        if edge_data and not (
+                            self.brain.graph.has_edge(predecessor, node_ids[i]) or
+                            self.brain.graph.has_edge(node_ids[i], predecessor)
+                        ):
+                            edge = Edge(
+                                type       = EdgeType(edge_data['type']),
+                                narration  = edge_data['narration'],
+                                weight     = edge_data['weight'],
+                                confidence = edge_data['confidence'],
+                                source     = EdgeSource(edge_data['source']),
+                                decay_exempt = edge_data.get('decay_exempt', False)
+                            )
+                            self.brain.add_edge(predecessor, node_ids[i], edge)
+
+                    self.brain.graph.remove_node(node_ids[j])
+                    merged.add(node_ids[j])
+                    report.merges += 1
+                    print(f"    Merged {node_ids[j][:8]} \u2192 {node_ids[i][:8]} "
+                          f"(sim={sim:.2f})")
 
         print(f"    Done — {report.merges} merges")
 
@@ -362,18 +445,22 @@ class Consolidator:
                 cluster = cluster
             ), temperature=0.6)
             try:
-                result = json.loads(raw)
+                result = require_json(raw, default={})
                 if result.get('abstraction'):
                     stmt = result['statement']
 
                     # check it isn't a duplicate of something existing
                     stmt_emb = self._embed(stmt)
                     is_dup = False
-                    for nid, data in self.brain.all_nodes():
-                        existing_emb = self._embed(data['statement'])
-                        if self._cosine(stmt_emb, existing_emb) > DUPLICATE_THRESHOLD:
-                            is_dup = True
-                            break
+                    if self.index:
+                        dups = self.index.query(stmt_emb, threshold=DUPLICATE_THRESHOLD, top_k=1)
+                        is_dup = len(dups) > 0
+                    else:
+                        for nid, data in self.brain.all_nodes():
+                            existing_emb = self._embed(data['statement'])
+                            if self._cosine(stmt_emb, existing_emb) > DUPLICATE_THRESHOLD:
+                                is_dup = True
+                                break
 
                     if is_dup:
                         continue
@@ -386,6 +473,8 @@ class Consolidator:
                         importance= 0.8   # abstractions are high importance
                     )
                     nid = self.brain.add_node(node)
+                    if self.index:
+                        self.index.add(nid, stmt_emb)
                     report.abstractions += 1
 
                     # connect to all cluster members
@@ -449,7 +538,7 @@ class Consolidator:
                 edge_narration= data.get('narration', '')
             ), temperature=0.6)
             try:
-                result = json.loads(raw)
+                result = require_json(raw, default={})
                 if result.get('gap'):
                     stmt    = result['statement']
                     cluster = result.get('cluster', node_u.get('cluster', 'general'))
@@ -457,11 +546,15 @@ class Consolidator:
                     # don't create duplicate gap nodes
                     stmt_emb = self._embed(stmt)
                     is_dup   = False
-                    for nid, ndata in self.brain.all_nodes():
-                        if self._cosine(stmt_emb,
-                                self._embed(ndata['statement'])) > GAP_DEDUP_THRESHOLD:
-                            is_dup = True
-                            break
+                    if self.index:
+                        dups = self.index.query(stmt_emb, threshold=GAP_DEDUP_THRESHOLD, top_k=1)
+                        is_dup = len(dups) > 0
+                    else:
+                        for nid, ndata in self.brain.all_nodes():
+                            if self._cosine(stmt_emb,
+                                    self._embed(ndata['statement'])) > GAP_DEDUP_THRESHOLD:
+                                is_dup = True
+                                break
                     if is_dup:
                         continue
 
@@ -473,6 +566,8 @@ class Consolidator:
                         importance= 0.6
                     )
                     nid = self.brain.add_node(node)
+                    if self.index:
+                        self.index.add(nid, stmt_emb)
                     report.gap_ids.append(nid)
                     report.gaps += 1
 
@@ -544,9 +639,9 @@ class Consolidator:
 
     def _apply_decay(self, report: ConsolidationReport):
         """
-        Decay all non-exempt edges. Contradictions are exempt.
+        Decay all non-exempt edges AND unverified node confidence.
         """
-        print("  [6/6] Edge decay...")
+        print("  [6/6] Edge + confidence decay...")
         before = len(self.brain.graph.edges)
         try:
             with open(LAST_CONSOLIDATION_PATH, "r") as f:
@@ -569,7 +664,47 @@ class Consolidator:
             self.brain.graph.remove_edge(u, v)
 
         report.edges_decayed = before - len(self.brain.graph.edges)
-        print(f"    Done — {report.edges_decayed} edges pruned")
+        print(f"    Edges pruned: {report.edges_decayed}")
+
+        # ── Node confidence decay ──
+        # Nodes not verified in >3 days get source_quality reduced
+        now = time.time()
+        stale_threshold = 3 * 86400  # 3 days in seconds
+        decay_rate = 0.02            # 2% per elapsed day
+        nodes_decayed = 0
+
+        for nid, data in self.brain.all_nodes():
+            last_verified = data.get('last_verified', 0)
+            source_quality = data.get('source_quality', 0.5)
+            if last_verified and (now - last_verified) > stale_threshold:
+                days_stale = (now - last_verified - stale_threshold) / 86400
+                # Dream-synthesized nodes decay faster
+                rate = decay_rate * 2 if source_quality < 0.5 else decay_rate
+                new_quality = max(0.05, source_quality - (rate * days_stale * elapsed_days))
+                if new_quality < source_quality:
+                    self.brain.update_node(nid, source_quality=new_quality)
+                    nodes_decayed += 1
+
+        if nodes_decayed:
+            print(f"    Node confidence decayed: {nodes_decayed} nodes")
+
+    # ── Step 7: Insight buffer re-evaluation ──────────────────────────────────
+
+    def _evaluate_insight_buffer(self, report: ConsolidationReport):
+        """Re-evaluate near-miss pairs saved during ingestion."""
+        if not self.insight_buffer:
+            return
+
+        print("  [7/7] Insight buffer re-evaluation...")
+        result = self.insight_buffer.evaluate_all()
+        report.insights_promoted = result.get("promoted", 0)
+        report.insights_pending  = result.get("remaining", 0)
+
+        if result["promoted"] > 0:
+            print(f"    ★ Promoted {result['promoted']} delayed insights!")
+        if result["pruned"] > 0:
+            print(f"    Pruned {result['pruned']} stale pairs")
+        print(f"    Buffer: {result['remaining']} pairs still pending")
 
     def _recompute_mission_relevance(self):
         mission = self.brain.get_mission()
@@ -595,7 +730,7 @@ class Consolidator:
             )
             raw = self._llm(prompt, temperature=0.1)
             try:
-                result = json.loads(raw)
+                result = require_json(raw, default={})
                 if result.get("relevant") and result.get("strength", 0) > 0.4:
                     self.brain.link_to_mission(
                         nid,
@@ -630,6 +765,7 @@ class Consolidator:
         self._gap_detection(report)
         self._contradiction_update(report)
         self._apply_decay(report)
+        self._evaluate_insight_buffer(report)
         self._recompute_mission_relevance()
 
         # generate summary

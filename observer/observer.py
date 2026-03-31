@@ -2,16 +2,15 @@ import json
 import time
 import numpy as np
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import Brain, EdgeType, NodeType
 from dreamer.dreamer import DreamLog, DreamStep
 from config import THRESHOLDS
 from embedding import embed as shared_embed
 from persistence import atomic_write_json
+from llm_utils import llm_call
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL               = "llama3.1:8b"
 WEAK_EDGE_REPEAT_THRESHOLD = 3
 QUESTION_REPEAT_THRESHOLD  = 2
 COHERENCE_THRESHOLD        = THRESHOLDS.COHERENCE
@@ -63,9 +62,18 @@ class EmergenceSignal:
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 QUESTION_SIMILAR_PROMPT = """
-Are these two questions essentially the same, even if worded differently?
+Are these two questions asking the SAME THING, even if worded differently?
+
+"Same" means: if one were fully answered, the other would also be fully answered.
+"Different" means: they could have separate answers, even if they cover related topics.
+
 Q1: {q1}
 Q2: {q2}
+
+Examples:
+- "What role does X play in Y?" vs "How does X influence Y?" → YES (same question)
+- "What role does X play in Y?" vs "Is X or Z more important for Y?" → NO (related but distinct)
+
 Respond ONLY "yes" or "no".
 """
 
@@ -88,8 +96,28 @@ Idea B: {node_b}
 Connection: {narration}
 Insight depth claimed: {depth}
 
-Respond with ONLY a float 0.0 to 1.0.
-Weigh depth heavily: isomorphism=0.8-1.0, structural=0.5-0.8, surface=0.1-0.5.
+Scoring rubric (0.0 to 1.0):
+
+- 0.0-0.2: Incoherent — the claimed connection doesn't actually hold, or is a stretch.
+  Example: "Stars are hot" → "Hot dogs are food" via shared word "hot" = 0.1 (spurious).
+
+- 0.2-0.4: Surface — shared vocabulary/theme but no deeper structure.
+  Example: "Networks of neurons" → "Social networks" via "both are networks" = 0.3.
+
+- 0.4-0.6: Moderate — a plausible analogical mapping with some structural overlap.
+  Example: "Ant colony optimization" → "Neural network learning" via shared emergence = 0.5.
+
+- 0.6-0.8: Strong structural — clear relational correspondence (A:B::X:Y).
+  Example: "Natural selection" → "Gradient descent" via shared optimization-via-iterative-selection = 0.7.
+
+- 0.8-1.0: Isomorphic — formal mathematical or logical equivalence.
+  Example: "Heat equation" → "Diffusion equation" via identical PDEs = 0.95.
+
+Cross-check the claimed depth:
+- If depth="isomorphism" but the connection is really just shared vocabulary → score LOW (0.1-0.3).
+- If depth="surface" but there's actually a deep structural parallel → score HIGHER than surface would suggest.
+
+Respond with ONLY a float 0.0 to 1.0. No other text.
 """
 
 HYPOTHESIS_ADVANCE_PROMPT = """
@@ -123,7 +151,6 @@ Write like a scientist assessing their own progress.
 class Observer:
     def __init__(self, brain: Brain):
         self.brain                 = brain
-        self.llm                   = Client()
         self.agenda: list[AgendaItem]          = []
         self.agenda_embeddings: list           = []
         self.emergence_feed: list[EmergenceSignal] = []
@@ -134,12 +161,7 @@ class Observer:
         self._emergence_last_fired: dict       = {}
 
     def _llm(self, prompt: str, temperature: float = 0.5) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="precise")
 
     def _embed(self, text: str) -> np.ndarray:
         return shared_embed(text)

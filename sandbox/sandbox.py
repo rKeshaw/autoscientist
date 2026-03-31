@@ -5,13 +5,12 @@ import sys
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import Brain, Node, Edge, EdgeType, EdgeSource, NodeType, NodeStatus
 from persistence import atomic_write_json
+from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL      = "llama3.1:8b"
 SANDBOX_TIMEOUT   = 30
 MAX_OUTPUT_CHARS  = 2000
 SANDBOX_LOG_PATH  = "logs/sandbox_log.json"
@@ -28,6 +27,17 @@ A hypothesis is computationally testable if it:
 - Proposes a relationship between variables that can be simulated
 - Suggests a mathematical structure that can be checked formally
 - Can be partially validated through data analysis or statistical modeling
+
+A hypothesis is NOT computationally testable if it:
+- Is purely qualitative with no measurable prediction (e.g., "consciousness is fundamental")
+- Requires real-world experiments that cannot be simulated (e.g., "this drug cures cancer")
+- Is a definitional statement rather than a prediction (e.g., "mammals are warm-blooded")
+
+Examples:
+- TESTABLE: "Information integration in a network scales logarithmically with connection density"
+  → approach: simulate networks of varying density, measure information integration metric.
+- NOT TESTABLE: "Subjective experience arises from quantum effects in microtubules"
+  → cannot be computationally simulated without a theory of subjective experience.
 
 Respond with a JSON object:
 {{
@@ -75,12 +85,20 @@ Important distinction:
 - "supports" means the output provides positive evidence
 - "contradicts" means the output provides negative evidence
 
+Confidence rubric:
+- 0.1-0.3: Weak evidence — the result is suggestive but the test has major limitations
+  (e.g., oversimplified model, small parameter space explored)
+- 0.4-0.6: Moderate — the test is reasonable and the result is clear, but the hypothesis
+  could still be true/false for reasons the test didn't capture
+- 0.7-0.85: Strong — the test directly addresses the hypothesis and the result is unambiguous
+- 0.9-1.0: Definitive — the test is comprehensive and leaves little room for alternative explanations. VERY rare for computational tests.
+
 Interpret this result honestly.
 
 Respond with a JSON object:
 {{
   "verdict": one of ["supports", "contradicts", "inconclusive", "error"],
-  "confidence": a float 0.0 to 1.0,
+  "confidence": a float 0.0 to 1.0 (use rubric above),
   "interpretation": "2-3 sentences interpreting the result",
   "implications": "1-2 sentences on what this means for the central question"
 }}
@@ -115,17 +133,11 @@ class Sandbox:
     def __init__(self, brain: Brain, observer=None):
         self.brain    = brain
         self.observer = observer
-        self.llm      = Client()
         self.results: list[SandboxResult] = []
         self._load()
 
     def _llm(self, prompt: str, temperature: float = 0.5) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="code")
 
     def _mission(self) -> str:
         m = self.brain.get_mission()

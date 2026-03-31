@@ -17,13 +17,19 @@ from researcher.researcher import Researcher
 from reader.reader import Reader
 from notebook.notebook import Notebook
 from sandbox.sandbox import Sandbox
+from thinker.thinker import Thinker
+from insight_buffer import InsightBuffer
+from embedding_index import EmbeddingIndex
+from embedding import embed as shared_embed
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
 SCHEDULE = {
     "nrem_rem":    "0 23 * * *",
     "research":    "0 9  * * *",
+    "thinking":    "0 11 * * *",   # morning thinking session
     "reading":     "0 14 * * *",   # afternoon reading
+    "writing":     "0 16 * * *",   # afternoon writing phase
     "consolidate": "0 20 * * *",
 }
 
@@ -36,6 +42,7 @@ REGEN_LIST_THRESHOLD = 3   # regenerate reading list when fewer than this unread
 
 BRAIN_PATH    = "data/brain.json"
 OBSERVER_PATH = "data/observer.json"
+INDEX_PATH    = "data/embedding_index"
 DAILY_LEDGER_PATH = "data/daily_new_nodes.json"
 
 # ── Cycle log ─────────────────────────────────────────────────────────────────
@@ -88,15 +95,32 @@ class DreamerScheduler:
         self.observer = Observer(self.brain)
         self._load_state()
 
-        self.ingestor    = Ingestor(self.brain, research_agenda=self.observer)
+        # Load or build embedding index
+        try:
+            self.emb_index = EmbeddingIndex.load(INDEX_PATH)
+        except (FileNotFoundError, Exception):
+            self.emb_index = EmbeddingIndex.build_from_brain(
+                self.brain, shared_embed)
+
+        # Shared insight buffer
+        self.insight_buffer = InsightBuffer(self.brain,
+                                            embedding_index=self.emb_index)
+
+        self.ingestor    = Ingestor(self.brain, research_agenda=self.observer,
+                                    embedding_index=self.emb_index,
+                                    insight_buffer=self.insight_buffer)
         self.dreamer     = Dreamer(self.brain, research_agenda=self.observer)
-        self.consolidator= Consolidator(self.brain, observer=self.observer)
+        self.consolidator= Consolidator(self.brain, observer=self.observer,
+                                         embedding_index=self.emb_index,
+                                         insight_buffer=self.insight_buffer)
         self.researcher  = Researcher(self.brain, observer=self.observer,
                                       depth=RESEARCH_DEPTH)
         self.notebook    = Notebook(self.brain, observer=self.observer)
         self.reader      = Reader(self.brain, observer=self.observer,
                                   notebook=self.notebook)
         self.sandbox     = Sandbox(self.brain, observer=self.observer)
+        self.thinker     = Thinker(self.brain, observer=self.observer,
+                                   embedding_index=self.emb_index)
 
         signal.signal(signal.SIGINT,  self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -114,6 +138,7 @@ class DreamerScheduler:
     def _save_state(self):
         self.brain.save(BRAIN_PATH)
         self.observer.save(OBSERVER_PATH)
+        self.emb_index.save(INDEX_PATH)
 
     def _shutdown(self, signum, frame):
         print("\n── Shutdown signal — saving state ──")
@@ -276,6 +301,57 @@ class DreamerScheduler:
             self.cycle_log.add(entry)
             self._save_state()
 
+    def run_thinking_phase(self):
+        """Active deliberate thinking — structured reasoning sessions."""
+        cycle      = self.cycle_log.current_cycle()
+        brain_mode = self.brain.get_mode()
+        entry      = CycleEntry(cycle=cycle, phase="thinking", brain_mode=brain_mode)
+        print(f"\n{'='*60}")
+        print(f"DREAMER — Thinking Session {cycle} [{brain_mode.upper()}]")
+        print(f"{'='*60}")
+        try:
+            logs = self.thinker.think_session(num_rounds=3)
+            insights = [l.insight for l in logs if l.insight]
+            entry.summary = f"{len(logs)} rounds, {len(insights)} insights"
+            print(f"  Thinking complete: {len(insights)} insights")
+        except Exception as e:
+            print(f"Thinking error: {e}")
+            entry.interrupted = True
+        finally:
+            entry.ended_at = time.time()
+            self.cycle_log.add(entry)
+            self._save_state()
+
+    def run_writing_phase(self):
+        """Writing phase — synthesis essay that forces clarity."""
+        cycle      = self.cycle_log.current_cycle()
+        brain_mode = self.brain.get_mode()
+        entry      = CycleEntry(cycle=cycle, phase="writing", brain_mode=brain_mode)
+        print(f"\n{'='*60}")
+        print(f"DREAMER — Writing Phase {cycle} [{brain_mode.upper()}]")
+        print(f"{'='*60}")
+        try:
+            result = self.notebook.write_synthesis_essay(cycle)
+            # Ingest any side-effect insights back into the graph
+            for insight in result.get('insights', []):
+                if isinstance(insight, str) and len(insight) > 15:
+                    self.ingestor.ingest(insight, source=EdgeSource.CONSOLIDATION)
+            # Add any new questions to the agenda
+            for question in result.get('questions', []):
+                if isinstance(question, str) and len(question) > 10:
+                    self.observer.add_to_agenda(
+                        text=question, item_type="question",
+                        cycle=cycle
+                    )
+            entry.summary = f"Essay written, {len(result.get('insights',[]))} insights"
+        except Exception as e:
+            print(f"Writing error: {e}")
+            entry.interrupted = True
+        finally:
+            entry.ended_at = time.time()
+            self.cycle_log.add(entry)
+            self._save_state()
+
     # ── Public interface ──────────────────────────────────────────────────────
 
     def ingest(self, text, source=EdgeSource.CONVERSATION):
@@ -317,7 +393,9 @@ class DreamerScheduler:
         phases = {
             "dream":         self.run_dream_phase,
             "research":      self.run_research_phase,
+            "thinking":      self.run_thinking_phase,
             "reading":       self.run_reading_phase,
+            "writing":       self.run_writing_phase,
             "consolidation": self.run_consolidation_phase,
         }
         if phase not in phases:
@@ -329,7 +407,9 @@ class DreamerScheduler:
         print("\n── Running full cycle now ──")
         self.run_dream_phase()
         self.run_research_phase()
+        self.run_thinking_phase()
         self.run_reading_phase()
+        self.run_writing_phase()
         self.run_consolidation_phase()
         print("\n── Full cycle complete ──")
 
@@ -341,8 +421,14 @@ class DreamerScheduler:
         self.scheduler.add_job(self.run_research_phase,
             CronTrigger.from_crontab(s["research"]), id="research",
             replace_existing=True)
+        self.scheduler.add_job(self.run_thinking_phase,
+            CronTrigger.from_crontab(s["thinking"]), id="thinking",
+            replace_existing=True)
         self.scheduler.add_job(self.run_reading_phase,
             CronTrigger.from_crontab(s["reading"]), id="reading",
+            replace_existing=True)
+        self.scheduler.add_job(self.run_writing_phase,
+            CronTrigger.from_crontab(s["writing"]), id="writing",
             replace_existing=True)
         self.scheduler.add_job(self.run_consolidation_phase,
             CronTrigger.from_crontab(s["consolidate"]), id="consolidation",
@@ -382,7 +468,8 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="DREAMER Scheduler")
     parser.add_argument("--mode", choices=[
-        "auto","dream","research","reading","consolidation","cycle","status"
+        "auto","dream","research","thinking","reading","writing",
+        "consolidation","cycle","status"
     ], default="auto")
     parser.add_argument("--ingest",  type=str, default=None)
     parser.add_argument("--url",     type=str, default=None)

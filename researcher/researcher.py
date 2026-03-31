@@ -2,14 +2,13 @@ import json
 import time
 import requests
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import Brain, EdgeSource
 from ingestion.ingestor import Ingestor
 from persistence import atomic_write_json
+from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
  
-OLLAMA_MODEL         = "llama3.1:8b"
 MAX_QUESTIONS_PER_DAY = 5      # how many agenda items to research per cycle
 MAX_RESULTS_PER_QUERY = 3      # web results per search query
 MAX_ARXIV_RESULTS    = 2       # arXiv papers per query
@@ -41,7 +40,13 @@ Example: ["query one here", "query two here"]
 
 RELEVANCE_PROMPT = """
 Is this text at least partially related to this research question?
-Be generous — if it touches the topic at all, say yes.
+
+Be generous — if the text provides ANY factual content that could inform the question,
+say yes. Only say no if the text is completely off-topic.
+
+Examples:
+- Question: "How does neuroplasticity work?" + Text about brain anatomy → yes (related domain)
+- Question: "How does neuroplasticity work?" + Text about cooking recipes → no (unrelated)
 
 Question: {question}
 Text: {text}
@@ -70,6 +75,13 @@ After today's research, these findings were added to the knowledge graph:
  
 Has the question been meaningfully answered or significantly advanced?
  
+Grading definitions:
+- "none": The findings are unrelated or too tangential to advance the question.
+- "partial": The findings provide useful context or answer a sub-aspect, but the core question
+  remains open. Test: could you now write a better literature review section, but NOT a conclusion?
+- "strong": The findings directly answer the question or provide conclusive evidence.
+  Test: could you now write a confident conclusion section?
+
 Respond with a JSON object:
 {{
   "resolved": true or false,
@@ -110,17 +122,11 @@ class Researcher:
         self.brain    = brain
         self.observer = observer
         self.ingestor = Ingestor(brain, research_agenda=observer)
-        self.llm      = Client()
         self.depth    = DEPTH_PROFILES.get(depth, DEPTH_PROFILES["standard"])
         self.log      = ResearchLog()
  
     def _llm(self, prompt: str, temperature: float = 0.5) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="precise")
 
     # ── Query generation ──────────────────────────────────────────────────────
  
@@ -128,12 +134,10 @@ class Researcher:
         raw = self._llm(QUERY_GENERATION_PROMPT.format(
             question=question, n=n
         ), temperature=0.5)
-        try:
-            queries = json.loads(raw)
+        queries = require_json(raw, default=[])
+        if isinstance(queries, list):
             return [q for q in queries if isinstance(q, str)][:n]
-        except (json.JSONDecodeError, ValueError):
-            # fallback — use question directly
-            return [question]
+        return [question]
 
     # ── Web search ────────────────────────────────────────────────────────────
  
@@ -296,22 +300,18 @@ class Researcher:
             question=question_text,
             findings=findings_summary
         ), temperature=0.2)
-        try:
-            result = json.loads(raw)
-            entry.resolved = result.get('grade', 'none')
-            explanation    = result.get('explanation', '')
+        result = require_json(raw, default={})
+        entry.resolved = result.get('grade', 'none')
+        explanation    = result.get('explanation', '')
  
-            if entry.resolved in ['partial', 'strong'] and self.observer:
-                self.observer.record_answer(
-                    question_text=question_text,
-                    answer_node_id=new_ids[0] if new_ids else "",
-                    explanation=explanation,
-                    grade=entry.resolved
-                )
-                print(f"     Resolution: [{entry.resolved}] {explanation}")
- 
-        except (json.JSONDecodeError, ValueError):
-            pass
+        if entry.resolved in ['partial', 'strong'] and self.observer:
+            self.observer.record_answer(
+                question_text=question_text,
+                answer_node_id=new_ids[0] if new_ids else "",
+                explanation=explanation,
+                grade=entry.resolved
+            )
+            print(f"     Resolution: [{entry.resolved}] {explanation}")
  
         return entry
 

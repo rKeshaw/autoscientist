@@ -2,13 +2,12 @@ import json
 import time
 import os
 from dataclasses import dataclass, field
-from ollama import Client
 from graph.brain import Brain, NodeType, EdgeType
 from persistence import atomic_write_json
+from llm_utils import llm_call
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-OLLAMA_MODEL   = "llama3.1:8b"
 NOTEBOOK_PATH  = "data/notebook.json"
 SCIENTIST_NAME = "THE SCIENTIST"
 
@@ -19,6 +18,7 @@ ENTRY_FIELD_NOTES   = "field_notes"  # after research day
 ENTRY_EVENING       = "evening"      # after consolidation
 ENTRY_HYPOTHESIS    = "hypothesis"   # running best answer to mission
 ENTRY_BREAKTHROUGH  = "breakthrough" # flagged manually or by strong emergence
+ENTRY_SYNTHESIS     = "synthesis"    # writing phase — forces clarity
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -162,19 +162,13 @@ class Notebook:
                  scientist_name: str = SCIENTIST_NAME):
         self.brain          = brain
         self.observer       = observer
-        self.llm            = Client()
         self.name           = scientist_name
         self.entries: list[NotebookEntry] = []
         self.running_hypothesis: str = ""
         self._load()
 
     def _llm(self, prompt: str, temperature: float = 0.6) -> str:
-        response = self.llm.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": temperature}
-        )
-        return response['message']['content'].strip()
+        return llm_call(prompt, temperature=temperature, role="creative")
 
     def _mission(self) -> str:
         m = self.brain.get_mission()
@@ -380,6 +374,102 @@ class Notebook:
         )
         print(f"\n── Notebook: BREAKTHROUGH entry written ──")
         return content
+
+    def write_synthesis_essay(self, cycle: int) -> dict:
+        """
+        Writing phase — the scientist writes a structured essay.
+
+        Writing forces clarity. The LLM is asked to *write* about the research,
+        and the act of writing produces side-effect insights that get returned
+        for graph ingestion.
+
+        Returns dict with 'essay', 'insights' (list of strings), 'questions' (list).
+        """
+        SYNTHESIS_ESSAY_PROMPT = """You are {name}, a scientist writing a short research essay.
+
+Your central research question:
+"{mission}"
+
+Your working hypothesis:
+{hypothesis}
+
+Key ideas in your knowledge graph:
+{key_ideas}
+
+Working memory (currently focused on):
+{working_memory}
+
+Write a structured 3-5 paragraph essay that:
+1. States the current best understanding of the central question
+2. Identifies the strongest evidence and the weakest links
+3. Highlights 1-2 SURPRISES — things that turned out differently than expected
+4. Names the single most important NEXT STEP for progress
+
+Then separately list:
+- Any NEW INSIGHTS that emerged from the act of writing (things you realized
+  while articulating your understanding, not things you already knew)
+- Any NEW QUESTIONS that the writing raised
+
+Respond with a JSON object:
+{{
+  "essay": "the full essay text",
+  "insights": ["insight 1", "insight 2"],
+  "questions": ["question 1", "question 2"]
+}}"""
+
+        # Build key ideas from graph
+        key_nodes = sorted(
+            self.brain.all_nodes(),
+            key=lambda x: x[1].get('importance', 0.5),
+            reverse=True
+        )[:12]
+        key_ideas = "\n".join(
+            f"- [{d.get('node_type','concept')}] {d.get('statement','')}"
+            for _, d in key_nodes
+        )
+
+        # Working memory
+        wm = self.brain.get_working_memory()
+        wm_text = "\n".join(
+            f"- [{d.get('node_type','concept')}] {d.get('statement','')}"
+            for _, d in wm
+        ) if wm else "Nothing currently in focus."
+
+        raw = self._llm(SYNTHESIS_ESSAY_PROMPT.format(
+            name           = self.name,
+            mission        = self._mission(),
+            hypothesis     = self.running_hypothesis or "None formulated yet.",
+            key_ideas      = key_ideas,
+            working_memory = wm_text
+        ), temperature=0.5)
+
+        # Try to parse as JSON
+        from llm_utils import require_json
+        result = require_json(raw, default=None)
+
+        if result and isinstance(result, dict):
+            essay    = result.get("essay", raw)
+            insights = result.get("insights", [])
+            questions = result.get("questions", [])
+        else:
+            essay = raw
+            insights = []
+            questions = []
+
+        # Store the essay
+        self._add_entry(
+            ENTRY_SYNTHESIS, essay, cycle,
+            tags=["synthesis_essay", f"cycle:{cycle}"]
+        )
+
+        print(f"\n── Notebook: synthesis essay written "
+              f"({len(insights)} insights, {len(questions)} questions) ──")
+
+        return {
+            "essay":     essay,
+            "insights":  insights if isinstance(insights, list) else [],
+            "questions": questions if isinstance(questions, list) else []
+        }
 
     # ── Getters ───────────────────────────────────────────────────────────────
 

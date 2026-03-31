@@ -77,6 +77,10 @@ class Node:
     first_queued_cycle: int= 0
     empirical_result: str  = ""
     empirical_code: str    = ""
+    # ── Confidence tracking ──
+    source_quality: float      = 0.5   # 1.0=primary source, 0.5=synthesis, 0.3=dream
+    verification_count: int    = 0     # how many times reinforced from independent sources
+    last_verified: float       = 0.0   # timestamp of last reinforcement
 
     def touch(self):
         self.activated_at = time.time()
@@ -104,13 +108,16 @@ class Edge:
 # ── Brain ─────────────────────────────────────────────────────────────────────
 
 class Brain:
+    MAX_WORKING_MEMORY = 10   # top items under active investigation
+
     def __init__(self, decay_rate: float = 0.01, scientificness: float = 0.7):
         self.graph           = nx.DiGraph()
         self.decay_rate      = decay_rate
         self.scientificness  = scientificness
         self.mission: Optional[dict] = None
         self._mode: BrainMode = BrainMode.WANDERING
-        self._suspended_mission: Optional[dict] = None  # saved when suspended
+        self._suspended_mission: Optional[dict] = None
+        self.working_memory: list[str] = []  # ordered list of node IDs
 
     # ── Mode ──────────────────────────────────────────────────────────────────
 
@@ -229,6 +236,36 @@ class Brain:
             (nid, data) for nid, data in self.graph.nodes(data=True)
             if data.get('node_type') == node_type.value
         ]
+
+    # ── Working memory ────────────────────────────────────────────────────────
+
+    def focus_on(self, node_id: str):
+        """Add a node to working memory (front = highest priority)."""
+        if node_id in self.working_memory:
+            self.working_memory.remove(node_id)
+        self.working_memory.insert(0, node_id)
+        if len(self.working_memory) > self.MAX_WORKING_MEMORY:
+            self.working_memory = self.working_memory[:self.MAX_WORKING_MEMORY]
+        self.update_node(node_id, activated_at=time.time())
+
+    def unfocus(self, node_id: str):
+        """Remove a node from working memory."""
+        if node_id in self.working_memory:
+            self.working_memory.remove(node_id)
+
+    def get_working_memory(self) -> list[tuple[str, dict]]:
+        """Return working memory nodes with their data."""
+        result = []
+        for nid in self.working_memory:
+            data = self.get_node(nid)
+            if data:
+                result.append((nid, data))
+            else:
+                self.working_memory.remove(nid)
+        return result
+
+    def is_in_focus(self, node_id: str) -> bool:
+        return node_id in self.working_memory
 
     # ── Edge operations ──────────────────────────────────────────────────────
 
@@ -360,6 +397,7 @@ class Brain:
             "mission": self.mission,
             "suspended_mission": self._suspended_mission,
             "mode":    self._mode.value,
+            "working_memory": self.working_memory,
             "config":  {
                 "decay_rate":     self.decay_rate,
                 "scientificness": self.scientificness
@@ -385,6 +423,7 @@ class Brain:
                 self._mode = BrainMode(mode_str)
             except ValueError:
                 self._mode = BrainMode.WANDERING
+            self.working_memory = raw.get("working_memory", [])
         else:
             # legacy format
             self.graph = nx.node_link_graph(raw)
@@ -433,4 +472,5 @@ class Brain:
             "mode":               self._mode.value,
             "mission":            self.mission['question']
                                   if self.mission else None,
+            "working_memory":     len(self.working_memory),
         }
