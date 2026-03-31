@@ -1,14 +1,14 @@
 class ThresholdConfig:
     # Similarity thresholds (cosine, 0-1)
-    MERGE_NODE          = 0.80
+    MERGE_NODE          = 0.72
     DUPLICATE_MERGE     = 0.88
-    WEAK_EDGE           = 0.60
+    WEAK_EDGE           = 0.58
     QUESTION_DEDUP_HIGH = 0.90
     QUESTION_DEDUP_LOW  = 0.70
     COHERENCE           = 0.65
     GAP_CONFIDENCE      = 0.75
     GAP_DEDUP           = 0.75
-    CONTRADICTION       = 0.65
+    CONTRADICTION       = 0.60
     AGENDA_PREFILTER    = 0.30
 
 
@@ -24,15 +24,15 @@ class ModelConfig:
         MODELS.PRECISE  = "qwen2.5:7b"     # faster model for JSON extraction
     """
     # Creative tasks: dreaming, synthesis, analogies
-    CREATIVE     = "llama3.1:8b"
+    CREATIVE     = "mixtral:latest"
     # Precise tasks: JSON extraction, factual answers
-    PRECISE      = "llama3.1:8b"
+    PRECISE      = "mixtral:latest"
     # Code generation: sandbox experiments
-    CODE         = "llama3.1:8b"
+    CODE         = "mixtral:latest"
     # Deliberate reasoning: thinker, chain-of-thought
-    REASONING    = "llama3.1:8b"
+    REASONING    = "mixtral:latest"
     # Conversation: chat interface
-    CONVERSATION = "llama3.1:8b"
+    CONVERSATION = "mixtral:latest"
 
 
 MODELS = ModelConfig()

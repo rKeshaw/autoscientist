@@ -1,0 +1,221 @@
+{
+  "test": "D1 \u2014 Cluster Coherence",
+  "timestamp": "2026-03-31T14:37:58",
+  "config": {
+    "judge_model": "llama3.1:70b",
+    "total_nodes": 39,
+    "clusters_evaluated": 4,
+    "sample_per_cluster": 5
+  },
+  "summary": {
+    "global_mean_intra_similarity": 0.4295,
+    "global_mean_inter_similarity": 0.0663,
+    "mean_silhouette_score": 0.8572,
+    "cluster_assignment_accuracy": 1.0,
+    "nodes_judged": 15,
+    "PASS_intra": false,
+    "PASS_inter": true,
+    "PASS_assignment": true,
+    "PASS": false,
+    "pass_threshold_intra": 0.55,
+    "pass_threshold_inter": 0.4,
+    "pass_threshold_assignment": 0.75
+  },
+  "per_cluster_stats": {
+    "genetics": {
+      "node_count": 4,
+      "mean_intra_similarity": 0.4895,
+      "mean_inter_similarity": 0.0284,
+      "silhouette_score": 0.942,
+      "node_ids": [
+        "393e3fe6-b9c6-4253-bfc2-18cdc019683a",
+        "6cba1986-024c-4572-b43f-7125f9e9d41c",
+        "2ae92008-8a02-4f07-9ea7-335a3d4ea100",
+        "ab163428-b910-4924-b125-7d88b5aeca5c"
+      ],
+      "assignment_accuracy": 1.0
+    },
+    "thermodynamics": {
+      "node_count": 11,
+      "mean_intra_similarity": 0.4129,
+      "mean_inter_similarity": 0.071,
+      "silhouette_score": 0.828,
+      "node_ids": [
+        "bbccef79-7e40-48e5-82dd-ed3bda9b85ee",
+        "47f5ba59-c8cb-4afd-b469-7e53f2680281",
+        "742e6224-f849-4e8d-a7b9-8d7044364464",
+        "049230ae-e8bd-4d0f-884b-0b906758fb2c",
+        "362a7e7d-c292-4ece-801d-68aa5f865a7e",
+        "abc3589c-8bca-4495-bb92-45bc31cfe904",
+        "831af101-aaa0-478d-93a0-cb1967be4003",
+        "c35497b2-26c4-4d23-bd77-3d62885a29a3",
+        "6c0f15fc-9c58-469f-8435-9fe46efa2251",
+        "a366610a-41a1-41c0-81c4-9ecad14058cc",
+        "0d6d106a-dc6a-4052-a16d-d8b64d3dace3"
+      ],
+      "assignment_accuracy": 1.0
+    },
+    "evolutionary_biology": {
+      "node_count": 3,
+      "mean_intra_similarity": 0.5934,
+      "mean_inter_similarity": 0.0716,
+      "silhouette_score": 0.8794,
+      "node_ids": [
+        "b14cd312-6eeb-4245-9bf0-c1f4f7bc296f",
+        "b0381321-491e-4d60-b2a5-5793cf1ecd07",
+        "25fe9a99-f73f-4781-ae0c-274dd9eaada6"
+      ],
+      "assignment_accuracy": 1.0
+    },
+    "economics": {
+      "node_count": 3,
+      "mean_intra_similarity": 0.4495,
+      "mean_inter_similarity": 0.0991,
+      "silhouette_score": 0.7794,
+      "node_ids": [
+        "22e1b596-aa05-4fea-a2c6-ddc835e34716",
+        "a2fd1cd1-2892-4a62-85f9-6817f5a3bd69",
+        "8e09deae-ebed-4666-9de2-8af50b4d9856"
+      ],
+      "assignment_accuracy": 1.0
+    }
+  },
+  "mislabeled_nodes": [],
+  "all_judgments": [
+    {
+      "node_id": "6cba1986-024c-4572-b43f-7125f9e9d41c",
+      "statement": "Noncanonical bases in DNA are often modifications of canonical bases and uracil, and have been found to avoid restriction enzymes or act as molecular markers",
+      "assigned_cluster": "genetics",
+      "correct": true,
+      "correct_cluster": "genetics",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is about DNA modifications and their functions, which falls squarely within the domain of genetics."
+    },
+    {
+      "node_id": "2ae92008-8a02-4f07-9ea7-335a3d4ea100",
+      "statement": "DNA is composed of two polynucleotide chains that coil around each other to form a double helix",
+      "assigned_cluster": "genetics",
+      "correct": true,
+      "correct_cluster": "genetics",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is the structure of DNA, which is a fundamental concept in genetics."
+    },
+    {
+      "node_id": "ab163428-b910-4924-b125-7d88b5aeca5c",
+      "statement": "Adenine pairs with thymine and guanine pairs with cytosine, forming A-T and G-C base pairs",
+      "assigned_cluster": "genetics",
+      "correct": true,
+      "correct_cluster": "genetics",
+      "confidence": 1.0,
+      "reasoning": "The node's primary topic is about base pairing rules, a fundamental concept in genetics."
+    },
+    {
+      "node_id": "393e3fe6-b9c6-4253-bfc2-18cdc019683a",
+      "statement": "The double helix structure of DNA consists of two sugar-phosphate backbones bound together by hydrogen bonds between complementary bases (A-T and G-C)",
+      "assigned_cluster": "genetics",
+      "correct": true,
+      "correct_cluster": "genetics",
+      "confidence": 0.95,
+      "reasoning": "The node's primary topic is the structure of DNA, which is a fundamental concept in genetics."
+    },
+    {
+      "node_id": "831af101-aaa0-478d-93a0-cb1967be4003",
+      "statement": "The fundamental concepts of heat capacity and latent heat, necessary for thermodynamics, were developed through experiments by scientists like Boyle, Hooke, Black, and Watt | The fundamental concepts of heat capacity and latent heat are necessary for the development of thermodynamics",
+      "assigned_cluster": "thermodynamics",
+      "correct": true,
+      "correct_cluster": "thermodynamics",
+      "confidence": 0.9,
+      "reasoning": "The node primarily discusses concepts fundamental to thermodynamics, such as heat capacity and latent heat."
+    },
+    {
+      "node_id": "c35497b2-26c4-4d23-bd77-3d62885a29a3",
+      "statement": "Pressure, temperature, and volume are interrelated",
+      "assigned_cluster": "thermodynamics",
+      "correct": true,
+      "correct_cluster": "thermodynamics",
+      "confidence": 1.0,
+      "reasoning": "The node's statement directly relates to fundamental concepts in thermodynamics, making it a primary topic fit for this domain."
+    },
+    {
+      "node_id": "47f5ba59-c8cb-4afd-b469-7e53f2680281",
+      "statement": "The historical development of thermodynamics was driven by a desire to increase steam engine efficiency, with key contributions from Carnot, Kelvin, Clausius, Carath\u00e9odory, and others | The development of thermodynamics was driven by a desire to increase the efficiency of early steam engines",
+      "assigned_cluster": "thermodynamics",
+      "correct": true,
+      "correct_cluster": "thermodynamics",
+      "confidence": 1.0,
+      "reasoning": "The node's primary topic is the historical development and key contributors of thermodynamics, making it a clear fit for the thermodynamics cluster."
+    },
+    {
+      "node_id": "bbccef79-7e40-48e5-82dd-ed3bda9b85ee",
+      "statement": "Thermodynamics studies the relationships between heat, work, temperature, energy, entropy, and physical properties of matter & radiation, with its behavior governed by four laws explained by statistical mechanics",
+      "assigned_cluster": "thermodynamics",
+      "correct": true,
+      "correct_cluster": "thermodynamics",
+      "confidence": 1.0,
+      "reasoning": "The node statement explicitly describes the field of thermodynamics, making it a clear primary topic fit for this domain cluster."
+    },
+    {
+      "node_id": "a366610a-41a1-41c0-81c4-9ecad14058cc",
+      "statement": "The external condenser led to a large increase in steam engine efficiency",
+      "assigned_cluster": "thermodynamics",
+      "correct": true,
+      "correct_cluster": "thermodynamics",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is the efficiency of a steam engine, which is a fundamental concept in thermodynamics."
+    },
+    {
+      "node_id": "b0381321-491e-4d60-b2a5-5793cf1ecd07",
+      "statement": "New species can arise especially if new traits are radically different from the traits possessed by their predecessors",
+      "assigned_cluster": "evolutionary_biology",
+      "correct": true,
+      "correct_cluster": "evolutionary_biology",
+      "confidence": 0.9,
+      "reasoning": "The node discusses the emergence of new species through trait differences, a fundamental concept in evolutionary biology."
+    },
+    {
+      "node_id": "25fe9a99-f73f-4781-ae0c-274dd9eaada6",
+      "statement": "The likelihood of traits being 'selected' and passed down is determined by many factors, including adaptation to environments, sexual selection, and fecundity selection",
+      "assigned_cluster": "evolutionary_biology",
+      "correct": true,
+      "correct_cluster": "evolutionary_biology",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is the process of trait selection and inheritance, which is a fundamental concept in evolutionary biology."
+    },
+    {
+      "node_id": "b14cd312-6eeb-4245-9bf0-c1f4f7bc296f",
+      "statement": "Variation of traits exists within all populations, and some traits are more likely to facilitate survival and reproductive success",
+      "assigned_cluster": "evolutionary_biology",
+      "correct": true,
+      "correct_cluster": "evolutionary_biology",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is the existence of trait variation within populations and its impact on survival and reproductive success, which is a fundamental concept in evolutionary biology."
+    },
+    {
+      "node_id": "22e1b596-aa05-4fea-a2c6-ddc835e34716",
+      "statement": "Game theory was extended in the 1950s to non zero-sum games, expanding its application to a wide range of behavioral relations, and is now an umbrella term for rational decision making in humans, animals, and computers",
+      "assigned_cluster": "economics",
+      "correct": true,
+      "correct_cluster": "economics",
+      "confidence": 0.8,
+      "reasoning": "Game theory is a fundamental concept in economics, and the node's statement primarily discusses its application to decision making, which is a key aspect of economic theory."
+    },
+    {
+      "node_id": "8e09deae-ebed-4666-9de2-8af50b4d9856",
+      "statement": "Mechanism design theory lays the foundations for market design, introduced by Leonid Hurwicz, Eric Maskin, and Roger Myerson, including concepts like incentive compatibility and proper equilibrium",
+      "assigned_cluster": "economics",
+      "correct": true,
+      "correct_cluster": "economics",
+      "confidence": 0.9,
+      "reasoning": "The node's primary topic is mechanism design theory, a subfield of economics that deals with the design of economic systems and incentives."
+    },
+    {
+      "node_id": "a2fd1cd1-2892-4a62-85f9-6817f5a3bd69",
+      "statement": "Reinhard Selten introduced subgame perfect equilibria and trembling hand perfection, refining the Nash equilibrium, and contributed to economic game theory with his work on dynamic models and evolutionarily stable strategy",
+      "assigned_cluster": "economics",
+      "correct": true,
+      "correct_cluster": "economics",
+      "confidence": 0.9,
+      "reasoning": "The node primarily discusses Reinhard Selten's contributions to economic game theory, refining the Nash equilibrium and evolutionarily stable strategy."
+    }
+  ]
+}

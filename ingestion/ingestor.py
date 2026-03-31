@@ -10,6 +10,8 @@ from llm_utils import llm_call, require_json
 # ── Config ────────────────────────────────────────────────────────────────────
 
 SIMILARITY_THRESHOLD  = THRESHOLDS.MERGE_NODE
+DEDUP_QUERY_THRESHOLD = SIMILARITY_THRESHOLD - 0.12
+DEDUP_LLM_THRESHOLD   = SIMILARITY_THRESHOLD - 0.06
 WEAK_EDGE_THRESHOLD   = THRESHOLDS.WEAK_EDGE
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
@@ -88,6 +90,40 @@ If they are related, respond with a JSON object:
   "confidence": a float (see rubric below)
 }}
 
+TYPE SELECTION RULES — read carefully before choosing:
+
+Use "causes" when A is a mechanism, process, or event that directly produces B
+as a physical or temporal effect. The test: does A happen BEFORE B and make B
+happen? Examples:
+  ✓ "High temperature increases molecular kinetic energy" → causes "increased pressure"
+  ✓ "Mutations in replication introduce variation" → causes "heritable diversity"
+  ✗ "Studies show X correlates with Y" → this is "supports", not "causes"
+
+Use "supports" when A is evidence, reasoning, prior work, or context that makes
+B more credible or likely — but A does not directly produce B.
+  ✓ "Fossil record shows gradual change" → supports "evolution by natural selection"
+  ✓ "Backpropagation computes gradients" → supports "gradient descent can train deep nets"
+
+Use "contradicts" only when A and B make MUTUALLY EXCLUSIVE claims — if A is
+true, B must be false. Do NOT use for statements that merely contrast or
+emphasize different aspects of the same phenomenon.
+  ✓ "All objects fall at the same rate" contradicts "heavier objects fall faster"
+  ✗ "Neural nets need data" vs "neural nets can overfit" — these are compatible
+
+Use "analogy" when the same relational pattern appears in two different domains.
+Specify depth:
+  surface     — shared vocabulary or theme only
+  structural  — same A:B::X:Y relational pattern across domains
+  isomorphism — formally identical mathematical or logical structure
+
+Use "associated" when the ideas co-occur or share a domain but have no direct
+logical, causal, or analogical link. This is the CORRECT and FREQUENT answer
+for ideas from the same domain that simply appear together. Do NOT force a
+stronger type just because the ideas are related — topical proximity alone
+means "associated".
+  ✓ "Game theory developed in 1940s" associated with "Nash equilibrium defined later"
+  ✓ "DNA has four bases" associated with "proteins have 20 amino acids"
+
 Weight rubric (how STRONG is the relationship?):
 - 0.1-0.3: Tangentially related, same broad topic but no direct logical link
 - 0.4-0.6: Meaningfully connected, one informs understanding of the other
@@ -105,9 +141,10 @@ Analogy depth guide:
 - structural: same relational pattern between different entities. Example: "A relates to B the same way X relates to Y"
 - isomorphism: formal mathematical or logical equivalence. Example: "the equations governing X are identical in form to those governing Y"
 
-IMPORTANT: Do NOT mark ideas as related just because they share a broad topic. 
-"The brain uses electricity" and "Lightning is electricity" are NOT meaningfully related
-even though both mention electricity. They must share a conceptual connection.
+IMPORTANT: Do NOT mark ideas as related just because they share a broad topic.
+"The brain uses electricity" and "Lightning is electricity" warrant "associated"
+at most — not "supports" or "causes". Topical proximity without a conceptual
+mechanism = "associated".
 
 If not meaningfully related:
 {{"related": false}}
@@ -118,16 +155,30 @@ Respond ONLY with JSON. No preamble.
 CLUSTER_PROMPT = """
 Given this conceptual statement, assign it to a single domain cluster.
 
-Use a short lowercase label. Choose from the following or create a similarly
-specific label if none fit:
+Use a SHORT, SPECIFIC lowercase label — prefer sub-domain labels over broad ones.
+
+Prefer SPECIFIC over BROAD:
+  thermodynamics     (not physics)
+  evolutionary_biology (not biology)
+  deep_learning      (not computer_science, if the statement is specifically about NNs)
+  game_theory        (not economics, if the statement is specifically about strategic interaction)
+  molecular_biology  (not biology, if the statement is about DNA/proteins/cells)
+  quantum_mechanics  (not physics, if the statement is about quantum phenomena)
+  statistical_mechanics (not physics or thermodynamics, if about microstates/ensembles)
+
+General domain labels to use when no specific sub-domain fits:
   neuroscience, physics, chemistry, biology, mathematics, computer_science,
   psychology, philosophy_of_science, linguistics, economics, sociology,
   cognitive_science, information_theory, systems_biology, ecology,
-  evolutionary_biology, quantum_mechanics, thermodynamics, genetics, general
+  genetics, general
 
-If the statement spans two domains, choose the MOST SPECIFIC one.
-Example: "Neural networks learn via gradient descent" → computer_science (not neuroscience)
-Example: "The brain's learning rule resembles backpropagation" → neuroscience (it's about the brain)
+Rules:
+- If the statement spans two domains, choose the MOST SPECIFIC one.
+- Prefer the domain the statement is ABOUT over the domain it USES.
+  Example: "Neural networks learn via gradient descent" → deep_learning
+  Example: "The brain's learning rule resembles backpropagation" → neuroscience
+  Example: "Entropy in thermodynamic systems equals k*ln(W)" → thermodynamics
+  Example: "Shannon entropy measures uncertainty in distributions" → information_theory
 
 Statement: {statement}
 
@@ -138,7 +189,66 @@ CONTRADICTION_CHECK_PROMPT = """
 Existing node: {existing}
 New node: {new}
 
-Do these two ideas directly contradict each other?
+Do these two ideas make MUTUALLY EXCLUSIVE claims?
+
+The test for a genuine contradiction:
+  If the existing node is TRUE, does the new node become IMPOSSIBLE or FALSE?
+  If the new node is TRUE, does the existing node become IMPOSSIBLE or FALSE?
+
+Both must be true for this to be a contradiction.
+
+Examples of GENUINE contradictions (answer: yes):
+  "All objects fall at the same rate in a vacuum"
+  vs "Heavier objects fall faster than lighter ones" → YES (mutually exclusive)
+
+  "Acquired traits can be inherited by offspring"
+  vs "Only genetic mutations are heritable, not acquired traits" → YES
+
+Examples of NOT contradictions (answer: no):
+  "Neural networks need large datasets to generalize"
+  vs "Regularization helps neural networks generalize with less data" → NO (compatible)
+
+  "Natural selection favors reproductive fitness"
+  vs "Genetic drift changes allele frequencies randomly" → NO (different mechanisms, not exclusive)
+
+  "Overfitting occurs when a model memorizes training noise"
+  vs "Regularization techniques reduce overfitting by penalizing complexity" → NO
+  (problem + solution: both can be true simultaneously)
+
+  "Game theory assumes perfectly rational agents"
+  vs "Behavioral economics shows humans deviate from rational predictions" → NO
+  (theory + empirical critique: the critique does not make the theory impossible,
+  it adds boundary conditions. Both statements can be simultaneously true.)
+
+  "X has property P"
+  vs "Technique Y mitigates or reduces P" → NO, always. Mitigation is not negation.
+
+Respond with ONLY "yes" or "no". No explanation.
+"""
+
+DEDUP_CONFIRMATION_PROMPT = """
+Two knowledge graph nodes have similar embeddings. Determine whether they
+express the SAME core idea and should be merged into one node.
+
+Node A: "{node_a}"
+Node B: "{node_b}"
+Embedding similarity: {similarity:.3f}
+
+Merge criteria — answer YES only if:
+  - One is a paraphrase or minor rewording of the other, OR
+  - One is a more detailed version of the other that adds no new distinct claim
+
+Answer NO if:
+  - They make different claims (even if about the same topic)
+  - One adds a genuinely new sub-idea the other doesn't contain
+  - They describe different aspects of the same phenomenon
+
+Examples:
+  YES: "Entropy measures disorder" vs "Entropy quantifies the degree of disorder in a system"
+  YES: "Natural selection favors fit organisms" vs "Selection pressure preserves adaptive traits"
+  NO:  "DNA stores genetic information" vs "RNA transcribes information from DNA" (different roles)
+  NO:  "High temperature increases pressure" vs "Pressure depends on molecular collisions" (different claims)
+
 Respond with ONLY "yes" or "no".
 """
 
@@ -398,15 +508,54 @@ class Ingestor:
 
         # ── Duplicate detection (indexed or fallback) ──
         if self.index:
-            matches = self.index.query(stmt_emb, threshold=SIMILARITY_THRESHOLD, top_k=1)
-            if matches:
-                best_match_id, best_similarity = matches[0]
+            # Query wider (DEDUP_QUERY_THRESHOLD) to catch paraphrases that land
+            # below the hard merge threshold due to embedding drift on re-ingest.
+            matches = self.index.query(
+                stmt_emb, threshold=DEDUP_QUERY_THRESHOLD, top_k=5
+            )
+            for candidate_id, candidate_sim in matches:
+                if candidate_id == node_type:
+                    continue
+                if candidate_sim >= SIMILARITY_THRESHOLD:
+                    best_match_id   = candidate_id
+                    best_similarity = candidate_sim
+                    break
+                elif candidate_sim >= DEDUP_LLM_THRESHOLD:
+                    candidate_data = self.brain.get_node(candidate_id)
+                    if candidate_data:
+                        confirm = self._llm(
+                            DEDUP_CONFIRMATION_PROMPT.format(
+                                node_a=candidate_data["statement"],
+                                node_b=stmt,
+                                similarity=candidate_sim,
+                            ),
+                            temperature=0.1
+                        ).strip().lower()
+                        if confirm.startswith("yes"):
+                            best_match_id   = candidate_id
+                            best_similarity = candidate_sim
+                            break
         else:
             for nid, nemb in existing_embeddings.items():
                 sim = self._cosine(stmt_emb, nemb)
                 if sim > best_similarity:
                     best_similarity = sim
                     best_match_id   = nid
+            if (best_match_id is not None and
+                    DEDUP_LLM_THRESHOLD <= best_similarity < SIMILARITY_THRESHOLD):
+                candidate_data = self.brain.get_node(best_match_id)
+                if candidate_data:
+                    confirm = self._llm(
+                        DEDUP_CONFIRMATION_PROMPT.format(
+                            node_a=candidate_data["statement"],
+                            node_b=stmt,
+                            similarity=best_similarity,
+                        ),
+                        temperature=0.1
+                    ).strip().lower()
+                    if not confirm.startswith("yes"):
+                        best_match_id   = None
+                        best_similarity = 0.0
 
         if best_similarity >= SIMILARITY_THRESHOLD:
             existing = self.brain.get_node(best_match_id)
@@ -437,7 +586,7 @@ class Ingestor:
         contradiction_ids = []
         if self.index:
             contra_candidates = self.index.query(
-                stmt_emb, threshold=THRESHOLDS.CONTRADICTION, top_k=10
+                stmt_emb, threshold=0.45, top_k=15
             )
             for cand_id, cand_sim in contra_candidates:
                 node_data = self.brain.get_node(cand_id)
@@ -453,8 +602,7 @@ class Ingestor:
                     print(f"  Contradiction with {cand_id[:8]}")
         else:
             for nid, nemb in existing_embeddings.items():
-                sim = self._cosine(stmt_emb, nemb)
-                if sim > THRESHOLDS.CONTRADICTION:
+                if self._cosine(stmt_emb, nemb) > 0.45:
                     check = self._llm(CONTRADICTION_CHECK_PROMPT.format(
                         existing=self.brain.get_node(nid)['statement'],
                         new=stmt

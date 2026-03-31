@@ -1,0 +1,95 @@
+{
+  "dimension": "D1 \u2014 Knowledge Graph Quality",
+  "timestamp": "2026-03-31T14:51:04",
+  "summary": {
+    "tests_total": 5,
+    "tests_passed": 2,
+    "tests_failed": 3,
+    "tests_missing": 0,
+    "PASS": false,
+    "pass_rate": 0.4
+  },
+  "tests": {
+    "d1_node_quality": {
+      "status": "PASS",
+      "pass": true,
+      "mean_score": 4.486,
+      "pct_score_4_plus": 1.0,
+      "pct_self_contained": 1.0,
+      "pct_says_how_or_why": 0.4,
+      "nodes_judged": 35
+    },
+    "d1_duplicate_rate": {
+      "status": "PASS",
+      "pass": true,
+      "duplicate_rate_final": 0.0,
+      "new_nodes_on_reingestion": 32,
+      "llm_precision": 0
+    },
+    "d1_edge_accuracy": {
+      "status": "FAIL",
+      "pass": false,
+      "overall_type_accuracy": 0.65,
+      "analogy_depth_accuracy": 0.571,
+      "mean_narration_quality": 4.462,
+      "per_type": {
+        "supports": {
+          "gt_count": 4,
+          "pred_count": 5,
+          "true_positives": 3,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.667
+        },
+        "causes": {
+          "gt_count": 3,
+          "pred_count": 2,
+          "true_positives": 1,
+          "precision": 0.5,
+          "recall": 0.333,
+          "f1": 0.4
+        },
+        "contradicts": {
+          "gt_count": 3,
+          "pred_count": 3,
+          "true_positives": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "analogy": {
+          "gt_count": 7,
+          "pred_count": 6,
+          "true_positives": 6,
+          "precision": 1.0,
+          "recall": 0.857,
+          "f1": 0.923
+        },
+        "associated": {
+          "gt_count": 3,
+          "pred_count": 1,
+          "true_positives": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0
+        }
+      }
+    },
+    "d1_cluster_coherence": {
+      "status": "FAIL",
+      "pass": false,
+      "mean_intra_similarity": 0.4295,
+      "mean_inter_similarity": 0.0663,
+      "mean_silhouette": 0.8572,
+      "assignment_accuracy": 1.0
+    },
+    "d1_contradiction_detection": {
+      "status": "FAIL",
+      "pass": false,
+      "precision": 0.769,
+      "recall": 1.0,
+      "f1": 0.87,
+      "accuracy": 0.85
+    }
+  }
+}

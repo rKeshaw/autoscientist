@@ -1,0 +1,317 @@
+[
+  {
+    "node_id": "924ccd40-1a91-40c4-be2a-979ac1493e14",
+    "statement": "DNA is a polymer composed of two polynucleotide chains that coil around each other to form a double helix, carrying genetic instructions for all known organisms and many viruses",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "370b8483-abf3-451f-ab0f-63374fbfac98",
+    "statement": "The two DNA strands are composed of nucleotides, each containing one of four nitrogen-containing nucleobases (cytosine, guanine, adenine, or thymine) joined by phosphodiester linkages, with hydrogen bonds between the bases forming double-stranded DNA",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "e219b56c-4611-4051-9bdc-18d835cb4745",
+    "statement": "Nucleotide sequences along the sugar-phosphate backbone of DNA encode genetic information, which is replicated and transcribed into RNA for protein synthesis",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "199835d2-d747-42ed-a5a4-30b8468c3495",
+    "statement": "Within eukaryotic cells, DNA is organized into chromosomes, which are duplicated in the process of DNA replication before cell division, with chromatin proteins compacting and organizing DNA",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "fff5a8c9-f76e-4fae-84eb-a8b0b6e02350",
+    "statement": "DNA typically exists as a double helix, characterized by a pitch of 34 \u00c5 (3.4 nm) and a radius of 10 \u00c5 (1.0 nm), but may coil into tight loops and other shapes, with a buoyant density of 1.7g/cm3",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "41447e6d-5a5e-4095-9a5e-f993066cc025",
+    "statement": "DNA directionality is conferred by the asymmetric ends, with a 5' phosphoryl end and a 3' hydroxyl end, resulting in antiparallel strands",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "4f8c33e2-3e3b-427c-8d56-898069d83933",
+    "statement": "The DNA double helix is stabilized primarily by hydrogen bonds between nucleotides and base-stacking interactions among aromatic nucleobases, with adenine pairing with thymine and guanine pairing with cytosine",
+    "cluster": "biology genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "04ac5dcc-b7b7-41a6-a066-e743ba4a4d00",
+    "statement": "Nucleobases in DNA are classified into two types: purines (A and G) and pyrimidines (C and T), with modifications of these bases playing vital roles in epigenetic control of gene expression in plants and animals",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "5355676f-54a5-4ff5-a623-666d59f10426",
+    "statement": "Non-canonical bases, including 5-methylcytosine and uracil, occur in DNA to avoid restriction enzymes in bacteria or as part of epigenetic regulation in plants and animals",
+    "cluster": "genetics",
+    "node_type": "concept",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "2a84b791-9429-4c49-8bc1-f09c34ca9447",
+    "statement": "DNA is composed of two helical chains, bound to each other by hydrogen bonds",
+    "cluster": "genetics",
+    "node_type": "hypothesis",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "1cbf48cf-ceca-4581-af48-926920a39b0a",
+    "statement": "The directionality of the 3\u2019 and 5\u2019 carbons along the sugar-phosphate backbone confers directionality to each DNA strand",
+    "cluster": "genetics",
+    "node_type": "hypothesis",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "b7a143c5-5699-4c48-b7ae-8aeaa0e158ea",
+    "statement": "The four bases found in DNA are adenine (A), cytosine (C), guanine (G) and thymine (T). These four bases are attached to the sugar-phosphate to form the complete nucleotide, as shown for adenosine monophosphate",
+    "cluster": "biology  (genetics is a subfield of biology)",
+    "node_type": "hypothesis",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "7c029733-da56-4e4f-ae7a-14f6fca1c928",
+    "statement": "Adenine pairs with thymine and guanine pairs with cytosine, forming A-T and G-C base pairs",
+    "cluster": "biology \n (or genetics)",
+    "node_type": "hypothesis",
+    "article_id": "dna",
+    "article_title": "DNA",
+    "domain": "biology"
+  },
+  {
+    "node_id": "7b75944d-27f6-460f-ac11-93f138f239f8",
+    "statement": "Thermodynamics studies the relationships between heat, work, and temperature in physical systems, using four laws to describe these interactions from a macroscopic perspective.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "072d22b9-bf12-48c4-8082-19fae32ca36f",
+    "statement": "The four laws of thermodynamics form an axiomatic basis for describing any thermodynamic system, governing energy transfer as heat or work, and defining entropy and its role in quantifying the direction and order of system evolution.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "05b2f2eb-45b0-4d05-af33-0fb6bbedfdff",
+    "statement": "The development of thermodynamics emerged from efforts to increase the efficiency of early steam engines, with key contributions by Sadi Carnot, Lord Kelvin, and Rudolf Clausius, who formulated the second law and introduced the concept of entropy.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "cd1ce28b-ea4c-4888-88c1-828fde476f3b",
+    "statement": "Statistical thermodynamics, or statistical mechanics, focuses on predicting collective behavior of particles from microscopic perspectives, providing a foundation for understanding thermodynamic phenomena at a molecular level.",
+    "cluster": "statistical_thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "0880dd4e-fb76-44c6-af04-cd6dd674fa9e",
+    "statement": "The history of thermodynamics can be traced back to Otto von Guericke's creation of the world's first vacuum pump in 1650, followed by Robert Boyle and Robert Hooke's development of an air pump, leading to the formulation of Boyle's Law.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "eedc1657-7b11-4482-ace4-cbb31e71729b",
+    "statement": "Joseph Black and James Watt's experiments at the University of Glasgow contributed significantly to understanding heat capacity and latent heat, ultimately resulting in Watt's invention of the external condenser and Sadi Carnot's development of the 'motive power of fire'.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "ac91cb5f-0e53-431b-b1cf-4c4026881669",
+    "statement": "The first thermodynamic textbook was published by William Rankine in 1859, while the mathematical foundations of statistical thermodynamics were laid by physicists such as James Clerk Maxwell, Ludwig Boltzmann, and J. Willard Gibbs.",
+    "cluster": "thermodynamics",
+    "node_type": "concept",
+    "article_id": "thermodynamics",
+    "article_title": "Thermodynamics",
+    "domain": "physics"
+  },
+  {
+    "node_id": "f9df2486-cb14-4848-abb0-95f223990b68",
+    "statement": "Game theory studies mathematical models of strategic interactions, initially focusing on two-person zero-sum games where gains/losses of one participant are exactly balanced by those of the other",
+    "cluster": "economics (game theory is a subfield of economics that studies strategic interactions using mathematical models)",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "70254923-c436-4f39-ada0-4f26909baf54",
+    "statement": "Modern game theory, extending beyond two-person zero-sum games, is an umbrella term for the science of rational decision making in humans, animals, and computers",
+    "cluster": "economics or sociology or cognitive_science or computer_science or psychology or biology or (if needing to be most specific) cognitive_science or economics",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "6beb906b-1327-41b0-96ca-1059d8eb1d43",
+    "statement": "John von Neumann's proof using Brouwer's fixed-point theorem established mixed-strategy equilibria in two-person zero-sum games, a standard method in game theory and mathematical economics",
+    "cluster": "economics (most specific domain)",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "8efff7d3-1659-4afb-8202-c2b3fa28ded3",
+    "statement": "Game theory has been applied to evolution and recognized as an important tool in many fields, with multiple Nobel Prize laureates in economics",
+    "cluster": "economics (game theory has been applied to evolution and recognized as an important tool in many fields, with multiple nobel prize laureates in economics)",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "5c35a0b1-4d02-45bc-87b7-e8f86e8111bf",
+    "statement": "Discussions on the mathematics of games date back centuries, with developments from Cardano, Huygens, Waldegrave, Cournot, Bertrand, Zermelo, Borel, and others",
+    "cluster": "mathematics \n (or possibly: game_theory, if that is considered a domain of its own)",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "1d0fa399-12c7-477a-9e4b-26df623d13b7",
+    "statement": "The Nash equilibrium, introduced by John Nash, is a solution concept for non-cooperative games, applicable to a wide variety of games and proven to exist in every finite n-player, non-zero-sum game | The concept of the Nash equilibrium is a solution concept for non-cooperative games",
+    "cluster": "economics",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "ca0e2367-ba6e-4213-8b95-2cca2600a91d",
+    "statement": "Game theory experienced a flurry of activity in the 1950s, with the development of various concepts like the core, extensive form game, fictitious play, repeated games, and Shapley value, along with first applications to philosophy and political science",
+    "cluster": "economics",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "1ebb091a-8d8c-4d72-9813-3d33e18c86dd",
+    "statement": "Reinhard Selten's subgame perfect equilibria and trembling hand perfection further refined the Nash equilibrium, earning him a Nobel Prize in 1994",
+    "cluster": "economics",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "54b2dfd4-bcba-4fa5-bf4d-b2a2eb2f21d5",
+    "statement": "John Maynard Smith's evolutionarily stable strategy and the concepts of correlated equilibrium, trembling hand perfection, and common knowledge were introduced and analyzed in the 1970s and 1990s",
+    "cluster": "economics (the statement is about game theory concepts that were developed and studied in economics)",
+    "node_type": "concept",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "36d8d160-423d-493f-8f03-fd32784eeddb",
+    "statement": "Game theory can be used to analyze evolutionary processes",
+    "cluster": "evolutionary_biology, computer_science, game_theory, mathematics, economics",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "0d355bd6-ea40-48b3-bf07-916cf47ae27d",
+    "statement": "The optimal chess strategy is strictly determined",
+    "cluster": "mathematics or computer_science",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "723c8d52-6f4e-40e8-8d62-c67c1cda25f4",
+    "statement": "Every finite n-player, non-zero-sum (not just two-player zero-sum) non-cooperative game has a Nash equilibrium in mixed strategies",
+    "cluster": "game_theory (which could be considered a subfield of mathematics, economics, or sociology; i chose the most specific domain)",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "1d0fa399-12c7-477a-9e4b-26df623d13b7",
+    "statement": "The Nash equilibrium, introduced by John Nash, is a solution concept for non-cooperative games, applicable to a wide variety of games and proven to exist in every finite n-player, non-zero-sum game | The concept of the Nash equilibrium is a solution concept for non-cooperative games",
+    "cluster": "economics",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "3c91d056-2a3c-4bb3-a915-805a17a67d0c",
+    "statement": "The notion of proper equilibrium and the concept of incentive compatibility are foundational for mechanism design theory",
+    "cluster": "economics",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  },
+  {
+    "node_id": "a2e99c41-3b37-4d83-8aa2-50b94a300546",
+    "statement": "The theory of stable allocations and the practice of market design can improve real-world outcomes",
+    "cluster": "economics",
+    "node_type": "hypothesis",
+    "article_id": "game_theory",
+    "article_title": "Game theory",
+    "domain": "economics"
+  }
+]

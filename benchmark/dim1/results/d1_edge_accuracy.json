@@ -1,0 +1,596 @@
+{
+  "test": "D1 \u2014 Edge Accuracy",
+  "timestamp": "2026-03-31T21:24:43",
+  "config": {
+    "judge_model": "llama3.1:70b",
+    "num_pairs": 20
+  },
+  "summary": {
+    "overall_type_accuracy": 0.9,
+    "fully_correct_accuracy": 0.75,
+    "analogy_depth_accuracy": 0.571,
+    "mean_narration_quality": 4.267,
+    "PASS_type_accuracy": true,
+    "PASS_recall_no_blind_spot": true,
+    "PASS": true,
+    "pass_threshold_accuracy": 0.7,
+    "pass_threshold_recall": 0.5
+  },
+  "per_type_metrics": {
+    "supports": {
+      "gt_count": 4,
+      "pred_count": 2,
+      "true_positives": 2,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.667
+    },
+    "causes": {
+      "gt_count": 3,
+      "pred_count": 5,
+      "true_positives": 3,
+      "precision": 0.6,
+      "recall": 1.0,
+      "f1": 0.75
+    },
+    "contradicts": {
+      "gt_count": 3,
+      "pred_count": 3,
+      "true_positives": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "analogy": {
+      "gt_count": 7,
+      "pred_count": 7,
+      "true_positives": 7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "unrelated": {
+      "gt_count": 3,
+      "pred_count": 3,
+      "true_positives": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "analogy_depth_breakdown": {
+    "surface_correct": 0,
+    "structural_correct": 3,
+    "isomorphism_correct": 1,
+    "total_analogy_pairs": 7
+  },
+  "confusion_matrix": {
+    "supports": {
+      "causes": 2,
+      "supports": 2
+    },
+    "causes": {
+      "causes": 3
+    },
+    "contradicts": {
+      "contradicts": 3
+    },
+    "analogy": {
+      "analogy": 7
+    },
+    "unrelated": {
+      "unrelated": 3
+    }
+  },
+  "narration_quality": {
+    "pairs_evaluated": 15,
+    "mean_score": 4.267,
+    "pct_accurate": 1.0
+  },
+  "per_pair_results": [
+    {
+      "pair_id": 0,
+      "node_a": "Natural selection acts on heritable variation in populations, favoring traits that increase reproductive success.",
+      "node_b": "Populations that experience strong selection pressure over many generations accumulate adaptive traits that improve survival.",
+      "gt_type": "supports",
+      "gt_depth": null,
+      "pred_type": "causes",
+      "pred_depth": null,
+      "narration": "Idea A describes the mechanism of natural selection that favors traits increasing reproductive success, while Idea B describes a result of this process where populations accumulate adaptive traits over generations. Thus, idea A causes idea B.",
+      "raw_edge": {
+        "related": true,
+        "type": "causes",
+        "narration": "Idea A describes the mechanism of natural selection that favors traits increasing reproductive success, while Idea B describes a result of this process where populations accumulate adaptive traits over generations. Thus, idea A causes idea B.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": false,
+      "depth_correct": true,
+      "fully_correct": false
+    },
+    {
+      "pair_id": 1,
+      "node_a": "Entropy in a closed system tends to increase over time, moving toward states of greater disorder.",
+      "node_b": "Irreversible processes in thermodynamics consistently move toward higher entropy states, making time's arrow thermodynamically asymmetric.",
+      "gt_type": "supports",
+      "gt_depth": null,
+      "pred_type": "causes",
+      "pred_depth": null,
+      "narration": "Idea A describes how entropy in a closed system tends to increase over time, leading to greater disorder. Idea B explains that irreversible processes in thermodynamics consistently move toward higher entropy states, which is a direct consequence of the general tendency described in Idea A. This makes the arrow of time thermodynamically asymmetric.",
+      "raw_edge": {
+        "related": true,
+        "type": "causes",
+        "narration": "Idea A describes how entropy in a closed system tends to increase over time, leading to greater disorder. Idea B explains that irreversible processes in thermodynamics consistently move toward higher entropy states, which is a direct consequence of the general tendency described in Idea A. This makes the arrow of time thermodynamically asymmetric.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": false,
+      "depth_correct": true,
+      "fully_correct": false
+    },
+    {
+      "pair_id": 2,
+      "node_a": "DNA base pairing follows strict complementarity rules: adenine pairs with thymine, cytosine pairs with guanine.",
+      "node_b": "The double helix structure of DNA is stabilized by hydrogen bonds between complementary base pairs on opposite strands.",
+      "gt_type": "supports",
+      "gt_depth": null,
+      "pred_type": "supports",
+      "pred_depth": null,
+      "narration": "The rule of strict complementarity in DNA base pairing (Idea A) is a key factor that enables the formation of hydrogen bonds between complementary base pairs on opposite strands, thereby stabilizing the double helix structure of DNA (Idea B).",
+      "raw_edge": {
+        "related": true,
+        "type": "supports",
+        "narration": "The rule of strict complementarity in DNA base pairing (Idea A) is a key factor that enables the formation of hydrogen bonds between complementary base pairs on opposite strands, thereby stabilizing the double helix structure of DNA (Idea B).",
+        "weight": 0.6,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 3,
+      "node_a": "Gradient descent updates model weights by moving in the direction of steepest decrease of the loss function.",
+      "node_b": "Backpropagation computes the gradient of the loss with respect to each weight, enabling gradient descent to train deep networks.",
+      "gt_type": "supports",
+      "gt_depth": null,
+      "pred_type": "supports",
+      "pred_depth": null,
+      "narration": "Idea B, backpropagation computing the gradient of the loss with respect to each weight, enables Idea A, gradient descent updates model weights by moving in the direction of steepest decrease of the loss function, to train deep networks.",
+      "raw_edge": {
+        "related": true,
+        "type": "supports",
+        "narration": "Idea B, backpropagation computing the gradient of the loss with respect to each weight, enables Idea A, gradient descent updates model weights by moving in the direction of steepest decrease of the loss function, to train deep networks.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 4,
+      "node_a": "Increasing the temperature of a gas increases the average kinetic energy of its molecules.",
+      "node_b": "Higher average kinetic energy in a gas leads to more frequent and forceful collisions with container walls, raising pressure.",
+      "gt_type": "causes",
+      "gt_depth": null,
+      "pred_type": "causes",
+      "pred_depth": null,
+      "narration": "Increasing the temperature of a gas directly leads to an increase in the average kinetic energy of its molecules, which in turn results in more frequent and forceful collisions with container walls. This causes a rise in pressure as described in Idea B.",
+      "raw_edge": {
+        "related": true,
+        "type": "causes",
+        "narration": "Increasing the temperature of a gas directly leads to an increase in the average kinetic energy of its molecules, which in turn results in more frequent and forceful collisions with container walls. This causes a rise in pressure as described in Idea B.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 5,
+      "node_a": "A dominant strategy in a game yields a higher payoff regardless of what other players do.",
+      "node_b": "When all players follow their dominant strategies, the resulting outcome is a Nash equilibrium from which no player wishes to deviate.",
+      "gt_type": "causes",
+      "gt_depth": null,
+      "pred_type": "causes",
+      "pred_depth": null,
+      "narration": "A dominant strategy in a game resulting in a higher payoff regardless of other players' actions can lead to all players following their dominant strategies, which is the definition of a Nash equilibrium. This outcome is a state from which no player wishes to deviate as it provides them with the best possible payoff under the given conditions.",
+      "raw_edge": {
+        "related": true,
+        "type": "causes",
+        "narration": "A dominant strategy in a game resulting in a higher payoff regardless of other players' actions can lead to all players following their dominant strategies, which is the definition of a Nash equilibrium. This outcome is a state from which no player wishes to deviate as it provides them with the best possible payoff under the given conditions.",
+        "weight": 0.7,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 6,
+      "node_a": "Mutations in DNA replication introduce heritable variation into a population.",
+      "node_b": "Heritable variation provides the raw material on which natural selection can act, enabling evolutionary change over generations.",
+      "gt_type": "causes",
+      "gt_depth": null,
+      "pred_type": "causes",
+      "pred_depth": null,
+      "narration": "Mutations in DNA replication cause heritable variation, which is the raw material on which natural selection can act to enable evolutionary change over generations.",
+      "raw_edge": {
+        "related": true,
+        "type": "causes",
+        "narration": "Mutations in DNA replication cause heritable variation, which is the raw material on which natural selection can act to enable evolutionary change over generations.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 7,
+      "node_a": "Neural networks with more layers always achieve better performance on any given task.",
+      "node_b": "Deeper neural networks often suffer from vanishing gradients and overfitting, and frequently underperform shallower architectures on small datasets.",
+      "gt_type": "contradicts",
+      "gt_depth": null,
+      "pred_type": "contradicts",
+      "pred_depth": null,
+      "narration": "Idea A suggests that deeper neural networks always achieve better performance, while Idea B states that they often suffer from vanishing gradients and overfitting, which can lead to underperformance. These two ideas contradict each other as they make mutually exclusive claims about the performance of deep neural networks.",
+      "raw_edge": {
+        "related": true,
+        "type": "contradicts",
+        "narration": "Idea A suggests that deeper neural networks always achieve better performance, while Idea B states that they often suffer from vanishing gradients and overfitting, which can lead to underperformance. These two ideas contradict each other as they make mutually exclusive claims about the performance of deep neural networks.",
+        "weight": 0.9,
+        "confidence": 0.8
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 8,
+      "node_a": "In a perfectly competitive market, the Nash equilibrium is always the socially optimal outcome.",
+      "node_b": "The prisoner's dilemma demonstrates that Nash equilibria can be socially suboptimal \u2014 rational individual behavior produces outcomes worse for all participants than cooperative alternatives.",
+      "gt_type": "contradicts",
+      "gt_depth": null,
+      "pred_type": "contradicts",
+      "pred_depth": null,
+      "narration": "Idea A suggests that in a perfectly competitive market, the Nash equilibrium is always the socially optimal outcome. However, Idea B demonstrates that this is not always the case, as the prisoner's dilemma shows that Nash equilibria can lead to socially suboptimal outcomes, contradicting Idea A.",
+      "raw_edge": {
+        "related": true,
+        "type": "contradicts",
+        "narration": "Idea A suggests that in a perfectly competitive market, the Nash equilibrium is always the socially optimal outcome. However, Idea B demonstrates that this is not always the case, as the prisoner's dilemma shows that Nash equilibria can lead to socially suboptimal outcomes, contradicting Idea A.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 9,
+      "node_a": "Lamarckian inheritance holds that organisms can pass on traits acquired during their lifetime to their offspring.",
+      "node_b": "Modern evolutionary biology, supported by genetics, shows that only heritable genetic variations \u2014 not acquired characteristics \u2014 are passed to offspring.",
+      "gt_type": "contradicts",
+      "gt_depth": null,
+      "pred_type": "contradicts",
+      "pred_depth": null,
+      "narration": "Lamarckian inheritance proposes that organisms can pass on traits acquired during their lifetime to their offspring, while modern evolutionary biology, supported by genetics, shows that only heritable genetic variations are passed to offspring.",
+      "raw_edge": {
+        "related": true,
+        "type": "contradicts",
+        "narration": "Lamarckian inheritance proposes that organisms can pass on traits acquired during their lifetime to their offspring, while modern evolutionary biology, supported by genetics, shows that only heritable genetic variations are passed to offspring.",
+        "weight": 0.9,
+        "confidence": 1.0
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 10,
+      "node_a": "The internet routes information packets through nodes in a network, with each node forwarding packets toward their destination.",
+      "node_b": "Neurons in the brain transmit signals through synaptic connections, with signal strength determined by connection weights.",
+      "gt_type": "analogy",
+      "gt_depth": "surface",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both the internet and the brain transmit information through interconnected nodes (packets and neurons) that pass signals along to their destinations via weighted connections.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both the internet and the brain transmit information through interconnected nodes (packets and neurons) that pass signals along to their destinations via weighted connections.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": false,
+      "fully_correct": false
+    },
+    {
+      "pair_id": 11,
+      "node_a": "Nash equilibrium in game theory describes a stable state where no player benefits from unilaterally changing strategy.",
+      "node_b": "Fixed points in dynamical systems describe stable states where a system no longer changes under its own dynamics.",
+      "gt_type": "analogy",
+      "gt_depth": "surface",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both Nash equilibrium in game theory and fixed points in dynamical systems describe stable states where no change occurs. In the former, no player benefits from changing strategy; in the latter, the system no longer changes under its own dynamics.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both Nash equilibrium in game theory and fixed points in dynamical systems describe stable states where no change occurs. In the former, no player benefits from changing strategy; in the latter, the system no longer changes under its own dynamics.",
+        "weight": 0.7,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": false,
+      "fully_correct": false
+    },
+    {
+      "pair_id": 12,
+      "node_a": "Natural selection filters heritable variation in biological populations, preserving traits that increase fitness and eliminating those that reduce it.",
+      "node_b": "Gradient descent filters parameter configurations in a neural network, preserving weight updates that reduce loss and discarding those that increase it.",
+      "gt_type": "analogy",
+      "gt_depth": "structural",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both ideas describe a process of iterative improvement through the selective preservation and discarding of certain variations. In natural selection, heritable traits are filtered based on their contribution to fitness; in gradient descent for neural networks, weight updates are retained if they reduce loss and discarded otherwise.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both ideas describe a process of iterative improvement through the selective preservation and discarding of certain variations. In natural selection, heritable traits are filtered based on their contribution to fitness; in gradient descent for neural networks, weight updates are retained if they reduce loss and discarded otherwise.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 13,
+      "node_a": "DNA transcription reads a genetic sequence and produces an RNA copy, which is then translated into a protein.",
+      "node_b": "A compiler reads source code, produces an intermediate representation, which is then compiled into machine instructions.",
+      "gt_type": "analogy",
+      "gt_depth": "structural",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both DNA transcription and a compiler process involve reading a sequence (genetic or code) and producing an intermediate representation (RNA or intermediate code) that is then used to create a final product (protein or machine instructions).",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both DNA transcription and a compiler process involve reading a sequence (genetic or code) and producing an intermediate representation (RNA or intermediate code) that is then used to create a final product (protein or machine instructions).",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 14,
+      "node_a": "The prisoner's dilemma shows that individually rational choices can lead to collectively suboptimal outcomes.",
+      "node_b": "Tragedy of the commons demonstrates that individually rational resource exploitation leads to collective depletion and loss for all.",
+      "gt_type": "analogy",
+      "gt_depth": "structural",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both ideas describe how individually rational actions can lead to collectively detrimental outcomes, with the Prisoner's Dilemma focusing on cooperation and defection in strategic situations, while the Tragedy of the Commons explores resource exploitation and depletion.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both ideas describe how individually rational actions can lead to collectively detrimental outcomes, with the Prisoner's Dilemma focusing on cooperation and defection in strategic situations, while the Tragedy of the Commons explores resource exploitation and depletion.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 15,
+      "node_a": "Heat diffusion through a medium is governed by the heat equation: the rate of change of temperature is proportional to the Laplacian of the temperature field.",
+      "node_b": "Information diffusion through a network follows a diffusion equation structurally identical to the heat equation, with information concentration replacing temperature.",
+      "gt_type": "analogy",
+      "gt_depth": "isomorphism",
+      "pred_type": "analogy",
+      "pred_depth": "structural",
+      "narration": "Both heat diffusion through a medium and information diffusion through a network follow a diffusion equation where the rate of change is proportional to a Laplacian. In the case of heat diffusion, the Laplacian is applied to the temperature field, while in information diffusion, it is applied to the information concentration.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "structural",
+        "narration": "Both heat diffusion through a medium and information diffusion through a network follow a diffusion equation where the rate of change is proportional to a Laplacian. In the case of heat diffusion, the Laplacian is applied to the temperature field, while in information diffusion, it is applied to the information concentration.",
+        "weight": 0.8,
+        "confidence": 0.9
+      },
+      "type_correct": true,
+      "depth_correct": false,
+      "fully_correct": false
+    },
+    {
+      "pair_id": 16,
+      "node_a": "Entropy in thermodynamics measures the number of microstates corresponding to a macrostate: S = k ln(W).",
+      "node_b": "Shannon entropy in information theory measures the expected information content of a probability distribution: H = -\u03a3 p log p. Both formulas are formally equivalent under a change of variables.",
+      "gt_type": "analogy",
+      "gt_depth": "isomorphism",
+      "pred_type": "analogy",
+      "pred_depth": "isomorphism",
+      "narration": "Both entropy in thermodynamics and Shannon entropy in information theory measure the uncertainty or disorder within a system. The formal equivalence of their mathematical formulas under a change of variables highlights this analogy, indicating that they share a common underlying structure.",
+      "raw_edge": {
+        "related": true,
+        "type": "analogy",
+        "analogy_depth": "isomorphism",
+        "narration": "Both entropy in thermodynamics and Shannon entropy in information theory measure the uncertainty or disorder within a system. The formal equivalence of their mathematical formulas under a change of variables highlights this analogy, indicating that they share a common underlying structure.",
+        "weight": 0.9,
+        "confidence": 0.8
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 17,
+      "node_a": "Game theory was developed in the mid-20th century by mathematicians including John von Neumann and John Nash.",
+      "node_b": "Thermodynamics was formalized in the 19th century through the work of Clausius, Kelvin, and Carnot.",
+      "gt_type": "unrelated",
+      "gt_depth": null,
+      "pred_type": "unrelated",
+      "pred_depth": null,
+      "narration": "",
+      "raw_edge": {
+        "related": false
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 18,
+      "node_a": "Wikipedia is a freely editable online encyclopedia covering topics across all domains of human knowledge.",
+      "node_b": "The human genome project mapped the complete DNA sequence of human chromosomes between 1990 and 2003.",
+      "gt_type": "unrelated",
+      "gt_depth": null,
+      "pred_type": "unrelated",
+      "pred_depth": null,
+      "narration": "",
+      "raw_edge": {
+        "related": false
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    },
+    {
+      "pair_id": 19,
+      "node_a": "Artificial neural networks require significant computational resources to train on large datasets.",
+      "node_b": "Game theory has been applied to auction design and mechanism design in economics.",
+      "gt_type": "unrelated",
+      "gt_depth": null,
+      "pred_type": "unrelated",
+      "pred_depth": null,
+      "narration": "",
+      "raw_edge": {
+        "related": false,
+        "weight": 0.1,
+        "confidence": 0.4
+      },
+      "type_correct": true,
+      "depth_correct": true,
+      "fully_correct": true
+    }
+  ],
+  "narration_judgments": [
+    {
+      "pair_id": 2,
+      "narration": "The rule of strict complementarity in DNA base pairing (Idea A) is a key factor that enables the formation of hydrogen bonds between complementary base pairs on opposite strands, thereby stabilizing the double helix structure of DNA (Idea B).",
+      "score": 5,
+      "is_accurate": true,
+      "reasoning": "The narration clearly explains how the strict complementarity rules in DNA base pairing enable the formation of hydrogen bonds, thereby stabilizing the double helix structure."
+    },
+    {
+      "pair_id": 3,
+      "narration": "Idea B, backpropagation computing the gradient of the loss with respect to each weight, enables Idea A, gradient descent updates model weights by moving in the direction of steepest decrease of the loss function, to train deep networks.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains how backpropagation supports gradient descent, but is slightly generic in not explicitly stating that the computed gradients are used to determine the direction of steepest decrease."
+    },
+    {
+      "pair_id": 4,
+      "narration": "Increasing the temperature of a gas directly leads to an increase in the average kinetic energy of its molecules, which in turn results in more frequent and forceful collisions with container walls. This causes a rise in pressure as described in Idea B.",
+      "score": 5,
+      "is_accurate": true,
+      "reasoning": "The narration clearly explains the causal chain from increasing temperature to rising pressure through increased kinetic energy and more forceful collisions."
+    },
+    {
+      "pair_id": 5,
+      "narration": "A dominant strategy in a game resulting in a higher payoff regardless of other players' actions can lead to all players following their dominant strategies, which is the definition of a Nash equilibrium. This outcome is a state from which no player wishes to deviate as it provides them with the best possible payoff under the given conditions.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the relationship but is slightly generic in describing how dominant strategies lead to a Nash equilibrium."
+    },
+    {
+      "pair_id": 6,
+      "narration": "Mutations in DNA replication cause heritable variation, which is the raw material on which natural selection can act to enable evolutionary change over generations.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the relationship but is slightly generic in describing how mutations introduce heritable variation."
+    },
+    {
+      "pair_id": 7,
+      "narration": "Idea A suggests that deeper neural networks always achieve better performance, while Idea B states that they often suffer from vanishing gradients and overfitting, which can lead to underperformance. These two ideas contradict each other as they make mutually exclusive claims about the performance of deep neural networks.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the contradiction but could be more specific about how vanishing gradients and overfitting lead to underperformance."
+    },
+    {
+      "pair_id": 8,
+      "narration": "Idea A suggests that in a perfectly competitive market, the Nash equilibrium is always the socially optimal outcome. However, Idea B demonstrates that this is not always the case, as the prisoner's dilemma shows that Nash equilibria can lead to socially suboptimal outcomes, contradicting Idea A.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the contradiction but could be more precise in highlighting that Node A's claim is specific to perfectly competitive markets, while Node B provides a counterexample from a different context."
+    },
+    {
+      "pair_id": 9,
+      "narration": "Lamarckian inheritance proposes that organisms can pass on traits acquired during their lifetime to their offspring, while modern evolutionary biology, supported by genetics, shows that only heritable genetic variations are passed to offspring.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the contradiction between Lamarckian inheritance and modern evolutionary biology, but is slightly generic in not explicitly highlighting that acquired characteristics are the point of contention."
+    },
+    {
+      "pair_id": 10,
+      "narration": "Both the internet and the brain transmit information through interconnected nodes (packets and neurons) that pass signals along to their destinations via weighted connections.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately captures the analogy between internet routing and neural signal transmission but uses slightly generic terms like 'weighted connections' without specifying how weights are determined."
+    },
+    {
+      "pair_id": 11,
+      "narration": "Both Nash equilibrium in game theory and fixed points in dynamical systems describe stable states where no change occurs. In the former, no player benefits from changing strategy; in the latter, the system no longer changes under its own dynamics.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the analogy but is slightly generic and doesn't delve into the deeper mathematical or conceptual connections between Nash equilibria and fixed points."
+    },
+    {
+      "pair_id": 12,
+      "narration": "Both ideas describe a process of iterative improvement through the selective preservation and discarding of certain variations. In natural selection, heritable traits are filtered based on their contribution to fitness; in gradient descent for neural networks, weight updates are retained if they reduce loss and discarded otherwise.",
+      "score": 5,
+      "is_accurate": true,
+      "reasoning": "The narration precisely explains the analogy by highlighting the shared mechanism of iterative improvement through selective preservation and discarding."
+    },
+    {
+      "pair_id": 13,
+      "narration": "Both DNA transcription and a compiler process involve reading a sequence (genetic or code) and producing an intermediate representation (RNA or intermediate code) that is then used to create a final product (protein or machine instructions).",
+      "score": 5,
+      "is_accurate": true,
+      "reasoning": "The narration precisely explains the analogy between DNA transcription and a compiler by highlighting the parallel processing steps of reading, producing an intermediate representation, and creating a final product."
+    },
+    {
+      "pair_id": 14,
+      "narration": "Both ideas describe how individually rational actions can lead to collectively detrimental outcomes, with the Prisoner's Dilemma focusing on cooperation and defection in strategic situations, while the Tragedy of the Commons explores resource exploitation and depletion.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the relationship between the two nodes as an analogy, but could be more precise in highlighting the specific mechanisms or logical links."
+    },
+    {
+      "pair_id": 15,
+      "narration": "Both heat diffusion through a medium and information diffusion through a network follow a diffusion equation where the rate of change is proportional to a Laplacian. In the case of heat diffusion, the Laplacian is applied to the temperature field, while in information diffusion, it is applied to the information concentration.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the structural analogy between heat and information diffusion but could be more precise in highlighting the direct proportionality to the Laplacian."
+    },
+    {
+      "pair_id": 16,
+      "narration": "Both entropy in thermodynamics and Shannon entropy in information theory measure the uncertainty or disorder within a system. The formal equivalence of their mathematical formulas under a change of variables highlights this analogy, indicating that they share a common underlying structure.",
+      "score": 4,
+      "is_accurate": true,
+      "reasoning": "The narration accurately explains the analogy between thermodynamic and Shannon entropy, but could be more precise in detailing the change of variables that establishes their formal equivalence."
+    }
+  ]
+}

@@ -1,0 +1,540 @@
+{
+  "test": "D1 \u2014 Contradiction Detection",
+  "timestamp": "2026-03-31T22:10:47",
+  "config": {
+    "judge_model": "llama3.1:70b",
+    "num_contradicting_pairs": 10,
+    "num_compatible_pairs": 10
+  },
+  "summary": {
+    "true_positives": 7,
+    "true_negatives": 7,
+    "false_positives": 3,
+    "false_negatives": 3,
+    "precision": 0.7,
+    "recall": 0.7,
+    "f1": 0.7,
+    "accuracy": 0.7,
+    "llm_validation_agreement": 0.7,
+    "PASS_precision": false,
+    "PASS_recall": true,
+    "PASS": false,
+    "pass_threshold_precision": 0.8,
+    "pass_threshold_recall": 0.7
+  },
+  "missed_contradictions": [
+    {
+      "stmt_a": "DNA is a single-stranded molecule that carries genetic information in a linear sequence of nucleotid",
+      "stmt_b": "DNA is a double-stranded helical molecule; the two strands are held together by hydrogen bonds betwe"
+    },
+    {
+      "stmt_a": "Entropy in an isolated system can spontaneously decrease, allowing order to emerge from disorder wit",
+      "stmt_b": "The second law of thermodynamics states that entropy in an isolated system never decreases \u2014 spontan"
+    },
+    {
+      "stmt_a": "Gradient descent guarantees finding the global minimum of the loss function for any neural network a",
+      "stmt_b": "Gradient descent is a local optimization method and is not guaranteed to find the global minimum; no"
+    }
+  ],
+  "false_alarms": [
+    {
+      "stmt_a": "Mutations in protein-coding genes can alter the amino acid sequence of the resulting protein, potent",
+      "stmt_b": "Gene regulatory regions control when and where a gene is expressed, and mutations in these regions c"
+    },
+    {
+      "stmt_a": "The prisoner's dilemma illustrates how individually rational decisions can lead to collectively subo",
+      "stmt_b": "Repeated games and reputation mechanisms can enable cooperation to emerge in prisoner's dilemma situ"
+    },
+    {
+      "stmt_a": "Overfitting occurs when a model learns the noise in training data, performing well on training data ",
+      "stmt_b": "Regularization techniques such as L2 weight decay penalize large weights and reduce overfitting by c"
+    }
+  ],
+  "all_results": [
+    {
+      "pair_id": 0,
+      "stmt_a": "Heavier objects fall faster than lighter objects in a vacuum, as Aristotle argued.",
+      "stmt_b": "In a vacuum, all objects fall at the same rate regardless of mass, as Galileo demonstrated \u2014 gravity accelerates all objects equally.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "b36d2112-d0e0-4e20-ac30-f6d9d753cab0",
+          "to": "0bf35ec9-feb0-4a60-92c6-cc9eeb1d142a",
+          "narration": "Idea A, that in a vacuum all objects fall at the same rate regardless of mass, directly contradicts Idea B which states that gravity accelerates all objects equally, implying that heavier objects should still fall faster under gravity's influence."
+        },
+        {
+          "from": "26e8a8c8-b9cf-46ed-8b63-ddd4ff14ac17",
+          "to": "83e8d3ee-8a29-4b82-9b3c-18788bfb185a",
+          "narration": "Aristotle's claim that heavier objects fall faster than lighter ones in a vacuum is contradicted by the understanding of the vacuum environment, which eliminates air resistance and allows for a uniform rate of falling objects' acceleration."
+        },
+        {
+          "from": "26e8a8c8-b9cf-46ed-8b63-ddd4ff14ac17",
+          "to": "b36d2112-d0e0-4e20-ac30-f6d9d753cab0",
+          "narration": "Galileo's demonstration that in a vacuum all objects fall at the same rate directly contradicts Aristotle's view that heavier objects fall faster than lighter ones in a vacuum."
+        },
+        {
+          "from": "26e8a8c8-b9cf-46ed-8b63-ddd4ff14ac17",
+          "to": "0bf35ec9-feb0-4a60-92c6-cc9eeb1d142a",
+          "narration": "Aristotle's perspective that heavier objects fall faster than lighter ones in a vacuum directly contradicts the understanding that gravity accelerates all objects equally, regardless of their mass."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims heavier objects fall faster, while Statement B claims all objects fall at the same rate regardless of mass."
+      }
+    },
+    {
+      "pair_id": 1,
+      "stmt_a": "Acquired characteristics \u2014 skills and features an organism develops during its lifetime \u2014 can be inherited by its offspring.",
+      "stmt_b": "Only heritable genetic variations encoded in DNA can be passed to offspring; traits acquired during an individual's lifetime cannot be directly transmitted.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "fe2df6e7-9042-41eb-9304-0c6f9f46d35a",
+          "to": "bd3978f7-6fd5-43b2-8d97-4a0d264b79e4",
+          "narration": "Idea A suggests the possibility of inheriting acquired characteristics, while Idea B asserts that such traits cannot be directly transmitted to offspring, contradicting the idea proposed in Idea A."
+        },
+        {
+          "from": "fe2df6e7-9042-41eb-9304-0c6f9f46d35a",
+          "to": "b02e9518-d066-4cad-9de9-e23138532818",
+          "narration": "The theory of acquired characteristics challenges the central dogma of molecular biology by suggesting a form of 'soft' inheritance, contradicting the idea that genetic information flows only from DNA to RNA to proteins."
+        },
+        {
+          "from": "a516de21-8242-4fc5-90b4-96b09ae21b51",
+          "to": "bd3978f7-6fd5-43b2-8d97-4a0d264b79e4",
+          "narration": "Idea A discusses how skills and features developed over an organism's life are described as 'acquired characteristics', which cannot be directly transmitted to offspring. However, Idea B presents a contradiction by stating that there is scientific consensus stating traits acquired during an individual's lifetime cannot be directly transmitted to its offspring, while also suggesting the possibility of acquired characteristics being inherited by offspring."
+        },
+        {
+          "from": "a516de21-8242-4fc5-90b4-96b09ae21b51",
+          "to": "b02e9518-d066-4cad-9de9-e23138532818",
+          "narration": "The concept of acquired characteristics contradicts the central dogma of molecular biology, which asserts that genetic information can only flow from DNA to RNA to proteins. If acquired characteristics could change an organism's genes during its life, this would imply a flow of genetic information in the opposite direction, challenging the central dogma."
+        },
+        {
+          "from": "b02e9518-d066-4cad-9de9-e23138532818",
+          "to": "bd3978f7-6fd5-43b2-8d97-4a0d264b79e4",
+          "narration": "The idea of acquired characteristics contradicts the scientific consensus that traits acquired during an individual's lifetime cannot be directly transmitted to its offspring. The former suggests a possibility of inheriting acquired traits, while the latter explicitly denies this possibility."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims acquired characteristics can be inherited, while Statement B explicitly states they cannot."
+      }
+    },
+    {
+      "pair_id": 2,
+      "stmt_a": "Neural networks with more hidden layers always achieve higher accuracy on any classification task.",
+      "stmt_b": "Adding more layers to a neural network frequently causes vanishing gradients and overfitting, leading to worse generalization on tasks with limited training data.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "f38185f9-aae8-4a41-9d2b-f42436e93e5e",
+          "to": "eb120aa3-8a8a-4ad6-9fce-65938a21df0f",
+          "narration": "Idea A suggests that adding layers to a neural network can increase its accuracy by allowing it to model more complex functions. However, Idea B states that adding more layers can cause vanishing gradients, where gradient updates become too small to effectively train deep networks. This makes it difficult for the network to learn and negatively impacts its performance, contradicting Idea A's claim of increased accuracy."
+        },
+        {
+          "from": "f38185f9-aae8-4a41-9d2b-f42436e93e5e",
+          "to": "62d0381d-0079-48bd-833e-ca03167ca7d7",
+          "narration": "Idea A suggests that adding layers to a neural network can increase its accuracy by modeling complex functions, while Idea B states that this can lead to overfitting and poor generalization on tasks with limited training data. Therefore, there is a contradiction between the two ideas as adding more layers can both enhance accuracy (A) and degrade performance (B)."
+        },
+        {
+          "from": "775effb0-a0c0-4aed-986a-654992118c7d",
+          "to": "eb120aa3-8a8a-4ad6-9fce-65938a21df0f",
+          "narration": "Idea A states that having more layers in a neural network can lead to overfitting and vanishing gradients, while Idea B also mentions the risk of vanishing gradients but implies that adding more layers always increases accuracy. These two ideas contradict each other as they present different views on the effect of increasing the number of hidden layers in neural networks."
+        },
+        {
+          "from": "775effb0-a0c0-4aed-986a-654992118c7d",
+          "to": "62d0381d-0079-48bd-833e-ca03167ca7d7",
+          "narration": "Idea A suggests that adding more layers to a neural network can result in issues such as overfitting and vanishing gradients, while Idea B claims that this addition directly causes overfitting. However, these two ideas cannot both be true simultaneously, as they make mutually exclusive claims about the effects of adding layers to a neural network."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims more layers always improve accuracy, while Statement B asserts that adding layers can lead to worse performance due to vanishing gradients and overfitting."
+      }
+    },
+    {
+      "pair_id": 3,
+      "stmt_a": "The Nash equilibrium always produces the socially optimal outcome in any strategic interaction between rational agents.",
+      "stmt_b": "The prisoner's dilemma is a canonical example of a Nash equilibrium that is Pareto suboptimal \u2014 all players would be better off deviating to a cooperative outcome.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "130d0815-4409-49c9-86a3-feca191bd4f8",
+          "to": "35bd3112-d1dd-4781-99a9-675d6b28eaad",
+          "narration": "Idea A makes two mutually exclusive claims about the Nash equilibrium's ability to guarantee socially optimal outcomes in strategic interactions with rational agents. Idea B highlights the discrepancy between Nash and Pareto optimality, implying that the Nash equilibrium does not always lead to socially optimal outcomes."
+        },
+        {
+          "from": "130d0815-4409-49c9-86a3-feca191bd4f8",
+          "to": "11c49172-3891-4534-89f2-bdcf620df88c",
+          "narration": "Idea A and Idea B make mutually exclusive claims about the Nash equilibrium guaranteeing the socially optimal outcome in any strategic interaction with rational agents. While Idea A asserts that it does, Idea B contradicts this by stating that multiple equilibria can exist with varying welfare outcomes, which may not always align with the socially optimal outcome."
+        },
+        {
+          "from": "130d0815-4409-49c9-86a3-feca191bd4f8",
+          "to": "968689cf-062c-403c-ad42-73ccf818cf28",
+          "narration": "Idea A and Idea B contradict each other as Idea A suggests that the Nash equilibrium always produces the socially optimal outcome in any strategic interaction between rational agents, while Idea B presents the prisoner's dilemma as a counterexample where the Nash equilibrium results in a Pareto suboptimal outcome."
+        },
+        {
+          "from": "11c49172-3891-4534-89f2-bdcf620df88c",
+          "to": "35bd3112-d1dd-4781-99a9-675d6b28eaad",
+          "narration": "Idea A highlights the potential for multiple equilibria and varying welfare outcomes despite attempts to achieve Pareto optimality, while Idea B emphasizes the discrepancy between Nash and Pareto optimality. These ideas contradict each other as they present different perspectives on the complexity of strategic interactions."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims Nash equilibrium always produces the socially optimal outcome, while Statement B provides a specific example where this is not the case."
+      }
+    },
+    {
+      "pair_id": 4,
+      "stmt_a": "DNA is a single-stranded molecule that carries genetic information in a linear sequence of nucleotides.",
+      "stmt_b": "DNA is a double-stranded helical molecule; the two strands are held together by hydrogen bonds between complementary base pairs and run antiparallel to each other.",
+      "expected": "contradicts",
+      "contradiction_detected": false,
+      "correct": false,
+      "new_nodes_created": 2,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims DNA is single-stranded, while Statement B claims it is double-stranded, making them mutually exclusive."
+      }
+    },
+    {
+      "pair_id": 5,
+      "stmt_a": "Entropy in an isolated system can spontaneously decrease, allowing order to emerge from disorder without external energy input.",
+      "stmt_b": "The second law of thermodynamics states that entropy in an isolated system never decreases \u2014 spontaneous processes always increase or maintain total entropy.",
+      "expected": "contradicts",
+      "contradiction_detected": false,
+      "correct": false,
+      "new_nodes_created": 1,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims entropy can decrease, while Statement B asserts it never decreases, making them mutually exclusive."
+      }
+    },
+    {
+      "pair_id": 6,
+      "stmt_a": "Gradient descent guarantees finding the global minimum of the loss function for any neural network architecture.",
+      "stmt_b": "Gradient descent is a local optimization method and is not guaranteed to find the global minimum; non-convex loss landscapes mean it frequently converges to local minima or saddle points.",
+      "expected": "contradicts",
+      "contradiction_detected": false,
+      "correct": false,
+      "new_nodes_created": 1,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims a guarantee of finding the global minimum, while Statement B explicitly states that gradient descent is not guaranteed to find the global minimum."
+      }
+    },
+    {
+      "pair_id": 7,
+      "stmt_a": "Natural selection always produces optimal organisms \u2014 evolution reliably converges on the best possible solution to any environmental challenge.",
+      "stmt_b": "Natural selection is constrained by historical contingency, genetic drift, developmental constraints, and pleiotropy; it produces organisms that are 'good enough,' not optimal.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "ab10ae92-553a-4617-904d-3aeb9362ed00",
+          "to": "67b8d705-e32b-4025-bee2-f8a95d0a0642",
+          "narration": "Idea A suggests that evolution's optimization is reliable in solving environmental challenges, while Idea B states developmental constraints and pleiotropy limit evolution's optimization potential. These two ideas contradict each other as the limitations mentioned in Idea B would negatively impact the reliability of evolution's optimization."
+        },
+        {
+          "from": "ab10ae92-553a-4617-904d-3aeb9362ed00",
+          "to": "8b97fa6e-ad0b-4bdd-a557-32a70be07c84",
+          "narration": "Idea A suggests that evolution's optimization is reliable in solving environmental challenges, implying that natural selection can produce optimal organisms. However, Idea B points out constraints on natural selection such as historical contingency, genetic drift, developmental constraints, and pleiotropy, which limit its ability to produce optimal organisms, contradicting the assumption of optimality in Idea A."
+        },
+        {
+          "from": "042dce9a-f21c-4d4c-ae7b-fb1bcf92bae9",
+          "to": "ab10ae92-553a-4617-904d-3aeb9362ed00",
+          "narration": "Idea A suggests that natural selection does not reliably produce optimal organisms and it only produces organisms that are 'good enough'. However, Idea B states that evolution's optimization is thought to be reliable in solving environmental challenges, implying the production of optimal organisms. These two ideas contradict each other as they make mutually exclusive claims."
+        },
+        {
+          "from": "042dce9a-f21c-4d4c-ae7b-fb1bcf92bae9",
+          "to": "8b97fa6e-ad0b-4bdd-a557-32a70be07c84",
+          "narration": "Idea A suggests that natural selection produces organisms that are 'good enough' and not necessarily optimal, while Idea B states that historical contingency, genetic drift, developmental constraints, and pleiotropy limit natural selection's ability to produce optimal organisms. The two ideas contradict each other since Idea B implies that there is a possibility for natural selection to produce optimal organisms if not for these limiting factors."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 0.9,
+        "reasoning": "Statement A claims natural selection always produces optimal organisms, while Statement B asserts it only produces 'good enough' organisms due to various constraints."
+      }
+    },
+    {
+      "pair_id": 8,
+      "stmt_a": "Information cannot be destroyed; it is always conserved in any physical process, including black hole formation.",
+      "stmt_b": "The black hole information paradox arises because Hawking radiation appears to destroy information, contradicting the principle of unitarity in quantum mechanics.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 3,
+      "contradiction_details": [
+        {
+          "from": "970dd548-5ab5-4729-8160-e5f932fe5eed",
+          "to": "dc641e45-620c-49a3-9347-d09a98a24fdd",
+          "narration": "Idea A asserts that information cannot be destroyed in any physical process, while Idea B's Hawking radiation seems to destroy information, creating a contradiction with the law of conservation of information."
+        },
+        {
+          "from": "dc641e45-620c-49a3-9347-d09a98a24fdd",
+          "to": "5ed949a9-c811-4d13-bb96-4eb158380ec5",
+          "narration": "Idea A describes a contradiction between the principle of unitarity in quantum mechanics and Hawking radiation's apparent destruction of information, while Idea B asserts that information is always preserved during a quantum mechanical transformation."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 0.9,
+        "reasoning": "Statement A asserts information is conserved, while Statement B suggests Hawking radiation destroys information, making them mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 9,
+      "stmt_a": "The central dogma of molecular biology states that information flows from protein back to DNA, allowing proteins to modify the genome directly.",
+      "stmt_b": "The central dogma states information flows from DNA to RNA to protein and never in reverse from protein to nucleic acid; reverse transcriptase transfers RNA back to DNA, but protein to DNA transfer has not been observed.",
+      "expected": "contradicts",
+      "contradiction_detected": true,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [
+        {
+          "from": "f9d8ff8c-0d2f-4600-91f4-19000bcec5c8",
+          "to": "1a0428ba-01eb-495d-b0eb-f5f94108d591",
+          "narration": "Idea A states that there are no observed instances of protein directly modifying DNA, while Idea B implies that proteins play a significant role in information transfer by shaping the translation and functionality of RNA. These ideas contradict each other because the process of shaping RNA functionality could potentially involve protein-DNA interaction, which is inconsistent with the claim made in Idea A."
+        },
+        {
+          "from": "f9d8ff8c-0d2f-4600-91f4-19000bcec5c8",
+          "to": "902193a9-d19a-4758-89a2-ba68ed51a219",
+          "narration": "Idea A contradicts the assumption in the central dogma that protein directly modifies DNA, as it states that there is no observed instance of this happening."
+        },
+        {
+          "from": "f9d8ff8c-0d2f-4600-91f4-19000bcec5c8",
+          "to": "d45803b4-7b2a-4ac8-b6ad-bad56a2a15b4",
+          "narration": "Idea A states that there is no observed instance of protein directly modifying DNA, while Idea B mentions the existence of reverse transcriptase which is a type of protein that transfers RNA back to DNA. Therefore, these two ideas contradict each other."
+        },
+        {
+          "from": "1a0428ba-01eb-495d-b0eb-f5f94108d591",
+          "to": "902193a9-d19a-4758-89a2-ba68ed51a219",
+          "narration": "Idea A describes the role of proteins in information transfer downstream via shaping RNA translation and functionality, which supports the central dogma's assumptions. However, Idea B points out challenges to these initial assumptions, such as the discovery of reverse transcriptase, contradicting Idea A."
+        },
+        {
+          "from": "902193a9-d19a-4758-89a2-ba68ed51a219",
+          "to": "d45803b4-7b2a-4ac8-b6ad-bad56a2a15b4",
+          "narration": "Idea A suggests that the central dogma can be challenged by recent discoveries such as reverse transcriptase, which allows for RNA to be transferred back to DNA. However, Idea B states that protein to DNA transfer has not been observed, implying that there is still a one-way flow of genetic information from DNA to RNA and then proteins, which contradicts the idea of challenging the central dogma."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": true,
+        "confidence": 1.0,
+        "reasoning": "Statement A claims proteins can modify the genome directly, while Statement B explicitly states that protein to DNA transfer has not been observed."
+      }
+    },
+    {
+      "pair_id": 0,
+      "stmt_a": "DNA replication is semi-conservative: each new double helix consists of one original strand and one newly synthesized strand.",
+      "stmt_b": "During DNA replication, helicase unwinds the double helix and DNA polymerase synthesizes the new complementary strand in the 5' to 3' direction.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 3,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "Statement A describes the outcome of DNA replication, while Statement B explains a step in the process, without making mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 1,
+      "stmt_a": "Natural selection acts on phenotypic variation, favoring individuals whose traits increase reproductive success.",
+      "stmt_b": "Genetic drift is a random process that changes allele frequencies in small populations, independent of natural selection.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 2,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "The statements describe different mechanisms of evolution, one acting on phenotypic variation and the other on random changes in allele frequencies."
+      }
+    },
+    {
+      "pair_id": 2,
+      "stmt_a": "In game theory, a Nash equilibrium is a set of strategies from which no player has an incentive to deviate unilaterally.",
+      "stmt_b": "The minimax theorem states that in zero-sum games, the minimax strategy profile coincides with the Nash equilibrium.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 4,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "Both statements describe related concepts in game theory without making mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 3,
+      "stmt_a": "Backpropagation computes gradients by applying the chain rule backward through the computational graph of a neural network.",
+      "stmt_b": "Stochastic gradient descent uses random mini-batches to estimate the gradient, making it computationally efficient for large datasets.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 2,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "The statements describe different aspects of neural network training and do not make mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 4,
+      "stmt_a": "The first law of thermodynamics states that energy is conserved: it can be converted between forms but not created or destroyed.",
+      "stmt_b": "Free energy, defined as the energy available to do useful work, decreases in spontaneous processes at constant temperature and pressure.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 2,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "Statement A discusses the conservation of energy in general, while Statement B specifically addresses free energy under certain conditions, without contradicting the principle of energy conservation."
+      }
+    },
+    {
+      "pair_id": 5,
+      "stmt_a": "Mutations in protein-coding genes can alter the amino acid sequence of the resulting protein, potentially changing its function.",
+      "stmt_b": "Gene regulatory regions control when and where a gene is expressed, and mutations in these regions can affect gene expression without changing the protein sequence.",
+      "expected": "compatible",
+      "contradiction_detected": true,
+      "correct": false,
+      "new_nodes_created": 3,
+      "contradiction_details": [
+        {
+          "from": "6c3240c1-8724-44f3-b388-d402f51c75f1",
+          "to": "5671d74d-6f18-4d28-be42-b4d239de85f6",
+          "narration": "Idea A describes how mutations in protein-coding genes can alter the amino acid sequence of a protein, potentially affecting its function. Idea B, however, states that mutations in gene regulatory regions do not change the protein sequence, highlighting a contradiction between the effects of different types of mutations on protein sequences."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": false,
+        "confidence": 0.9,
+        "reasoning": "The statements discuss different aspects of gene mutations and their effects, without making mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 6,
+      "stmt_a": "The prisoner's dilemma illustrates how individually rational decisions can lead to collectively suboptimal outcomes.",
+      "stmt_b": "Repeated games and reputation mechanisms can enable cooperation to emerge in prisoner's dilemma situations over time.",
+      "expected": "compatible",
+      "contradiction_detected": true,
+      "correct": false,
+      "new_nodes_created": 3,
+      "contradiction_details": [
+        {
+          "from": "dd84d587-bbde-4a55-adc6-bdb9a0e74ab2",
+          "to": "f5997bab-524f-4a16-a6dd-0d03222edeaf",
+          "narration": "While idea A discusses the inherent conflict between individual and collective rationality in prisoner's dilemma scenarios, idea B suggests that cooperation strategies can emerge over time through repeated games. This contradicts the notion of mutually detrimental outcomes from individually rational choices in idea A."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": false,
+        "confidence": 0.9,
+        "reasoning": "Statement A describes a general property of the prisoner's dilemma, while Statement B discusses potential mitigations or exceptions."
+      }
+    },
+    {
+      "pair_id": 7,
+      "stmt_a": "Entropy measures the number of possible microstates consistent with a given macrostate of a thermodynamic system.",
+      "stmt_b": "Shannon entropy in information theory is a measure of uncertainty in a probability distribution, formally analogous to thermodynamic entropy.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 3,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 1.0,
+        "reasoning": "Both statements describe different types of entropy, one in thermodynamics and the other in information theory, without making mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 8,
+      "stmt_a": "Overfitting occurs when a model learns the noise in training data, performing well on training data but poorly on unseen examples.",
+      "stmt_b": "Regularization techniques such as L2 weight decay penalize large weights and reduce overfitting by constraining model complexity.",
+      "expected": "compatible",
+      "contradiction_detected": true,
+      "correct": false,
+      "new_nodes_created": 2,
+      "contradiction_details": [
+        {
+          "from": "eed59ffb-d3b3-4d93-a4ab-4ed14b9afa2b",
+          "to": "227086f2-7a13-494d-b2cb-28148193c53f",
+          "narration": "Idea A suggests that overfitting results from a model learning the noise in training data, while Idea B implies that regularization techniques like L2 weight decay reduce overfitting by constraining model complexity. This appears to contradict each other as regularization does not directly address learning noise but rather controlling complexity."
+        }
+      ],
+      "llm_validation": {
+        "correct_classification": false,
+        "is_genuine_contradiction": false,
+        "confidence": 0.9,
+        "reasoning": "Both statements describe aspects of overfitting without making mutually exclusive claims."
+      }
+    },
+    {
+      "pair_id": 9,
+      "stmt_a": "Game theory assumes rational agents who maximize their own payoff given beliefs about other players' strategies.",
+      "stmt_b": "Behavioral economics documents systematic deviations from rational game-theoretic predictions in human decision-making.",
+      "expected": "compatible",
+      "contradiction_detected": false,
+      "correct": true,
+      "new_nodes_created": 2,
+      "contradiction_details": [],
+      "llm_validation": {
+        "correct_classification": true,
+        "is_genuine_contradiction": false,
+        "confidence": 0.9,
+        "reasoning": "Statement A describes an assumption of game theory, while Statement B discusses the limitations of this assumption in real-world decision-making."
+      }
+    }
+  ]
+}
