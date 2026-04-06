@@ -272,6 +272,7 @@ class Observer:
         )
         self.mission_advances.append(advance)
         print(f"  ★ Mission advance recorded (strength={strength:.2f})")
+        self.brain.spike_dopamine(0.3)
 
         if strength > 0.75:
             self._flag_emergence(

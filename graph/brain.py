@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional
 from enum import Enum
 from persistence import atomic_write_json
+from graph.episodic import EpisodicStrip
 
 # ── Types ────────────────────────────────────────────────────────────────────
 
@@ -118,6 +119,13 @@ class Brain:
         self._mode: BrainMode = BrainMode.WANDERING
         self._suspended_mission: Optional[dict] = None
         self.working_memory: list[str] = []  # ordered list of node IDs
+        
+        # Neuromodulators
+        self.dopamine: float    = 0.5
+        self.frustration: float = 0.0
+
+        # Episodic Memory
+        self.episodic = EpisodicStrip()
 
     # ── Mode ──────────────────────────────────────────────────────────────────
 
@@ -375,9 +383,36 @@ class Brain:
 
         return summary
 
+    # ── Neuromodulation ───────────────────────────────────────────────────────
+
+    def spike_dopamine(self, amount: float = 0.3):
+        self.dopamine = min(1.0, self.dopamine + amount)
+        print(f"  [Neuromodulation] Dopamine spike! Level: {self.dopamine:.2f}")
+
+    def increase_frustration(self, amount: float = 0.2):
+        self.frustration = min(1.0, self.frustration + amount)
+        print(f"  [Neuromodulation] Frustration increased. Level: {self.frustration:.2f}")
+        if self.frustration >= 0.8 and not self.is_wandering():
+            print("  [Neuromodulation] Frustration threshold reached! Suspending mission...")
+            self.suspend_mission()
+            self.frustration = 0.4  # Reset partially after abandoning
+            self.dopamine = min(self.dopamine, 0.4) # Kill motivation temporarily
+
+    def apply_neuromodulator_decay(self, elapsed_days: float = 1.0):
+        # Dopamine returns to baseline 0.5
+        if self.dopamine > 0.5:
+            self.dopamine = max(0.5, self.dopamine - (0.3 * elapsed_days))
+        elif self.dopamine < 0.5:
+            self.dopamine = min(0.5, self.dopamine + (0.3 * elapsed_days))
+            
+        # Frustration decays slowly to 0.0
+        if self.frustration > 0.0:
+            self.frustration = max(0.0, self.frustration - (0.2 * elapsed_days))
+
     # ── Decay ────────────────────────────────────────────────────────────────
 
     def apply_decay(self, elapsed_days: float = 1.0):
+        self.apply_neuromodulator_decay(elapsed_days)
         half_life_days = 1.0 / max(self.decay_rate, 1e-9)
         decay_factor = 0.5 ** (elapsed_days / half_life_days)
         for u, v, data in self.graph.edges(data=True):
@@ -398,6 +433,10 @@ class Brain:
             "suspended_mission": self._suspended_mission,
             "mode":    self._mode.value,
             "working_memory": self.working_memory,
+            "neuromodulators": {
+                "dopamine": self.dopamine,
+                "frustration": self.frustration
+            },
             "config":  {
                 "decay_rate":     self.decay_rate,
                 "scientificness": self.scientificness
@@ -424,6 +463,9 @@ class Brain:
             except ValueError:
                 self._mode = BrainMode.WANDERING
             self.working_memory = raw.get("working_memory", [])
+            nemod = raw.get("neuromodulators", {})
+            self.dopamine    = nemod.get("dopamine", 0.5)
+            self.frustration = nemod.get("frustration", 0.0)
         else:
             # legacy format
             self.graph = nx.node_link_graph(raw)

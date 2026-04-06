@@ -24,6 +24,7 @@ from graph.brain import (Brain, Node, Edge, EdgeType, EdgeSource,
                          NodeType, NodeStatus)
 from llm_utils import llm_call, llm_json, llm_chat
 from embedding import embed as shared_embed
+from thinker.policy import CognitivePolicy
 
 # ── Thinking patterns ─────────────────────────────────────────────────────────
 
@@ -149,6 +150,8 @@ Respond with ONLY the insight statement. No preamble.
 class ThinkingLog:
     question: str          = ""
     pattern: str           = ""
+    node_type: str         = "question"
+    cluster: str           = "unclustered"
     reasoning: str         = ""
     insight: str           = ""
     sub_questions: list    = field(default_factory=list)
@@ -169,6 +172,7 @@ class Thinker:
         self.observer = observer
         self.index    = embedding_index
         self.critic   = critic   # System 2 gating (optional)
+        self.policy   = CognitivePolicy()
 
     def _build_context(self, question: str, max_nodes: int = 8) -> str:
         """Build relevant context from the graph for a given question."""
@@ -238,20 +242,23 @@ class Thinker:
 
         return "What is the most important open question in our knowledge?"
 
-    def _pick_pattern(self, question: str) -> str:
-        """Let the LLM choose the best reasoning pattern."""
-        raw = llm_call(
-            PICK_PATTERN_PROMPT.format(question=question),
-            temperature=0.1,
-            role="reasoning"
-        ).strip().lower()
-
-        valid = ["dialectical", "analogical", "reductive",
-                 "experimental", "integrative"]
-        for v in valid:
-            if v in raw:
-                return v
-        return "dialectical"  # safe default
+    def _pick_pattern(self, question: str) -> tuple[str, str, str]:
+        """Let the RL policy choose the best reasoning pattern."""
+        node_type = "question"
+        cluster = "unclustered"
+        
+        q_emb = shared_embed(question)
+        if self.index and self.index.size > 0:
+            matches = self.index.query(q_emb, threshold=0.8, top_k=1)
+            if matches:
+                nid, _ = matches[0]
+                node = self.brain.get_node(nid)
+                if node:
+                    node_type = node.get('node_type', 'question')
+                    cluster = node.get('cluster', 'unclustered')
+                    
+        pattern = self.policy.choose_pattern(node_type, cluster)
+        return node_type, cluster, pattern
 
     def think(self, question: str = None, pattern: str = None,
               max_depth: int = 2) -> ThinkingLog:
@@ -277,7 +284,10 @@ class Thinker:
 
         # Pick pattern
         if not pattern:
-            pattern = self._pick_pattern(question)
+            log.node_type, log.cluster, pattern = self._pick_pattern(question)
+        else:
+            log.node_type, log.cluster = "question", "unclustered"
+            
         log.pattern = pattern
         print(f"  Pattern: {pattern}")
 
@@ -371,6 +381,7 @@ class Thinker:
                 critic_log = self.critic.evaluate_with_refinement(candidate)
 
                 if critic_log.verdict == Verdict.ACCEPT:
+                    reward = 1.0 * critic_log.confidence
                     # Use critic-assigned confidence instead of default
                     final_claim = log.insight
                     confidence  = critic_log.confidence
@@ -391,19 +402,26 @@ class Thinker:
                           f"{final_claim[:80]}...")
 
                 elif critic_log.verdict == Verdict.REJECT:
+                    reward = -1.0
                     print(f"  ✗ Insight rejected: {critic_log.rejection_reason}")
                     log.insight = ""  # clear so callers know it was rejected
 
                 elif critic_log.verdict == Verdict.DEFER:
+                    reward = 0.0
                     print(f"  ◇ Insight deferred to insight buffer")
                     self.critic.route_deferred(candidate)
                     log.insight = ""  # clear — not in graph yet
 
                 else:  # REFINE exhausted → treated as DEFER by evaluate_with_refinement
+                    reward = 0.0
                     print(f"  ◇ Insight deferred after refinement")
                     log.insight = ""
 
+                # Train RL Policy
+                self.policy.update(log.node_type, log.cluster, log.pattern, reward, self.brain.dopamine)
+
             else:
+                self.policy.update(log.node_type, log.cluster, log.pattern, 0.5, self.brain.dopamine)
                 # No critic — original behavior (direct insertion)
                 node = Node(
                     statement      = log.insight,

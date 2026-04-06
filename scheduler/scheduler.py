@@ -3,10 +3,11 @@ import json
 import os
 import signal
 import sys
+import queue
+import threading
 from datetime import datetime
 from dataclasses import dataclass, field
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from enum import IntEnum
 
 from graph.brain import Brain, BrainMode
 from ingestion.ingestor import Ingestor, EdgeSource
@@ -25,15 +26,6 @@ from conversation.conversation import Conversationalist
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-SCHEDULE = {
-    "nrem_rem":    "0 23 * * *",
-    "research":    "0 9  * * *",
-    "thinking":    "0 11 * * *",   # morning thinking session
-    "reading":     "0 14 * * *",   # afternoon reading
-    "writing":     "0 16 * * *",   # afternoon writing phase
-    "consolidate": "0 20 * * *",
-}
-
 DREAM_STEPS          = 20
 DREAM_TEMPERATURE    = 0.7
 RESEARCH_QUESTIONS   = 5
@@ -46,7 +38,7 @@ OBSERVER_PATH = "data/observer.json"
 INDEX_PATH    = "data/embedding_index"
 DAILY_LEDGER_PATH = "data/daily_new_nodes.json"
 
-# ── Cycle log ─────────────────────────────────────────────────────────────────
+# ── Logging ───────────────────────────────────────────────────────────────────
 
 @dataclass
 class CycleEntry:
@@ -84,30 +76,34 @@ class CycleLog:
     def current_cycle(self):
         return max((e.get('cycle', 0) for e in self.entries), default=0)
 
+# ── Salience Network (Priority Queue) ─────────────────────────────────────────
+
+class TaskPriority(IntEnum):
+    URGENT = 1       # immediate response (interruption, user chat, hypothesis failed)
+    HIGH = 2         # dopamine-driven focused thinking, targeted research
+    ROUTINE = 3      # daily reading, consolidation
+    BACKGROUND = 4   # wandering dreams, generic background indexing
+
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
-class DreamerScheduler:
+class SalienceScheduler:
     def __init__(self):
-        self.scheduler = BackgroundScheduler()
         self.cycle_log = CycleLog()
         self._running  = False
+        self._task_queue = queue.PriorityQueue()
+        self._task_counter = 0
 
         self.brain    = Brain()
         self.observer = Observer(self.brain)
         self._load_state()
 
-        # Load or build embedding index
         try:
             self.emb_index = EmbeddingIndex.load(INDEX_PATH)
         except (FileNotFoundError, Exception):
-            self.emb_index = EmbeddingIndex.build_from_brain(
-                self.brain, shared_embed)
+            self.emb_index = EmbeddingIndex.build_from_brain(self.brain, shared_embed)
 
-        # Shared insight buffer
-        self.insight_buffer = InsightBuffer(self.brain,
-                                            embedding_index=self.emb_index)
+        self.insight_buffer = InsightBuffer(self.brain, embedding_index=self.emb_index)
 
-        # System 2 gatekeeper
         from critic.critic import Critic
         self.critic = Critic(self.brain, embedding_index=self.emb_index,
                              insight_buffer=self.insight_buffer)
@@ -120,33 +116,25 @@ class DreamerScheduler:
         self.consolidator= Consolidator(self.brain, observer=self.observer,
                                          embedding_index=self.emb_index,
                                          insight_buffer=self.insight_buffer)
-        self.researcher  = Researcher(
-            self.brain,
-            observer=self.observer,
-            depth=RESEARCH_DEPTH,
-            ingestor=self.ingestor
-        )
+        self.researcher  = Researcher(self.brain, observer=self.observer, depth=RESEARCH_DEPTH, ingestor=self.ingestor)
         self.notebook    = Notebook(self.brain, observer=self.observer)
-        self.reader      = Reader(
-            self.brain,
-            observer=self.observer,
-            notebook=self.notebook,
-            ingestor=self.ingestor
-        )
+        self.reader      = Reader(self.brain, observer=self.observer, notebook=self.notebook, ingestor=self.ingestor)
         self.sandbox     = Sandbox(self.brain, observer=self.observer)
-        self.thinker     = Thinker(self.brain, observer=self.observer,
-                                   embedding_index=self.emb_index,
-                                   critic=self.critic)
-        self.conversation = Conversationalist(
-            self.brain,
-            observer=self.observer,
-            embedding_index=self.emb_index,
-            ingestor=self.ingestor,
-            notebook=self.notebook
-        )
+        self.thinker     = Thinker(self.brain, observer=self.observer, embedding_index=self.emb_index, critic=self.critic)
+        self.conversation = Conversationalist(self.brain, observer=self.observer, embedding_index=self.emb_index, ingestor=self.ingestor, notebook=self.notebook)
 
         signal.signal(signal.SIGINT,  self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
+
+        # Map task names to methods
+        self.task_registry = {
+            "dream": self.run_dream_phase,
+            "research": self.run_research_phase,
+            "thinking": self.run_thinking_phase,
+            "reading": self.run_reading_phase,
+            "writing": self.run_writing_phase,
+            "consolidation": self.run_consolidation_phase,
+        }
 
     def _load_state(self):
         try:
@@ -168,6 +156,13 @@ class DreamerScheduler:
         self._save_state()
         self.stop()
         sys.exit(0)
+
+    # ── Queue Operations ──────────────────────────────────────────────────────
+
+    def submit_task(self, name: str, priority: TaskPriority):
+        self._task_counter += 1
+        self._task_queue.put((priority, self._task_counter, name))
+        print(f"  [Salience Network] Task queued: '{name}' (Priority: {priority.name})")
 
     # ── Phase runners ─────────────────────────────────────────────────────────
 
@@ -205,13 +200,12 @@ class DreamerScheduler:
                 log_path=f"logs/dream_cycle{cycle}_wandering.json")
             self.observer.observe(log1)
             self.notebook.write_morning_entry(log1, cycle)
-            for signal in self.observer.emergence_feed[-5:]:
-                if (signal.type == "mission_advance" and
-                        signal.cycle == self.observer.cycle_count):
-                    self.notebook.write_breakthrough(signal.signal, cycle)
+            for signal_event in self.observer.emergence_feed[-5:]:
+                if (signal_event.type == "mission_advance" and
+                        signal_event.cycle == self.observer.cycle_count):
+                    self.notebook.write_breakthrough(signal_event.signal, cycle)
                     break
 
-            # pressure dream only in focused/transitional
             if not self.brain.is_wandering():
                 log2 = self.dreamer.dream(
                     mode=DreamMode.PRESSURE, steps=DREAM_STEPS//2,
@@ -220,6 +214,8 @@ class DreamerScheduler:
                 self.observer.observe_supplemental(log2)
 
             entry.summary = log1.summary
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("dream", f"Dreamed in {brain_mode} mode. {log1.summary}")
         except Exception as e:
             print(f"Dream error: {e}")
             entry.interrupted = True
@@ -229,7 +225,6 @@ class DreamerScheduler:
             self._save_state()
 
     def run_research_phase(self):
-        """Research + reading in the day cycle."""
         if self._last_phase_interrupted("dream"):
             print("Skipping research — previous dream cycle was interrupted.")
             return
@@ -240,7 +235,6 @@ class DreamerScheduler:
         print(f"DREAMER — Research Day {cycle} [{brain_mode.upper()}]")
         print(f"{'='*60}")
         try:
-            # targeted research (skip in pure wandering — follow curiosity freely)
             if not self.brain.is_wandering():
                 log = self.researcher.research_day(
                     max_questions=RESEARCH_QUESTIONS,
@@ -248,6 +242,9 @@ class DreamerScheduler:
                 self.notebook.write_field_notes(log, cycle)
                 all_new = [nid for r in log.entries for nid in r.node_ids]
                 self._append_daily_nodes(all_new)
+                entry.summary = f"Researched {len(log.entries)} links. Found {len(all_new)} ideas."
+                if hasattr(self.brain, 'episodic'):
+                    self.brain.episodic.record("research", entry.summary, all_new)
             else:
                 print("Wandering mode — skipping targeted research")
         except Exception as e:
@@ -259,7 +256,6 @@ class DreamerScheduler:
             self._save_state()
 
     def run_reading_phase(self):
-        """Afternoon reading — autonomous absorption from reading list."""
         cycle      = self.cycle_log.current_cycle()
         brain_mode = self.brain.get_mode()
         entry      = CycleEntry(cycle=cycle, phase="reading", brain_mode=brain_mode)
@@ -267,7 +263,6 @@ class DreamerScheduler:
         print(f"DREAMER — Reading [{brain_mode.upper()}]")
         print(f"{'='*60}")
         try:
-            # regenerate reading list if running low
             unread = len(self.reader.get_unread(20))
             if unread < REGEN_LIST_THRESHOLD:
                 print(f"Reading list low ({unread} items) — generating more...")
@@ -282,6 +277,8 @@ class DreamerScheduler:
             self._append_daily_nodes(reading_new)
             print(f"Reading day: {absorbed}/{len(results)} absorbed")
             entry.summary = f"Absorbed {absorbed} texts."
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("reading", entry.summary, reading_new)
         except Exception as e:
             print(f"Reading error: {e}")
             entry.interrupted = True
@@ -291,8 +288,6 @@ class DreamerScheduler:
             self._save_state()
 
     def run_consolidation_phase(self):
-        if self._last_phase_interrupted("research"):
-            print("Warning: previous research was interrupted — consolidating anyway.")
         cycle      = self.cycle_log.current_cycle()
         brain_mode = self.brain.get_mode()
         entry      = CycleEntry(cycle=cycle, phase="consolidation", brain_mode=brain_mode)
@@ -316,6 +311,8 @@ class DreamerScheduler:
             self.notebook.write_evening_entry(report, cycle)
             self.notebook.update_running_hypothesis(cycle)
             entry.summary = report.summary
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("consolidation", entry.summary)
         except Exception as e:
             print(f"Consolidation error: {e}")
             entry.interrupted = True
@@ -325,7 +322,6 @@ class DreamerScheduler:
             self._save_state()
 
     def run_thinking_phase(self):
-        """Active deliberate thinking — structured reasoning sessions."""
         cycle      = self.cycle_log.current_cycle()
         brain_mode = self.brain.get_mode()
         entry      = CycleEntry(cycle=cycle, phase="thinking", brain_mode=brain_mode)
@@ -335,7 +331,10 @@ class DreamerScheduler:
         try:
             logs = self.thinker.think_session(num_rounds=3)
             insights = [l.insight for l in logs if l.insight]
+            node_ids = [l.node_id for l in logs if getattr(l, 'node_id', '')]
             entry.summary = f"{len(logs)} rounds, {len(insights)} insights"
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("think", entry.summary, node_ids)
             print(f"  Thinking complete: {len(insights)} insights")
         except Exception as e:
             print(f"Thinking error: {e}")
@@ -346,7 +345,6 @@ class DreamerScheduler:
             self._save_state()
 
     def run_writing_phase(self):
-        """Writing phase — synthesis essay that forces clarity."""
         cycle      = self.cycle_log.current_cycle()
         brain_mode = self.brain.get_mode()
         entry      = CycleEntry(cycle=cycle, phase="writing", brain_mode=brain_mode)
@@ -355,11 +353,9 @@ class DreamerScheduler:
         print(f"{'='*60}")
         try:
             result = self.notebook.write_synthesis_essay(cycle)
-            # Ingest any side-effect insights back into the graph
             for insight in result.get('insights', []):
                 if isinstance(insight, str) and len(insight) > 15:
                     self.ingestor.ingest(insight, source=EdgeSource.CONSOLIDATION)
-            # Add any new questions to the agenda
             for question in result.get('questions', []):
                 if isinstance(question, str) and len(question) > 10:
                     self.observer.add_to_agenda(
@@ -367,6 +363,8 @@ class DreamerScheduler:
                         cycle=cycle
                     )
             entry.summary = f"Essay written, {len(result.get('insights',[]))} insights"
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("write", entry.summary)
         except Exception as e:
             print(f"Writing error: {e}")
             entry.interrupted = True
@@ -413,54 +411,51 @@ class DreamerScheduler:
         self._save_state()
 
     def run_now(self, phase):
-        phases = {
-            "dream":         self.run_dream_phase,
-            "research":      self.run_research_phase,
-            "thinking":      self.run_thinking_phase,
-            "reading":       self.run_reading_phase,
-            "writing":       self.run_writing_phase,
-            "consolidation": self.run_consolidation_phase,
-        }
-        if phase not in phases:
+        # Allow running directly and bypass queue
+        if phase in self.task_registry:
+            self.task_registry[phase]()
+        else:
             print(f"Unknown phase: {phase}")
-            return
-        phases[phase]()
 
-    def run_full_cycle_now(self):
-        print("\n── Running full cycle now ──")
-        self.run_dream_phase()
-        self.run_research_phase()
-        self.run_thinking_phase()
-        self.run_reading_phase()
-        self.run_writing_phase()
-        self.run_consolidation_phase()
-        print("\n── Full cycle complete ──")
+    def _salience_monitor(self):
+        """Monitors neuromodulators to dynamically alter task priority."""
+        while self._running:
+            # If Dopamine is very high, forcefully push a FOCUSED_THINKING event
+            if getattr(self.brain, 'dopamine', 0.5) > 0.8:
+                print(f"  [Salience Network] HIGH DOPAMINE DETECTED! Pushing urgent thinking task.")
+                self.submit_task("thinking", TaskPriority.HIGH)
+                # Slightly deplete dopamine so we don't spam
+                self.brain.dopamine *= 0.8
+                
+            # If Frustration is very high, maybe push a reading or wandering dream
+            if getattr(self.brain, 'frustration', 0.0) > 0.8:
+                print(f"  [Salience Network] HIGH FRUSTRATION DETECTED! Pushing wandering dream to reset.")
+                self.submit_task("dream", TaskPriority.HIGH)
+                self.brain.frustration *= 0.5
+
+            time.sleep(10)
+
+    def _background_scheduler(self):
+        """Pushes default tasks into the queue periodically if empty."""
+        phases_cycle = ["dream", "research", "thinking", "reading", "writing", "consolidation"]
+        idx = 0
+        while self._running:
+            if self._task_queue.empty():
+                phase = phases_cycle[idx % len(phases_cycle)]
+                self.submit_task(phase, TaskPriority.BACKGROUND)
+                idx += 1
+            # Sleep seconds between background tasks 
+            for _ in range(60):
+                if not self._running:
+                    break
+                time.sleep(10)
 
     def start(self, schedule=None):
-        s = schedule or SCHEDULE
-        self.scheduler.add_job(self.run_dream_phase,
-            CronTrigger.from_crontab(s["nrem_rem"]), id="dream",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_research_phase,
-            CronTrigger.from_crontab(s["research"]), id="research",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_thinking_phase,
-            CronTrigger.from_crontab(s["thinking"]), id="thinking",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_reading_phase,
-            CronTrigger.from_crontab(s["reading"]), id="reading",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_writing_phase,
-            CronTrigger.from_crontab(s["writing"]), id="writing",
-            replace_existing=True)
-        self.scheduler.add_job(self.run_consolidation_phase,
-            CronTrigger.from_crontab(s["consolidate"]), id="consolidation",
-            replace_existing=True)
-        self.scheduler.start()
         self._running = True
 
         print(f"\n{'='*60}")
         print(f"DREAMER is running | mode: {self.brain.get_mode().upper()}")
+        print(f"Salience Network: ACTIVE")
         print(f"Brain: {self.brain.stats()['nodes']} nodes | "
               f"{self.brain.stats()['edges']} edges")
         if self.brain.get_mission():
@@ -469,10 +464,25 @@ class DreamerScheduler:
         print(f"{'='*60}")
         print("Press Ctrl+C to stop.\n")
 
+        # Start Salience threads
+        threading.Thread(target=self._salience_monitor, daemon=True).start()
+        threading.Thread(target=self._background_scheduler, daemon=True).start()
+
+        # Main Event Loop
+        while self._running:
+            try:
+                priority, _, task_name = self._task_queue.get(timeout=2)
+                print(f"\n  [Queue] Executing {task_name} (Priority {priority.name})")
+                if task_name in self.task_registry:
+                    self.task_registry[task_name]()
+                self._task_queue.task_done()
+            except queue.Empty:
+                pass
+            except Exception as e:
+                print(f"Event loop error: {e}")
+
     def stop(self):
-        if self._running:
-            self.scheduler.shutdown(wait=False)
-            self._running = False
+        self._running = False
 
     def status(self):
         return {
@@ -485,7 +495,6 @@ class DreamerScheduler:
             "emergences":   len(self.observer.emergence_feed),
             "reading_list": self.reader.stats(),
         }
-
 
 if __name__ == "__main__":
     import argparse
@@ -504,7 +513,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     RESEARCH_DEPTH = args.depth
-    ds = DreamerScheduler()
+    ds = SalienceScheduler()
 
     if args.ingest:       ds.ingest(args.ingest)
     if args.url:          ds.read_url(args.url)
@@ -513,16 +522,16 @@ if __name__ == "__main__":
     if args.resume_mission:  ds.resume_mission()
 
     if args.mode == "auto":
-        ds.start()
         try:
-            while True:
-                time.sleep(60)
+            ds.start()
         except (KeyboardInterrupt, SystemExit):
-            pass
+            ds.stop()
     elif args.mode == "status":
         import json
         print(json.dumps(ds.status(), indent=2))
     elif args.mode == "cycle":
-        ds.run_full_cycle_now()
+        phases = ["dream", "research", "thinking", "reading", "writing", "consolidation"]
+        for p in phases:
+            ds.run_now(p)
     else:
         ds.run_now(args.mode)

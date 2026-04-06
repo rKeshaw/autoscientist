@@ -317,6 +317,7 @@ class Critic:
             log.confidence = 0.0
             log.duration = time.time() - start
             print(f"  ✗ REJECT (redundant): {candidate.claim[:60]}...")
+            self.brain.increase_frustration(0.2)
             return log
 
         # ── Adversarial dialogue ──
@@ -342,6 +343,9 @@ class Critic:
               f"(conf={log.confidence:.2f}): "
               f"{verdict_result.get('reason', '')[:80]}")
 
+        if log.verdict in (Verdict.REJECT, Verdict.REFINE):
+            self.brain.increase_frustration(0.2)
+            
         return log
 
     # ── Adversarial dialogue ──────────────────────────────────────────────────

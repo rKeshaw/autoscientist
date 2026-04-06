@@ -36,6 +36,20 @@ Write a brief reading log entry (3-4 sentences) noting:
 Write in first person. No markdown headers.
 """
 
+EXPECTATION_PROMPT = """
+You are generating a top-down prediction of what a text will contain BEFORE reading it.
+This is the Free Energy Principle (Active Inference) in action.
+
+Title: {title}
+URL/Context: {url}
+
+Current Mission: {mission}
+Current Knowledge Clusters: {clusters}
+
+Predict what specific concepts, hypotheses, and answers this text will contain.
+Keep it to 2-3 sentences. No formatting.
+"""
+
 READING_LIST_GENERATION_PROMPT = """
 You are a curious scientific mind building a reading list.
 
@@ -286,8 +300,22 @@ class Reader:
 
         nodes_before = len(self.brain.graph.nodes)
 
-        # absorb with READING source — no agenda checking
-        created_node_ids = self.ingestor.ingest(text, source=EdgeSource.READING) or []
+        # generate expectation (predictive processing)
+        mission = self.brain.get_mission()
+        mission_text = mission['question'] if mission else "None"
+        clusters = list(set(d.get('cluster', 'unknown') for _, d in self.brain.all_nodes() if d.get('cluster') != 'unclustered'))[:10]
+        
+        prediction = self._llm(EXPECTATION_PROMPT.format(
+            title=entry.title,
+            url=entry.url,
+            mission=mission_text,
+            clusters=", ".join(clusters)
+        ), temperature=0.6)
+        
+        print(f"  [Predictive Processing] Expectation: {prediction[:80]}...")
+
+        # absorb with READING source — pass prediction down
+        created_node_ids = self.ingestor.ingest(text, source=EdgeSource.READING, prediction=prediction) or []
 
         nodes_after  = len(self.brain.graph.nodes)
         node_count   = len(created_node_ids)

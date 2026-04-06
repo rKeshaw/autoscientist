@@ -392,7 +392,7 @@ class Ingestor:
 
     # ── Core pipeline ─────────────────────────────────────────────────────────
 
-    def ingest(self, text: str, source: EdgeSource = EdgeSource.CONVERSATION):
+    def ingest(self, text: str, source: EdgeSource = EdgeSource.CONVERSATION, prediction: str = ""):
         print(f"\n── Ingesting {len(text)} chars [{source.value}] ──")
 
         # extract concepts
@@ -450,6 +450,31 @@ class Ingestor:
                 if existing_embeddings is not None:
                     existing_embeddings[nid] = self._embedding_cache.get(
                         nid, self._embed(stmt))
+
+        # predictive processing (expectation engine)
+        if prediction and new_node_ids:
+            pred_emb  = self._embed(prediction)
+            node_embs = [self._embedding_cache[nid] for nid in new_node_ids if nid in self._embedding_cache]
+            if node_embs:
+                mean_emb = np.mean(node_embs, axis=0)
+                mean_emb = mean_emb / (np.linalg.norm(mean_emb) + 1e-10)
+                sim = self._cosine(pred_emb, mean_emb)
+                surprise = 1.0 - sim
+                print(f"  [Predictive Processing] Surprise (Prediction Error): {surprise:.2f}")
+
+                # modulate importance based on surprise
+                if surprise < 0.2:
+                    print("  [Predictive Processing] Low surprise. Dampening importance.")
+                    for nid in new_node_ids:
+                        node = self.brain.get_node(nid)
+                        if node:
+                            self.brain.update_node(nid, importance=node.get('importance', 0.5) * 0.5)
+                elif surprise > 0.6:
+                    print("  [Predictive Processing] High surprise! Boosting importance.")
+                    for nid in new_node_ids:
+                        node = self.brain.get_node(nid)
+                        if node:
+                            self.brain.update_node(nid, importance=min(1.0, node.get('importance', 0.5) + 0.3))
 
         # extract edges
         for i in range(len(new_node_ids)):

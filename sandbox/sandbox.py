@@ -220,52 +220,73 @@ class Sandbox:
 
         print(f"   Approach: {approach}")
 
-        # step 2: generate code
-        code = self._llm(CODE_GENERATION_PROMPT.format(
-            hypothesis = hypothesis,
-            approach   = approach,
-            mission    = self._mission()
-        ), temperature=0.2)
+        # step 2: generate code and run (up to 3 tries on error)
+        max_tries = 3
+        failures = 0
+        last_error = ""
 
-        # strip markdown fences
-        if '```' in code:
-            lines = code.split('\n')
-            code  = '\n'.join(
-                l for l in lines if not l.strip().startswith('```')
+        for attempt in range(max_tries):
+            prompt = CODE_GENERATION_PROMPT.format(
+                hypothesis = hypothesis,
+                approach   = approach,
+                mission    = self._mission()
             )
+            if last_error:
+                prompt += f"\n\nPREVIOUS ERROR TO FIX:\n{last_error}"
 
-        print(f"   Running code ({len(code)} chars)...")
+            code = self._llm(prompt, temperature=0.2 + (0.1 * attempt))
 
-        # step 3: run
-        stdout, stderr, duration = self._run_code(code)
-        print(f"   Completed in {duration:.1f}s")
-        if stdout:
-            print(f"   Output: {stdout}")
-        if stderr:
-            print(f"   Errors: {stderr}")
+            # strip markdown fences
+            if '```' in code:
+                lines = code.split('\n')
+                code  = '\n'.join(
+                    l for l in lines if not l.strip().startswith('```')
+                )
 
-        # step 4: interpret
-        raw = self._llm(RESULT_INTERPRETATION_PROMPT.format(
-            hypothesis = hypothesis,
-            mission    = self._mission(),
-            code       = code,
-            output     = stdout or "no output",
-            errors     = stderr or "none"
-        ), temperature=0.2)
-        try:
-            interp = json.loads(raw)
-        except (json.JSONDecodeError, ValueError):
-            interp = {
-                "verdict":        "inconclusive",
-                "confidence":     0.3,
-                "interpretation": raw,
-                "implications":   ""
-            }
+            print(f"   Running code attempt {attempt+1}/{max_tries} ({len(code)} chars)...")
 
-        verdict        = interp.get('verdict', 'inconclusive')
-        confidence     = interp.get('confidence', 0.3)
-        interpretation = interp.get('interpretation', '')
-        implications   = interp.get('implications', '')
+            # step 3: run
+            stdout, stderr, duration = self._run_code(code)
+            print(f"   Completed in {duration:.1f}s")
+            if stdout:
+                print(f"   Output: {stdout[:200]}...")
+            if stderr:
+                print(f"   Errors: {stderr[:200]}...")
+
+            # step 4: interpret
+            raw = self._llm(RESULT_INTERPRETATION_PROMPT.format(
+                hypothesis = hypothesis,
+                mission    = self._mission(),
+                code       = code,
+                output     = stdout or "no output",
+                errors     = stderr or "none"
+            ), temperature=0.2)
+            try:
+                interp = json.loads(raw)
+            except (json.JSONDecodeError, ValueError):
+                interp = {
+                    "verdict":        "error" if stderr else "inconclusive",
+                    "confidence":     0.3,
+                    "interpretation": raw,
+                    "implications":   ""
+                }
+
+            verdict        = interp.get('verdict', 'inconclusive')
+            confidence     = interp.get('confidence', 0.3)
+            interpretation = interp.get('interpretation', '')
+            implications   = interp.get('implications', '')
+
+            # If no execution error, we are done testing
+            if verdict != "error" and not stderr:
+                break
+                
+            failures += 1
+            last_error = stderr or interpretation
+            print(f"   Attempt {attempt+1} failed. Retrying...")
+
+        if failures >= max_tries:
+            print(f"   ✓ Sandbox failed after {max_tries} attempts. Increasing frustration.")
+            self.brain.increase_frustration(0.3)
 
         print(f"   Verdict: {verdict} (confidence={confidence:.2f})")
         print(f"   {interpretation}")

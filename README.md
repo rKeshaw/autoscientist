@@ -14,23 +14,22 @@
 
 ---
 
-AutoScientist is an **autonomous scientific research system** that builds and maintains a knowledge graph by reading papers, forming hypotheses, dreaming about connections between ideas, and consolidating knowledge — all on a continuous daily schedule, without human intervention.
+AutoScientist is an **autonomous scientific research system** modeled after biologically-inspired cognitive architectures. It builds and maintains a knowledge graph by reading papers, forming top-down expectations, dreaming about structural analogies, and learning optimal reasoning strategies via reinforcement learning — all regulated by a dynamic Salience Network.
 
-It uses a **dual-process cognitive architecture** (Kahneman's System 1 / System 2): fast intuitive reasoning (Thinker, Dreamer) is adversarially checked by a slow, skeptical Critic before insights enter the knowledge graph.
+The system moves beyond static pipelines into a **neuro-active architecture**: predictive processing (Active Inference), procedural memory (Contextual Bandits), and episodic trace replay (Hippocampus) are all modulated by synthetic Dopamine and Frustration signals.
 
 ## Features
 
 | | |
 |---|---|
-| 🧠 **Dual-Process Cognition** | System 1 (Thinker/Dreamer) generates ideas; System 2 (Critic) gates them via adversarial dialogue |
-| 🌐 **Knowledge Graph** | NetworkX-backed graph with typed nodes and edges |
-| 🔍 **Autonomous Research** | Searches Wikipedia & arXiv, extracts concepts, links them into the graph |
-| 🌙 **Dream Cycles** | Nightly graph walks finding unexpected analogies across domains |
-| 🧪 **Computational Sandbox** | Auto-generates and runs Python experiments to test hypotheses |
-| 💡 **Insight Buffer** | Near-miss ideas are saved and re-evaluated as knowledge grows |
-| 🔄 **Self-Regulating Knowledge** | Confidence decay on stale nodes; working memory biases active threads |
-| ⚡ **FAISS Embeddings** | Scalable vector similarity search via FAISS |
-| 💬 **Web UI** | Flask + SocketIO interface for graph, notebook, and chat |
+| 🧠 **Neuro-Modulation** | Dopamine & Frustration signals regulate mission persistence and task priority |
+| 🔮 **Predictive Processing** | Top-down expectations (Active Inference) calculate "Surprise" to modulate node importance |
+| 🕹️ **Procedural RL** | A Contextual Bandit learns the best reasoning patterns (Dialectical, Analogical, etc.) per domain |
+| 🎞️ **Episodic Memory** | Chronological event strips allow for "Hippocampal Replay" during dream cycles |
+| ⚡ **Salience Network** | Priority-queue scheduler that dynamically interrupts routine tasks for urgent breakthroughs |
+| 🌙 **Dream Cycles** | Nightly graph walks and episodic re-processing to find structural isomorphisms |
+| 🧪 **Computational Sandbox** | Auto-generates and runs Python experiments with frustration-based retry loops |
+| 🛡️ **System 2 Critic** | High-stakes claims must survive adversarial multi-turn dialogue before graph entry |
 
 ## Quickstart
 
@@ -77,42 +76,33 @@ python -m scheduler.scheduler --mode cycle   # full cycle immediately
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                    AutoScientist                      │
-│                                                       │
-│  Reader → Ingestor → Brain (NetworkX + FAISS)         │
-│                          │                            │
-│        ┌─────────────────┼──────────────────┐         │
-│        │                 │                  │         │
-│    Dreamer           Thinker           Researcher     │
-│    (System 1)        (System 1)                       │
-│        │                 │                            │
-│        └────────┬─────────┘                           │
-│                 │                                     │
-│              Critic  ◄── System 2 gating              │
-│         (adversarial dialogue)                        │
-│                 │                                     │
-│        ┌────────┴──────────┐                          │
-│        │                   │                          │
-│   InsightBuffer       Knowledge Graph                 │
-│   (deferred ideas)    (accepted claims)               │
-│                                                       │
-│  Consolidator · Observer · Notebook · Sandbox         │
-│  Scheduler (cron) · GUI (Flask)                       │
-│  llm_utils (unified LLM layer)                        │
-└──────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                     AutoScientist                         │
+│                                                           │
+│  Predictive Reader → Ingestor (Surprise) → Brain (Graph)  │
+│                                              │            │
+│        ┌───────────────────┬─────────────────┴──┐         │
+│        │                   │                    │         │
+│     Dreamer             Thinker            Researcher     │
+│   (REM Replay)      (Procedural RL)                       │
+│        │                   │                              │
+│        └─────────┬─────────┘                              │
+│                  │                                        │
+│           Salience Network (Priority Queue Loop)          │
+│                  │                                        │
+│       Critic (System 2) ←───→ Neuromodulators             │
+│    (Dopamine/Frustration)      (Dynamic Gating)           │
+└───────────────────────────────────────────────────────────┘
 ```
 
-### Daily Cycle
+Instead of a rigid clock, AutoScientist uses a **Salience Network** that prioritizes tasks based on cognitive load and neuromodulation:
 
-| Time | Phase | What Happens |
-|------|-------|--------------|
-| **09:00** | 🔬 Research | Searches web/arXiv, extracts concepts into the graph |
-| **11:00** | 🤔 Thinking | Applies a reasoning strategy (dialectical, analogical, reductive, experimental, integrative); insights gated by Critic |
-| **14:00** | 📖 Reading | Absorbs articles from the reading list |
-| **16:00** | ✍️ Writing | Synthesizes accumulated knowledge into structured essays |
-| **20:00** | 🔧 Consolidation | Merges duplicates, decays stale nodes, re-evaluates insight buffer |
-| **23:00** | 🌙 Dreaming | Nightly graph walks finding unexpected connections; insights gated by Critic |
+| Priority | Task | Trigger / Condition |
+|----------|------|-----------|
+| **URGENT** | 💬 Conversation / 🚨 Sandbox Failure | Direct user input or critical experimental collapse |
+| **HIGH** | 🤔 Thinking / 🔬 Discovery | Triggered by **Dopamine Spikes** after a mission advance |
+| **ROUTINE** | 📖 Reading / ✍️ Writing | Default daytime cycle for incremental knowledge gain |
+| **BACKGROUND** | 🌙 Dreaming / 🔧 Consolidation | Triggered by low dopamine or high frustration (Reset) |
 
 ## Modules
 
@@ -131,30 +121,14 @@ python -m scheduler.scheduler --mode cycle   # full cycle immediately
 
 | Module | Purpose |
 |--------|---------|
-| `thinker/` | System 1 — structured reasoning with 5 patterns |
-| `dreamer/` | System 1 — nightly graph walks (wandering, focused, pressure modes) |
-| `critic/` | System 2 — adversarial multi-turn dialogue gating high-stakes claims |
-| `consolidator/` | Evening knowledge maintenance — merge, synthesize, decay, gap detection |
-| `observer/` | Meta-cognitive monitoring — mission progress, emergence signals, agenda |
-
-### Knowledge Acquisition
-
-| Module | Purpose |
-|--------|---------|
-| `reader/` | Wikipedia/arXiv reader with prioritized reading list |
-| `researcher/` | Active research — generates queries, extracts findings |
-| `ingestion/` | Converts raw text → typed graph nodes and edges |
-
-### Interface & Scheduling
-
-| Module | Purpose |
-|--------|---------|
-| `gui/app.py` | Flask + SocketIO web UI |
-| `notebook/` | Persistent research journal |
-| `conversation/` | Chat interface that feeds responses into the graph |
-| `scheduler/` | APScheduler-based daily cycle |
-| `bootstrap.py` | Brain initialization from any research question |
-| `sandbox/` | Computational hypothesis testing |
+| `graph/brain.py` | Knowledge graph + Neuromodulator state (Dopamine, Frustration) |
+| `graph/episodic.py` | **EpisodicStrip** — chronological record of cognitive events |
+| `thinker/policy.py` | **Procedural Policy** — Contextual Bandit for RL strategy selection |
+| `scheduler/scheduler.py` | **Salience Network** — Priority-queue based event loop |
+| `ingestion/ingestor.py` | **Predictive Ingestor** — surprises/prediction-error evaluation |
+| `dreamer/` | **REM/NREM Dreamer** — with Hippocampal Replay integration |
+| `critic/` | System 2 — adversarial gating and frustration feedback |
+| `sandbox/` | Computational hypothesis testing with frustration retry loops |
 
 ## Configuration
 

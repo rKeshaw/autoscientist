@@ -610,6 +610,18 @@ class Dreamer:
 
     def nrem_pass(self):
         print("\n── NREM pass ──")
+        
+        # Hippocampal Replay
+        if hasattr(self.brain, 'episodic'):
+            sequence = self.brain.episodic.get_sequence(sequence_length=3)
+            if sequence:
+                print(f"  [Hippocampal Replay] Replaying {len(sequence)} events.")
+                for event in sequence:
+                    print(f"    - {event.event_type}: {event.description[:60]}")
+                    for nid in getattr(event, 'nodes_involved', []):
+                        if self.brain.get_node(nid):
+                            self.brain.update_node(nid, activated_at=time.time())
+                            
         self.brain.proximal_reinforce()
         print("── NREM complete ──\n")
 
