@@ -122,9 +122,16 @@ def main():
     weights_before = {}
     for u, v, d in brain.graph.edges(data=True):
         weights_before[(u, v)] = d.get('weight', 0.5)
+        
+    print("  Seeding Hippocampal Replay buffer...")
+    # Find some random highly connected nodes to pretend they were involved in a critical event
+    if hasattr(brain, 'episodic') and len(brain.graph.nodes) > 2:
+        top_nodes = sorted(brain.graph.degree, key=lambda x: x[1], reverse=True)
+        replay_nodes = [n for n, _ in top_nodes[:3]]
+        brain.episodic.record("breakthrough", "Important insight discovered", replay_nodes)
 
-    print("  Triggering NREM (proximal reinforcement)...")
-    brain.proximal_reinforce()
+    print("  Triggering NREM (Hippocampal Replay + proximal reinforcement)...")
+    dreamer.nrem_pass()
 
     # Track which edges got reinforced
     reinforced_edges = []

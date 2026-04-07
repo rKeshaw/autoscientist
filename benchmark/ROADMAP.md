@@ -43,6 +43,7 @@ Not yet implemented, but now part of the revised roadmap:
 - `dim9` - Conversation & Groundedness
 - `dim10` - End-to-End + Ablation Studies
 - `dim11` - Technical / Operational Reliability
+- `dim12` - Salience & Neuromodulatory Scheduling
 
 ## Dimension Overview
 
@@ -78,7 +79,7 @@ Keep from the original plan:
 - insight validity
 - mission advance calibration
 - walk diversity
-- NREM effectiveness
+- NREM effectiveness (includes Hippocampal Replay evaluation)
 
 Major revision required:
 Dream outputs now need to be evaluated in two layers:
@@ -226,6 +227,16 @@ Core metrics:
 - recovery from interruption
 - graph/index consistency after crash/restart
 - GUI-path vs scheduler-path parity
+
+## D12 - Salience & Neuromodulatory Scheduling
+
+Purpose:
+Measure whether the autonomous scheduler dynamically adapts to internal states using the neuromodulatory architecture.
+
+Core metrics:
+- dopamine response rate (does high dopamine correctly trigger focused thinking/research?)
+- frustration response rate (does high frustration correctly trigger wandering dreams to escape local minima?)
+- episodic record usefulness
 
 ## Recommended Evaluation Order
 
