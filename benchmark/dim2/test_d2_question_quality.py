@@ -7,6 +7,9 @@ to a naive baseline (random concept pairing).
 Pass criterion: Dream questions score higher on average across specificity,
 answerability, and novelty than baseline questions.
 
+Benchmark level:
+  - module-level
+
 Usage:
     python benchmark/dim2/test_d2_question_quality.py \
         --judge-model <ollama-model-name> \
@@ -105,9 +108,19 @@ def judge_questions(questions, model_name):
         prompt = JUDGE_PROMPT.format(question=q)
         raw = llm_call(prompt, temperature=0.1, model=model_name, role="precise")
         try:
-            score = require_json(raw, default={"specificity": 0, "answerability": 0, "novelty": 0})
+            score = require_json(raw, default={
+                "specificity": 0,
+                "answerability": 0,
+                "novelty": 0,
+                "reasoning": "Judge parse failed",
+            })
         except Exception:
-             score = {"specificity": 0, "answerability": 0, "novelty": 0}
+             score = {
+                 "specificity": 0,
+                 "answerability": 0,
+                 "novelty": 0,
+                 "reasoning": "Judge parse failed",
+             }
         
         results.append({
             "question": q,
@@ -170,8 +183,31 @@ def main():
         log = dreamer.dream(steps=15, run_nrem=False)
         dream_qs.extend(log.questions)
     
+    if not dream_qs:
+        print("No dream questions were produced. Failing benchmark instead of fabricating fallback questions.")
+        report = {
+            "test": "D2 — Question Quality",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "config": {
+                "judge_model": args.judge_model,
+            },
+            "summary": {
+                "num_questions_evaluated_each": 0,
+                "dream_questions_generated": 0,
+                "benchmark_exercised": False,
+                "failure_reason": "Dreamer produced no questions across benchmark cycles.",
+                "PASS": False,
+            },
+            "dream_evaluations": [],
+            "baseline_evaluations": [],
+        }
+        with open(args.out, "w") as f:
+            json.dump(report, f, indent=2)
+        print(f"Full report saved to: {args.out}")
+        return
+
     # Take up to 15 questions
-    dream_qs = random.sample(dream_qs, min(15, len(dream_qs))) if dream_qs else ["How do things work?"]
+    dream_qs = random.sample(dream_qs, min(15, len(dream_qs)))
     
     print("\n" + "=" * 60)
     print("PHASE 3: Generating Baseline Questions")
@@ -208,6 +244,8 @@ def main():
         },
         "summary": {
             "num_questions_evaluated_each": len(dream_qs),
+            "dream_questions_generated": len(dream_qs),
+            "benchmark_exercised": True,
             "dream_scores": {
                 "specificity": round(dream_spec, 2),
                 "answerability": round(dream_ans, 2),

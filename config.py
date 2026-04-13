@@ -10,6 +10,8 @@ class ThresholdConfig:
     GAP_DEDUP           = 0.75
     CONTRADICTION       = 0.60
     AGENDA_PREFILTER    = 0.30
+    MISSION_LINK        = 0.60
+    SYNTHESIS_COHESION  = 0.60
 
 
 THRESHOLDS = ThresholdConfig()
@@ -25,17 +27,17 @@ class ModelConfig:
         MODELS.CRITIC   = "llama3.1:70b"   # more rigorous model for System 2
     """
     # Creative tasks: dreaming, synthesis, analogies (System 1)
-    CREATIVE     = "mixtral:latest"
+    CREATIVE     = "gemma4:latest"
     # Precise tasks: JSON extraction, factual answers
-    PRECISE      = "mixtral:latest"
+    PRECISE      = "gemma4:latest"
     # Code generation: sandbox experiments
-    CODE         = "mixtral:latest"
+    CODE         = "gemma4:latest"
     # Deliberate reasoning: thinker, chain-of-thought (System 1)
-    REASONING    = "mixtral:latest"
+    REASONING    = "gemma4:latest"
     # Conversation: chat interface
-    CONVERSATION = "mixtral:latest"
+    CONVERSATION = "gemma4:latest"
     # Critic / System 2: adversarial evaluation, gating
-    CRITIC       = "mixtral:latest"
+    CRITIC       = "gemma4:latest"
 
 
 MODELS = ModelConfig()
@@ -74,4 +76,3 @@ class CriticConfig:
 
 
 CRITIC = CriticConfig()
-

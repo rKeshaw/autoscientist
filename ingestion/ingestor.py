@@ -10,8 +10,8 @@ from llm_utils import llm_call, require_json
 # ── Config ────────────────────────────────────────────────────────────────────
 
 SIMILARITY_THRESHOLD  = THRESHOLDS.MERGE_NODE
-DEDUP_QUERY_THRESHOLD = SIMILARITY_THRESHOLD - 0.12
-DEDUP_LLM_THRESHOLD   = SIMILARITY_THRESHOLD - 0.06
+DEDUP_QUERY_THRESHOLD = max(0.50, SIMILARITY_THRESHOLD - 0.16)
+DEDUP_LLM_THRESHOLD   = max(0.54, SIMILARITY_THRESHOLD - 0.14)
 WEAK_EDGE_THRESHOLD   = THRESHOLDS.WEAK_EDGE
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
@@ -26,7 +26,11 @@ Rules:
 - Write each as 1-3 sentences. Not a keyword. Not a title. A thought.
 - Capture the perspective, not just the topic
 - If an idea contains a tension or uncertainty, include that in the statement
-- Aim for 3 to 8 nodes per passage. Quality over quantity.
+- CRITICAL: Use dense, precise technical terminology. Avoid all conversational filler or introductory fluff (e.g. do NOT write "This idea suggests that...").
+- Do NOT omit foundational named mechanisms, canonical examples, failure modes,
+  or formal objects if they are central to understanding the text.
+- For dense expository passages, prefer roughly 5 to 12 nodes rather than a
+  tiny set of broad summaries.
 
 Example of a GOOD node:
   "REM sleep appears to loosen associative constraints, allowing ideas that
@@ -40,6 +44,36 @@ Respond ONLY with a JSON array of strings. No preamble. No markdown.
 
 Text:
 {text}
+"""
+
+COVERAGE_EXTRACTION_PROMPT = """
+You are doing a second-pass extraction for a scientific knowledge graph.
+
+The first pass often captures broad summaries but can miss anchor concepts that
+future reasoning depends on.
+
+Source text:
+{text}
+
+First-pass nodes:
+{existing_nodes}
+
+Return ONLY ADDITIONAL nodes that are important for scientific reasoning and
+are missing from the first pass.
+
+Prioritize concepts such as:
+- named mechanisms or algorithms
+- canonical examples, dilemmas, equilibria, or laws
+- important failure modes or constraints
+- formal objects that later reasoning would need explicitly
+
+Rules:
+- Return 0 to 6 additional nodes.
+- Each node must still be a self-contained conceptual statement, not a label.
+- Do not restate concepts already clearly present in the first-pass nodes.
+- Favor concise anchor concepts over broad restatements.
+
+Respond ONLY with a JSON array of strings. No preamble. No markdown.
 """
 
 HYPOTHESIS_EXTRACTION_PROMPT = """
@@ -90,38 +124,29 @@ If they are related, respond with a JSON object:
   "confidence": a float (see rubric below)
 }}
 
-TYPE SELECTION RULES — read carefully before choosing:
+TYPE SELECTION RULES (CRITICAL) — read carefully before choosing:
 
-Use "causes" when A is a mechanism, process, or event that directly produces B
-as a physical or temporal effect. The test: does A happen BEFORE B and make B
-happen? Examples:
-  ✓ "High temperature increases molecular kinetic energy" → causes "increased pressure"
-  ✓ "Mutations in replication introduce variation" → causes "heritable diversity"
+- "causes": Use ONLY if A is a mechanism, process, or event that directly and physically PRODUCES B. The test: does A happen BEFORE B and PHYSICALLY trigger B?
+  ✓ "High temperature..." → causes "increased pressure"
+  ✓ "Mutations in replication..." → causes "heritable diversity"
   ✗ "Studies show X correlates with Y" → this is "supports", not "causes"
+  ✗ "Algorithm A implies mathematically that B is fast" → this is "supports", not "causes"
 
-Use "supports" when A is evidence, reasoning, prior work, or context that makes
-B more credible or likely — but A does not directly produce B.
+- "supports": Use when A is evidence, reasoning, prior work, or mathematical justification that makes B more credible, BUT does NOT physically trigger B.
   ✓ "Fossil record shows gradual change" → supports "evolution by natural selection"
   ✓ "Backpropagation computes gradients" → supports "gradient descent can train deep nets"
 
-Use "contradicts" only when A and B make MUTUALLY EXCLUSIVE claims — if A is
-true, B must be false. Do NOT use for statements that merely contrast or
-emphasize different aspects of the same phenomenon.
+- "contradicts": Use ONLY when A and B make MUTUALLY EXCLUSIVE claims.
   ✓ "All objects fall at the same rate" contradicts "heavier objects fall faster"
   ✗ "Neural nets need data" vs "neural nets can overfit" — these are compatible
 
-Use "analogy" when the same relational pattern appears in two different domains.
-Specify depth:
-  surface     — shared vocabulary or theme only
-  structural  — same A:B::X:Y relational pattern across domains
-  isomorphism — formally identical mathematical or logical structure
+- "analogy": Use when the same relational pattern appears in two different domains. You MUST specify depth:
+  * "surface" (shared vocabulary/theme)
+  * "structural" (same A:B::X:Y relational pattern across different domains)
+  * "isomorphism" (formally identical mathematical equations)
 
-Use "associated" when the ideas co-occur or share a domain but have no direct
-logical, causal, or analogical link. This is the CORRECT and FREQUENT answer
-for ideas from the same domain that simply appear together. Do NOT force a
-stronger type just because the ideas are related — topical proximity alone
-means "associated".
-  ✓ "Game theory developed in 1940s" associated with "Nash equilibrium defined later"
+- "associated": Use when ideas share a domain but lack direct causal, logical, or analogical links. This is the CORRECT AND FREQUENT answer for topical proximity.
+  ✓ "Game theory developed in 1940s" associated with "Nash equilibrium"
   ✓ "DNA has four bases" associated with "proteins have 20 amino acids"
 
 Weight rubric (how STRONG is the relationship?):
@@ -246,11 +271,48 @@ Answer NO if:
 Examples:
   YES: "Entropy measures disorder" vs "Entropy quantifies the degree of disorder in a system"
   YES: "Natural selection favors fit organisms" vs "Selection pressure preserves adaptive traits"
+  YES: "A Nash equilibrium is stable against unilateral deviation"
+       vs "In Nash equilibrium, no player improves payoff by changing strategy alone"
   NO:  "DNA stores genetic information" vs "RNA transcribes information from DNA" (different roles)
   NO:  "High temperature increases pressure" vs "Pressure depends on molecular collisions" (different claims)
 
 Respond with ONLY "yes" or "no".
 """
+
+
+def _coerce_statement_list(items) -> list[str]:
+    """Normalize LLM extraction output into a deduplicated list of statements."""
+    if not isinstance(items, list):
+        return []
+
+    statements = []
+    seen = set()
+    for item in items:
+        if isinstance(item, dict):
+            stmt = (
+                item.get('statement', '') or
+                item.get('concept', '') or
+                item.get('text', '') or
+                str(item)
+            )
+        elif isinstance(item, str):
+            stmt = item
+        else:
+            continue
+
+        if not isinstance(stmt, str):
+            continue
+        stmt = stmt.strip()
+        if not stmt:
+            continue
+
+        normalized = ' '.join(stmt.split()).lower()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        statements.append(stmt)
+
+    return statements
 
 ANSWER_MATCH_PROMPT = """
 Question/Hypothesis: {question}
@@ -279,12 +341,26 @@ Central research question: {mission}
 New idea being added to the knowledge graph:
 {statement}
 
-Does this new idea meaningfully advance, inform, or relate to the central question?
+Decide whether this idea is mission-relevant in a SCIENTIFICALLY ACTIONABLE sense.
+
+Be conservative:
+- Mark NOT relevant if the idea is only in the same broad field, only shares
+  vocabulary, or is generic background that would not materially help answer
+  the mission.
+- Mark NOT relevant if the connection requires multiple unstated inferential
+  leaps.
+- Mark relevant only if the statement itself provides a direct mechanistic,
+  evidential, or constraint-level bridge to answering the mission, or to a
+  clear sub-question implied by it.
+- Ask yourself: would a careful scientist likely cite this exact idea when
+  explaining or testing an answer to the mission?
 
 Strength rubric:
-- 0.1-0.3: Same broad domain but no direct logical connection to the question.
-- 0.4-0.6: Provides useful context, background, or a building block for answering the question.
-- 0.7-0.85: Directly addresses a sub-question or provides evidence that informs a possible answer.
+- 0.0-0.2: Unrelated, or only shares surface vocabulary / broad domain.
+- 0.3-0.5: Background context or neighboring knowledge, but not something that
+  should create a mission edge by itself.
+- 0.6-0.85: Directly addresses a sub-question, mechanism, constraint, or
+  observation that informs a possible answer.
 - 0.9-1.0: Fundamentally advances or answers the central question. VERY rare.
 
 Respond with a JSON object:
@@ -307,8 +383,59 @@ class Ingestor:
         self.research_agenda  = research_agenda
         self.index            = embedding_index
         self.insight_buffer   = insight_buffer
+        # ── Pre-dedup state ──
+        # Track raw text chunks already ingested to avoid re-extracting through
+        # the LLM when the same (or very similar) source text is submitted again.
+        self._ingested_text_hashes: set[int]          = set()
+        self._ingested_text_embeddings: list[tuple[int, 'np.ndarray']] = []
 
-    def _llm(self, prompt: str, temperature: float = 0.7) -> str:
+    def _filter_novel_text(self, text: str) -> str:
+        """Filter out raw text chunks that have already been ingested.
+
+        Returns only the novel parts of the text.
+        Splits by newlines to evaluate paragraphs/sections independently.
+        Uses a two-tier check:
+          1. Hash-based: catches exact duplicates (zero cost)
+          2. Embedding-based: catches near-duplicate source text
+        """
+        import re
+        chunks = [c.strip() for c in re.split(r'\n+', text) if c.strip()]
+        
+        novel_chunks = []
+        for chunk in chunks:
+            normalized = ' '.join(chunk.split()).lower()
+            if not normalized:
+                continue
+                
+            chunk_hash = hash(normalized)
+            is_dup = False
+            
+            # Tier 1: exact match
+            if chunk_hash in self._ingested_text_hashes:
+                print(f"  [Pre-dedup] Exact text chunk already ingested — skipping chunk.")
+                is_dup = True
+                
+            # Tier 2: embedding-based near-duplicate (only for chunks > 50 chars)
+            elif len(normalized) > 50:
+                chunk_emb = self._embed(normalized)
+                for prev_hash, prev_emb in self._ingested_text_embeddings:
+                    sim = self._cosine(chunk_emb, prev_emb)
+                    if sim >= SIMILARITY_THRESHOLD:
+                        print(f"  [Pre-dedup] Very similar text chunk already ingested "
+                              f"(sim={sim:.3f}) — skipping chunk.")
+                        is_dup = True
+                        break
+                        
+            if not is_dup:
+                novel_chunks.append(chunk)
+                self._ingested_text_hashes.add(chunk_hash)
+                if len(normalized) > 50:
+                    chunk_emb = self._embed(normalized)
+                    self._ingested_text_embeddings.append((chunk_hash, chunk_emb))
+                    
+        return "\n\n".join(novel_chunks)
+
+    def _llm(self, prompt: str, temperature: float = 0.1) -> str:
         return llm_call(prompt, temperature=temperature, role="precise")
 
     def _embed(self, text: str) -> np.ndarray:
@@ -380,32 +507,61 @@ class Ingestor:
         raw = self._llm(MISSION_RELEVANCE_PROMPT.format(
             mission   = mission['question'],
             statement = statement
-        ), temperature=0.1)
+        ), temperature=0.0)
         result = require_json(raw, default={})
-        if result.get('relevant') and result.get('strength', 0) > 0.4:
+        strength = result.get('strength', 0)
+        if result.get('relevant') and strength >= THRESHOLDS.MISSION_LINK:
             self.brain.link_to_mission(
                 node_id,
                 result.get('narration', ''),
-                strength=result.get('strength', 0.5)
+                strength=strength
             )
-            print(f"  ↗ Mission link (strength={result['strength']:.2f})")
+            print(f"  ↗ Mission link (strength={strength:.2f})")
 
     # ── Core pipeline ─────────────────────────────────────────────────────────
 
     def ingest(self, text: str, source: EdgeSource = EdgeSource.CONVERSATION, prediction: str = ""):
         print(f"\n── Ingesting {len(text)} chars [{source.value}] ──")
 
-        # extract concepts
-        raw = self._llm(NODE_EXTRACTION_PROMPT.format(text=text))
-        statements = require_json(raw, default=[])
-        if not isinstance(statements, list):
-            print(f"  Node extraction parse error")
+        # ── Pre-dedup: filter out text that was already ingested ──
+        text = self._filter_novel_text(text)
+        if not text.strip():
+            print("  [Pre-dedup] All text already ingested. Skipping extraction.")
             return []
 
-        print(f"  Extracted {len(statements)} candidate nodes")
+        # extract concepts
+        raw = self._llm(NODE_EXTRACTION_PROMPT.format(text=text), temperature=0.1)
+        primary_statements = require_json(raw, default=[])
+        if not isinstance(primary_statements, list):
+            print(f"  Node extraction parse error")
+            return []
+        primary_statements = _coerce_statement_list(primary_statements)
+
+        raw_anchor = self._llm(
+            COVERAGE_EXTRACTION_PROMPT.format(
+                text=text,
+                existing_nodes=json.dumps(primary_statements, ensure_ascii=True),
+            ),
+            temperature=0.1,
+        )
+        anchor_statements = _coerce_statement_list(
+            require_json(raw_anchor, default=[])
+        )
+        statements = _coerce_statement_list(
+            primary_statements + anchor_statements
+        )
+
+        print(
+            f"  Extracted {len(primary_statements)} primary nodes and "
+            f"{len(anchor_statements)} anchor nodes "
+            f"({len(statements)} unique total)"
+        )
 
         # extract hypotheses
-        raw_hyp = self._llm(HYPOTHESIS_EXTRACTION_PROMPT.format(text=text))
+        raw_hyp = self._llm(
+            HYPOTHESIS_EXTRACTION_PROMPT.format(text=text),
+            temperature=0.1,
+        )
         hypotheses = require_json(raw_hyp, default=[])
         if not isinstance(hypotheses, list):
             hypotheses = []
@@ -417,10 +573,6 @@ class Ingestor:
 
         # process concepts
         for stmt in statements:
-            if isinstance(stmt, dict):
-                stmt = stmt.get('statement', '') or stmt.get('concept', '') or stmt.get('text', '') or str(stmt)
-            if not isinstance(stmt, str) or not stmt.strip():
-                continue
             nid = self._process_statement(
                 stmt, existing_embeddings, source, NodeType.CONCEPT
             )
@@ -563,7 +715,7 @@ class Ingestor:
                                 node_b=stmt,
                                 similarity=candidate_sim,
                             ),
-                            temperature=0.1
+                            temperature=0.0
                         ).strip().lower()
                         if confirm.startswith("yes"):
                             best_match_id   = candidate_id
@@ -585,7 +737,7 @@ class Ingestor:
                             node_b=stmt,
                             similarity=best_similarity,
                         ),
-                        temperature=0.1
+                        temperature=0.0
                     ).strip().lower()
                     if not confirm.startswith("yes"):
                         best_match_id   = None

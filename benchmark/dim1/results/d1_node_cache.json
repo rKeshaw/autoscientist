@@ -1,124 +1,79 @@
 [
   {
-    "node_id": "924ccd40-1a91-40c4-be2a-979ac1493e14",
-    "statement": "DNA is a polymer composed of two polynucleotide chains that coil around each other to form a double helix, carrying genetic instructions for all known organisms and many viruses",
-    "cluster": "genetics",
+    "node_id": "f04daaf7-2354-4fec-87dd-f5fa16a39924",
+    "statement": "Deoxyribonucleic acid (DNA) forms a double helix polymer composed of two antiparallel polynucleotide chains. The repeating monomeric units, nucleotides, are linked by phosphodiester bonds, creating an alternating sugar-phosphate backbone.",
+    "cluster": "molecular_biology",
     "node_type": "concept",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "370b8483-abf3-451f-ab0f-63374fbfac98",
-    "statement": "The two DNA strands are composed of nucleotides, each containing one of four nitrogen-containing nucleobases (cytosine, guanine, adenine, or thymine) joined by phosphodiester linkages, with hydrogen bonds between the bases forming double-stranded DNA",
-    "cluster": "genetics",
+    "node_id": "f69d3ea5-0cdf-4c8e-8b55-f410bc9d78bf",
+    "statement": "The structural integrity of DNA relies on base pairing rules, where complementary nitrogenous bases (pyrimidines and purines) are held together by specific hydrogen bonds (A-T and C-G). This pairing dictates the canonical organization of the double helix.",
+    "cluster": "molecular_biology",
     "node_type": "concept",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "e219b56c-4611-4051-9bdc-18d835cb4745",
-    "statement": "Nucleotide sequences along the sugar-phosphate backbone of DNA encode genetic information, which is replicated and transcribed into RNA for protein synthesis",
-    "cluster": "genetics",
+    "node_id": "d2202493-9488-46e0-9d9e-322bfa61d57d",
+    "statement": "Genetic information is encoded by the sequence of nucleobases, which is maintained through replication and expressed through transcription into RNA. The resulting RNA sequence then dictates the specific order of amino acids during translation.",
+    "cluster": "molecular_biology",
     "node_type": "concept",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "199835d2-d747-42ed-a5a4-30b8468c3495",
-    "statement": "Within eukaryotic cells, DNA is organized into chromosomes, which are duplicated in the process of DNA replication before cell division, with chromatin proteins compacting and organizing DNA",
-    "cluster": "genetics",
+    "node_id": "43e6ebe3-e275-499b-9854-8362df1d8102",
+    "statement": "The physical architecture of DNA is directional, defined by the terminal phosphate group at the 5' end and the free hydroxyl group at the 3' end. This polarity necessitates the antiparallel orientation of the two constituent strands.",
+    "cluster": "molecular_biology",
     "node_type": "concept",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "fff5a8c9-f76e-4fae-84eb-a8b0b6e02350",
-    "statement": "DNA typically exists as a double helix, characterized by a pitch of 34 \u00c5 (3.4 nm) and a radius of 10 \u00c5 (1.0 nm), but may coil into tight loops and other shapes, with a buoyant density of 1.7g/cm3",
-    "cluster": "genetics",
+    "node_id": "8b13a85c-43ed-4c80-91a5-828f2d18a7a7",
+    "statement": "In eukaryotic cells, DNA is highly organized into chromatin structures, where proteins such as histones compact and guide the access of transcriptional machinery. This compartmentalization differs markedly from the free, circular chromosomes found in prokaryotes.",
+    "cluster": "molecular_biology",
     "node_type": "concept",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "41447e6d-5a5e-4095-9a5e-f993066cc025",
-    "statement": "DNA directionality is conferred by the asymmetric ends, with a 5' phosphoryl end and a 3' hydroxyl end, resulting in antiparallel strands",
-    "cluster": "genetics",
-    "node_type": "concept",
-    "article_id": "dna",
-    "article_title": "DNA",
-    "domain": "biology"
-  },
-  {
-    "node_id": "4f8c33e2-3e3b-427c-8d56-898069d83933",
-    "statement": "The DNA double helix is stabilized primarily by hydrogen bonds between nucleotides and base-stacking interactions among aromatic nucleobases, with adenine pairing with thymine and guanine pairing with cytosine",
-    "cluster": "biology genetics",
-    "node_type": "concept",
-    "article_id": "dna",
-    "article_title": "DNA",
-    "domain": "biology"
-  },
-  {
-    "node_id": "04ac5dcc-b7b7-41a6-a066-e743ba4a4d00",
-    "statement": "Nucleobases in DNA are classified into two types: purines (A and G) and pyrimidines (C and T), with modifications of these bases playing vital roles in epigenetic control of gene expression in plants and animals",
-    "cluster": "genetics",
-    "node_type": "concept",
-    "article_id": "dna",
-    "article_title": "DNA",
-    "domain": "biology"
-  },
-  {
-    "node_id": "5355676f-54a5-4ff5-a623-666d59f10426",
-    "statement": "Non-canonical bases, including 5-methylcytosine and uracil, occur in DNA to avoid restriction enzymes in bacteria or as part of epigenetic regulation in plants and animals",
-    "cluster": "genetics",
-    "node_type": "concept",
-    "article_id": "dna",
-    "article_title": "DNA",
-    "domain": "biology"
-  },
-  {
-    "node_id": "2a84b791-9429-4c49-8bc1-f09c34ca9447",
-    "statement": "DNA is composed of two helical chains, bound to each other by hydrogen bonds",
-    "cluster": "genetics",
+    "node_id": "12bfa7b9-1c4a-4cfa-ad00-32b4b7db1485",
+    "statement": "The presence of non-canonical base modifications serves crucial biological roles. These modifications can function either as an epigenetic mechanism controlling gene expression or as a molecular strategy for bacteriophages to circumvent bacterial restriction enzyme systems. | The presence of noncanonical bases in bacterial viruses (bacteriophages) is a mechanism to avoid restriction enzymes present in bacteria.",
+    "cluster": "molecular_biology",
     "node_type": "hypothesis",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "1cbf48cf-ceca-4581-af48-926920a39b0a",
-    "statement": "The directionality of the 3\u2019 and 5\u2019 carbons along the sugar-phosphate backbone confers directionality to each DNA strand",
-    "cluster": "genetics",
+    "node_id": "12bfa7b9-1c4a-4cfa-ad00-32b4b7db1485",
+    "statement": "The presence of non-canonical base modifications serves crucial biological roles. These modifications can function either as an epigenetic mechanism controlling gene expression or as a molecular strategy for bacteriophages to circumvent bacterial restriction enzyme systems. | The presence of noncanonical bases in bacterial viruses (bacteriophages) is a mechanism to avoid restriction enzymes present in bacteria.",
+    "cluster": "molecular_biology",
     "node_type": "hypothesis",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "b7a143c5-5699-4c48-b7ae-8aeaa0e158ea",
-    "statement": "The four bases found in DNA are adenine (A), cytosine (C), guanine (G) and thymine (T). These four bases are attached to the sugar-phosphate to form the complete nucleotide, as shown for adenosine monophosphate",
-    "cluster": "biology  (genetics is a subfield of biology)",
+    "node_id": "23a463ee-85ee-40b7-abf9-ff070c46cc34",
+    "statement": "Modifications of the bases cytosine and adenine play vital roles in the epigenetic control of gene expression in plants and animals.",
+    "cluster": "molecular_biology",
     "node_type": "hypothesis",
     "article_id": "dna",
     "article_title": "DNA",
     "domain": "biology"
   },
   {
-    "node_id": "7c029733-da56-4e4f-ae7a-14f6fca1c928",
-    "statement": "Adenine pairs with thymine and guanine pairs with cytosine, forming A-T and G-C base pairs",
-    "cluster": "biology \n (or genetics)",
-    "node_type": "hypothesis",
-    "article_id": "dna",
-    "article_title": "DNA",
-    "domain": "biology"
-  },
-  {
-    "node_id": "7b75944d-27f6-460f-ac11-93f138f239f8",
-    "statement": "Thermodynamics studies the relationships between heat, work, and temperature in physical systems, using four laws to describe these interactions from a macroscopic perspective.",
+    "node_id": "6c193028-11d1-4eb2-862d-bb77161e5d94",
+    "statement": "Thermodynamics quantifies the relationship between macroscopic physical properties\u2014such as heat, work, and temperature\u2014and fundamental concepts like energy and entropy, governed by a set of four laws that define the physical limits of matter and radiation.",
     "cluster": "thermodynamics",
     "node_type": "concept",
     "article_id": "thermodynamics",
@@ -126,8 +81,8 @@
     "domain": "physics"
   },
   {
-    "node_id": "072d22b9-bf12-48c4-8082-19fae32ca36f",
-    "statement": "The four laws of thermodynamics form an axiomatic basis for describing any thermodynamic system, governing energy transfer as heat or work, and defining entropy and its role in quantifying the direction and order of system evolution.",
+    "node_id": "f47a4f05-8b6d-492e-91a1-24cb496b28de",
+    "statement": "The study of complex systems involves defining a system and its surroundings, where measurable properties combine to yield thermodynamic potentials, which are essential for determining the requisite conditions for both equilibrium states and spontaneous processes.",
     "cluster": "thermodynamics",
     "node_type": "concept",
     "article_id": "thermodynamics",
@@ -135,8 +90,8 @@
     "domain": "physics"
   },
   {
-    "node_id": "05b2f2eb-45b0-4d05-af33-0fb6bbedfdff",
-    "statement": "The development of thermodynamics emerged from efforts to increase the efficiency of early steam engines, with key contributions by Sadi Carnot, Lord Kelvin, and Rudolf Clausius, who formulated the second law and introduced the concept of entropy.",
+    "node_id": "d5e7a17d-e1a3-4573-b10e-fa663b7effbd",
+    "statement": "While classical thermodynamics primarily models systems assumed to be in equilibrium, non-equilibrium thermodynamics extends this treatment, drawing significant methodological advances from the statistical mechanics approach to transient processes.",
     "cluster": "thermodynamics",
     "node_type": "concept",
     "article_id": "thermodynamics",
@@ -144,17 +99,17 @@
     "domain": "physics"
   },
   {
-    "node_id": "cd1ce28b-ea4c-4888-88c1-828fde476f3b",
-    "statement": "Statistical thermodynamics, or statistical mechanics, focuses on predicting collective behavior of particles from microscopic perspectives, providing a foundation for understanding thermodynamic phenomena at a molecular level.",
-    "cluster": "statistical_thermodynamics",
+    "node_id": "3fdfcffe-7d6b-49b4-b481-bf071337a501",
+    "statement": "Statistical thermodynamics provides a crucial theoretical framework by predicting the collective motion of particles from their underlying microscopic behavior, enabling the description of macroscopic properties through statistical ensemble theory.",
+    "cluster": "statistical_mechanics",
     "node_type": "concept",
     "article_id": "thermodynamics",
     "article_title": "Thermodynamics",
     "domain": "physics"
   },
   {
-    "node_id": "0880dd4e-fb76-44c6-af04-cd6dd674fa9e",
-    "statement": "The history of thermodynamics can be traced back to Otto von Guericke's creation of the world's first vacuum pump in 1650, followed by Robert Boyle and Robert Hooke's development of an air pump, leading to the formulation of Boyle's Law.",
+    "node_id": "5235d783-7286-488e-b2e3-7feb69842bbe",
+    "statement": "Gibbs\u2019 pioneering work established a powerful mathematical methodology, allowing thermodynamic processes, including chemical reactions, to be graphically analyzed by studying the interplay of energy, entropy, volume, temperature, and pressure to determine spontaneous change.",
     "cluster": "thermodynamics",
     "node_type": "concept",
     "article_id": "thermodynamics",
@@ -162,8 +117,8 @@
     "domain": "physics"
   },
   {
-    "node_id": "eedc1657-7b11-4482-ace4-cbb31e71729b",
-    "statement": "Joseph Black and James Watt's experiments at the University of Glasgow contributed significantly to understanding heat capacity and latent heat, ultimately resulting in Watt's invention of the external condenser and Sadi Carnot's development of the 'motive power of fire'.",
+    "node_id": "bb225d34-095e-4a53-8a79-929fd1794aee",
+    "statement": "The initial development of thermodynamics was fundamentally driven by engineering necessity, specifically the pursuit of enhancing the efficiency of early mechanical heat engines, which spurred the early formulation of foundational laws by figures like Carnot and Rankine.",
     "cluster": "thermodynamics",
     "node_type": "concept",
     "article_id": "thermodynamics",
@@ -171,145 +126,244 @@
     "domain": "physics"
   },
   {
-    "node_id": "ac91cb5f-0e53-431b-b1cf-4c4026881669",
-    "statement": "The first thermodynamic textbook was published by William Rankine in 1859, while the mathematical foundations of statistical thermodynamics were laid by physicists such as James Clerk Maxwell, Ludwig Boltzmann, and J. Willard Gibbs.",
-    "cluster": "thermodynamics",
+    "node_id": "3c815cd6-8f73-4327-8e53-b8e82a889737",
+    "statement": "Natural selection is defined as the differential survival and reproduction of individuals based on the relative fitness conferred by their observable characteristic complement.",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "thermodynamics",
-    "article_title": "Thermodynamics",
-    "domain": "physics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "f9df2486-cb14-4848-abb0-95f223990b68",
-    "statement": "Game theory studies mathematical models of strategic interactions, initially focusing on two-person zero-sum games where gains/losses of one participant are exactly balanced by those of the other",
-    "cluster": "economics (game theory is a subfield of economics that studies strategic interactions using mathematical models)",
+    "node_id": "d50c6b35-99c9-4cf3-a67a-ade31d9af000",
+    "statement": "This evolutionary mechanism changes the heritable traits of a population across generations, fundamentally distinguishing itself from intentional processes such as artificial selection.",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "70254923-c436-4f39-ada0-4f26909baf54",
-    "statement": "Modern game theory, extending beyond two-person zero-sum games, is an umbrella term for the science of rational decision making in humans, animals, and computers",
-    "cluster": "economics or sociology or cognitive_science or computer_science or psychology or biology or (if needing to be most specific) cognitive_science or economics",
+    "node_id": "e7c1a314-7e63-4ef8-9a6d-4252f01a518a",
+    "statement": "Within any population, variation (both genotypic and phenotypic) exists, but adaptive traits are disproportionately transmitted, thereby increasing their frequency under selective pressure.",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "6beb906b-1327-41b0-96ca-1059d8eb1d43",
-    "statement": "John von Neumann's proof using Brouwer's fixed-point theorem established mixed-strategy equilibria in two-person zero-sum games, a standard method in game theory and mathematical economics",
-    "cluster": "economics (most specific domain)",
+    "node_id": "d491951f-d99e-465d-bfd1-f21912e5b60b",
+    "statement": "Evolutionary change is scaled: microevolution involves trait shifts favored by localized environmental changes, whereas macroevolution encompasses broader, systemic environmental shifts that may precipitate speciation.",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "8efff7d3-1659-4afb-8202-c2b3fa28ded3",
-    "statement": "Game theory has been applied to evolution and recognized as an important tool in many fields, with multiple Nobel Prize laureates in economics",
-    "cluster": "economics (game theory has been applied to evolution and recognized as an important tool in many fields, with multiple nobel prize laureates in economics)",
+    "node_id": "4760ecb4-5be2-40d8-984a-b0a860a30cb2",
+    "statement": "Trait persistence and transmission are governed by multiple selective pressures, including environmental adaptation, mate preference (sexual selection), and the optimization of reproductive health (fecundity selection).",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "5c35a0b1-4d02-45bc-87b7-e8f86e8111bf",
-    "statement": "Discussions on the mathematics of games date back centuries, with developments from Cardano, Huygens, Waldegrave, Cournot, Bertrand, Zermelo, Borel, and others",
-    "cluster": "mathematics \n (or possibly: game_theory, if that is considered a domain of its own)",
+    "node_id": "bea74230-b8cf-4491-8279-8cd4ce70580c",
+    "statement": "The initial formulation of natural selection was developed in the absence of a rigorous theory of heredity; consequently, the modern synthesis required integrating Darwinian evolution with classical genetic discoveries.",
+    "cluster": "evolutionary_biology",
     "node_type": "concept",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "1d0fa399-12c7-477a-9e4b-26df623d13b7",
-    "statement": "The Nash equilibrium, introduced by John Nash, is a solution concept for non-cooperative games, applicable to a wide variety of games and proven to exist in every finite n-player, non-zero-sum game | The concept of the Nash equilibrium is a solution concept for non-cooperative games",
-    "cluster": "economics",
+    "node_id": "98475338-24fe-4215-a7a4-4d98b9408b59",
+    "statement": "Contemporary evolutionary biology advances extended syntheses, integrating molecular genetics and evolutionary developmental biology (Evo-Devo) to infer how changes in developmental processes drive evolution.",
+    "cluster": "evolutionary_biology",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "ed6d6852-17e7-45e2-b0be-c4671a0945d5",
+    "statement": "While random genetic drift is recognized as a mechanism for genotype change, natural selection remains the primary explanatory framework for the observed patterns of adaptive evolution.",
+    "cluster": "evolutionary_biology",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "e4031e96-fae6-44e3-a02a-122c0c87236c",
+    "statement": "Early classical thought, exemplified by Empedocles, posited the random generation of life, a view that Aristotle countered by advancing natural teleology, arguing that forms achieve purpose (telos) through inherent regularity.",
+    "cluster": "philosophy_of_science",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "a78e45d7-11e7-4a8b-8269-86429d516d84",
+    "statement": "Aristotle maintained a complex view regarding adaptation, suggesting that while parts might appear functionally related, he rejected the possibility that mere chance or coincidence could generate the necessary structural complexity.",
+    "cluster": "evolutionary_biology",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "b4a3c84a-43e6-4e37-ab1c-d7f05c0ec58a",
+    "statement": "The theory of uniformitarianism in geology was critical because it demonstrated that continuous, weak forces acting over vast geological time could plausibly generate the radical changes required to make interspecies variation plausible.",
+    "cluster": "geology",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "7fc3f3c0-2a81-4a8f-b3f0-09710e7710bd",
+    "statement": "Jean-Baptiste Lamarck proposed the inheritance of acquired characteristics as the mechanism of evolutionary change, suggesting that environmentally induced modifications could be physically passed to progeny.",
+    "cluster": "evolutionary_biology",
+    "node_type": "concept",
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
+  },
+  {
+    "node_id": "63f2da3d-bc19-43d5-a91b-2025acf7e2e4",
+    "statement": "The characteristics acquired by an organism during its lifetime can be passed down to its offspring (inheritance of acquired characteristics).",
+    "cluster": "genetics",
     "node_type": "hypothesis",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
+    "article_id": "natural_selection",
+    "article_title": "Natural Selection",
+    "domain": "evolutionary_biology"
   },
   {
-    "node_id": "ca0e2367-ba6e-4213-8b95-2cca2600a91d",
-    "statement": "Game theory experienced a flurry of activity in the 1950s, with the development of various concepts like the core, extensive form game, fictitious play, repeated games, and Shapley value, along with first applications to philosophy and political science",
-    "cluster": "economics",
+    "node_id": "7253defe-a4ab-40c9-903d-eb077fe3cb08",
+    "statement": "A neural network (NN) is a computational model structured with interconnected artificial neurons and weighted edges, where the output signal of each node is determined by a non-linear activation function applied to the weighted sum of its inputs.",
+    "cluster": "deep_learning",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "a0bebb3b-84df-482e-b427-e6c47d9c9655",
+    "statement": "The evolution of deep neural networks was significantly accelerated by advances in GPU computing power and the availability of massive datasets, enabling the learning of complex, hierarchical representations from raw data.",
+    "cluster": "deep_learning",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "7e767e8d-e2b1-49f7-99d3-027793b0834e",
+    "statement": "Connectionist computing models information processing by eschewing the separation of memory and processing inherent in the von Neumann architecture, instead mimicking the distributed nature of biological neural systems.",
+    "cluster": "deep_learning",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "435778de-22cd-41dc-89de-9ed81bc8e1c4",
+    "statement": "Historically, computational models progressed from McCulloch and Pitts' non-learning representations of logical functions to Hebbian learning hypotheses, which formalized neural plasticity as the mechanism for synaptic weight adjustment.",
+    "cluster": "neuroscience",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "5e3570cd-d262-40e9-9ed1-a800666e30af",
+    "statement": "Early artificial neural network models, such as the perceptron, were fundamentally restricted to solving linearly separable pattern classes, a theoretical limitation that caused significant research stagnation until deep learning methods emerged.",
+    "cluster": "deep_learning",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "d1c54691-b07f-40ee-b192-f41a18f2ab57",
+    "statement": "The foundation of modern deep learning utilizes techniques like stochastic gradient descent (SGD) and layer-by-layer regression analysis, enabling the training of multi-layer perceptrons (MLPs) to classify non-linearly separable pattern sets.",
+    "cluster": "deep_learning",
+    "node_type": "concept",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "8576d5af-9eb9-4d76-80de-bd6b17bad46c",
+    "statement": "Hebbian learning predicts that the activity of neurons that fire together, wire together.",
+    "cluster": "neuroscience",
+    "node_type": "hypothesis",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "ba18bc74-d56e-443e-965c-2531ed9c1ed9",
+    "statement": "Simplified computational models of biological neurons (neuron nets) are capable of enabling machines to learn concepts and improve performance through experience.",
+    "cluster": "neuroscience",
+    "node_type": "hypothesis",
+    "article_id": "neural_network",
+    "article_title": "Artificial neural network",
+    "domain": "computer_science"
+  },
+  {
+    "node_id": "92737c5f-2661-4d58-a13f-89fc994ac9ef",
+    "statement": "Game theory models strategic interactions using mathematical frameworks, evolving from the initial focus on two-person zero-sum games to become a comprehensive theory of rational decision-making across diverse agents (human, animal, computer).",
+    "cluster": "game_theory",
     "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"
   },
   {
-    "node_id": "1ebb091a-8d8c-4d72-9813-3d33e18c86dd",
-    "statement": "Reinhard Selten's subgame perfect equilibria and trembling hand perfection further refined the Nash equilibrium, earning him a Nobel Prize in 1994",
-    "cluster": "economics",
+    "node_id": "386cfdec-ef08-44f4-ac71-6a003b640a3c",
+    "statement": "The mathematical foundation was established by Von Neumann, who utilized the Brouwer fixed-point theorem to prove mixed-strategy equilibria in zero-sum games, subsequently providing an axiomatic theory of expected utility for decision-making under uncertainty.",
+    "cluster": "game_theory",
     "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"
   },
   {
-    "node_id": "54b2dfd4-bcba-4fa5-bf4d-b2a2eb2f21d5",
-    "statement": "John Maynard Smith's evolutionarily stable strategy and the concepts of correlated equilibrium, trembling hand perfection, and common knowledge were introduced and analyzed in the 1970s and 1990s",
-    "cluster": "economics (the statement is about game theory concepts that were developed and studied in economics)",
+    "node_id": "518d8620-55db-410a-8bd6-d9fb52c2dba3",
+    "statement": "John Nash significantly generalized the concept of equilibrium, proving that every finite n-player, non-zero-sum, non-cooperative game possesses a mixed-strategy Nash equilibrium, thereby extending the theory far beyond bilateral zero-sum contexts.",
+    "cluster": "game_theory",
     "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"
   },
   {
-    "node_id": "36d8d160-423d-493f-8f03-fd32784eeddb",
-    "statement": "Game theory can be used to analyze evolutionary processes",
-    "cluster": "evolutionary_biology, computer_science, game_theory, mathematics, economics",
-    "node_type": "hypothesis",
+    "node_id": "28256058-0984-4bc0-a095-08d40a844ec3",
+    "statement": "The robustness of equilibrium concepts was refined by introducing notions such as subgame perfect equilibria and trembling hand perfection, which enforce increasingly stringent consistency requirements on player strategies.",
+    "cluster": "game_theory",
+    "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"
   },
   {
-    "node_id": "0d355bd6-ea40-48b3-bf07-916cf47ae27d",
-    "statement": "The optimal chess strategy is strictly determined",
-    "cluster": "mathematics or computer_science",
-    "node_type": "hypothesis",
+    "node_id": "2bedd0ec-21ad-4726-813b-e9364fcac664",
+    "statement": "The field achieved major applied theoretical depth through evolutionary game theory, exemplified by the concept of evolutionarily stable strategies, and later expanded into mechanism design, formalizing concepts like incentive compatibility and stable allocations.",
+    "cluster": "game_theory",
+    "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"
   },
   {
-    "node_id": "723c8d52-6f4e-40e8-8d62-c67c1cda25f4",
-    "statement": "Every finite n-player, non-zero-sum (not just two-player zero-sum) non-cooperative game has a Nash equilibrium in mixed strategies",
-    "cluster": "game_theory (which could be considered a subfield of mathematics, economics, or sociology; i chose the most specific domain)",
-    "node_type": "hypothesis",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
-  },
-  {
-    "node_id": "1d0fa399-12c7-477a-9e4b-26df623d13b7",
-    "statement": "The Nash equilibrium, introduced by John Nash, is a solution concept for non-cooperative games, applicable to a wide variety of games and proven to exist in every finite n-player, non-zero-sum game | The concept of the Nash equilibrium is a solution concept for non-cooperative games",
-    "cluster": "economics",
-    "node_type": "hypothesis",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
-  },
-  {
-    "node_id": "3c91d056-2a3c-4bb3-a915-805a17a67d0c",
-    "statement": "The notion of proper equilibrium and the concept of incentive compatibility are foundational for mechanism design theory",
-    "cluster": "economics",
-    "node_type": "hypothesis",
-    "article_id": "game_theory",
-    "article_title": "Game theory",
-    "domain": "economics"
-  },
-  {
-    "node_id": "a2e99c41-3b37-4d83-8aa2-50b94a300546",
-    "statement": "The theory of stable allocations and the practice of market design can improve real-world outcomes",
-    "cluster": "economics",
-    "node_type": "hypothesis",
+    "node_id": "03902c86-2aa0-4469-a425-0cb9016daa1e",
+    "statement": "A crucial distinction exists between cooperative games, which rely on the ability to form binding commitments, and non-cooperative games, where outcomes are determined solely by individual strategic choices.",
+    "cluster": "game_theory",
+    "node_type": "concept",
     "article_id": "game_theory",
     "article_title": "Game theory",
     "domain": "economics"

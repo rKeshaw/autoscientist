@@ -278,6 +278,8 @@ class Brain:
     # ── Edge operations ──────────────────────────────────────────────────────
 
     def add_edge(self, from_id: str, to_id: str, edge: Edge):
+        if not from_id or not to_id or from_id == to_id:
+            return
         self.graph.add_edge(from_id, to_id, **edge.to_dict())
 
     def get_edge(self, from_id: str, to_id: str) -> Optional[dict]:
@@ -317,14 +319,68 @@ class Brain:
     # ── NREM ─────────────────────────────────────────────────────────────────
 
     def proximal_reinforce(self, boost: float = 0.05, threshold: float = 0.6):
-        reinforced = 0
+        def _activation_score(node_data, now):
+            activated_at = node_data.get('activated_at', 0.0)
+            if not activated_at:
+                return 0.0
+            age = max(0.0, now - activated_at)
+            return max(0.0, 1.0 - (age / 600.0))
+
+        def _type_bonus(edge_type):
+            if edge_type in {
+                EdgeType.SUPPORTS.value,
+                EdgeType.CAUSES.value,
+                EdgeType.CONTRADICTS.value,
+                EdgeType.ANSWERS.value,
+                EdgeType.TOWARD_MISSION.value,
+            }:
+                return 0.20
+            if edge_type in {
+                EdgeType.STRUCTURAL_ANALOGY.value,
+                EdgeType.DEEP_ISOMORPHISM.value,
+            }:
+                return 0.14
+            if edge_type == EdgeType.SURFACE_ANALOGY.value:
+                return 0.05
+            return 0.0
+
+        now = time.time()
+        candidates = []
         for u, v, data in self.graph.edges(data=True):
             weight = data.get('weight', 0.5)
-            if weight >= threshold:
-                self.graph.edges[u, v]['weight']     = min(0.98, weight + boost)
-                self.graph.edges[u, v]['updated_at'] = time.time()
-                reinforced += 1
-        print(f"  NREM pass: reinforced {reinforced} strong edges")
+            if weight < threshold:
+                continue
+            node_u = self.get_node(u) or {}
+            node_v = self.get_node(v) or {}
+            avg_importance = (
+                node_u.get('importance', 0.5) + node_v.get('importance', 0.5)
+            ) / 2.0
+            avg_activation = (
+                _activation_score(node_u, now) + _activation_score(node_v, now)
+            ) / 2.0
+            priority = (
+                weight +
+                (0.22 * avg_importance) +
+                (0.18 * avg_activation) +
+                _type_bonus(data.get('type', ''))
+            )
+            candidates.append((priority, u, v, data))
+
+        if not candidates:
+            print("  NREM pass: reinforced 0 strong edges")
+            return 0
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        reinforce_count = max(1, int(round(len(candidates) * 0.35)))
+
+        reinforced = 0
+        for _, u, v, data in candidates[:reinforce_count]:
+            weight = data.get('weight', 0.5)
+            self.graph.edges[u, v]['weight'] = min(0.98, weight + boost)
+            self.graph.edges[u, v]['updated_at'] = now
+            reinforced += 1
+
+        print(f"  NREM pass: reinforced {reinforced} prioritized edges")
         return reinforced
 
     # ── Insight restructuring ─────────────────────────────────────────────────

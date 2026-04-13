@@ -166,11 +166,17 @@ def main():
         )
         raw = llm_call(prompt, temperature=0.1, model=args.judge_model, role="precise")
         try:
-             res = require_json(raw, default={"rating": 0.0})
+             res = require_json(raw, default={
+                 "rating": 0.0,
+                 "reasoning": "Judge parse failed",
+             })
              rating = float(res.get("rating", 0.0))
         except:
              rating = 0.0
-             res = {"rating": 0.0}
+             res = {
+                 "rating": 0.0,
+                 "reasoning": "Judge parse failed",
+             }
         
         sys_s = float(s['system_strength'])
         sys_scores.append(sys_s)

@@ -12,7 +12,7 @@ from llm_utils import llm_call
 # ── Config ────────────────────────────────────────────────────────────────────
 
 READING_LIST_PATH = "data/reading_list.json"
-MAX_TEXT_CHARS    = 8000   # truncate very long pages
+MAX_TEXT_CHARS    = 32000  # ~8-10 pages of content
 MIN_TEXT_CHARS    = 200    # ignore tiny pages
 
 # ── Prompts ───────────────────────────────────────────────────────────────────

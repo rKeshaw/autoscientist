@@ -32,21 +32,25 @@ def _key_metric(filename: str, summary: dict) -> str:
         total = summary.get('dream_scores', {}).get('total', 0)
         return f'Dream composite score: {total}'
     if filename == 'd2_insight_validity.json':
-        return f"Raw validity: {summary.get('genuine_fraction', 0) * 100:.1f}%"
+        return (
+            f"Raw validity: {summary.get('genuine_fraction', 0) * 100:.1f}% | "
+            f"depth mix: S={summary.get('structural_count', 0)} I={summary.get('isomorphism_count', 0)}"
+        )
     if filename == 'd2_mission_advance.json':
         return f"System/judge corr: {summary.get('correlation', 0):.2f}"
     if filename == 'd2_walk_diversity.json':
         return f"Coverage: {summary.get('coverage_fraction', 0) * 100:.1f}%"
     if filename == 'd2_nrem_effectiveness.json':
         return (
-            f"Reinf vs unreinf importance: "
-            f"{summary.get('mean_importance_reinforced', 0)} > "
-            f"{summary.get('mean_importance_unreinforced', 0)}"
+            f"Replay overlap: "
+            f"{summary.get('mean_replay_overlap_reinforced', 0)} > "
+            f"{summary.get('mean_replay_overlap_unreinforced', 0)}"
         )
     if filename == 'd2_critic_lift.json':
         return (
             f"Accepted validity: {summary.get('accepted_validity', 0) * 100:.1f}% "
-            f"(lift {summary.get('precision_lift', 0):+.3f})"
+            f"(lift {summary.get('precision_lift', 0):+.3f}, "
+            f"watered-down={summary.get('watered_down_accepts', 0)})"
         )
     if filename == 'd2_buffer_promotion_quality.json':
         return (
@@ -129,7 +133,7 @@ def main():
 
     out_path = results_dir / 'report_d2_summary.md'
     with open(out_path, 'w', encoding='utf-8') as f:
-        f.write(''.join(report_lines))
+        f.write('\n'.join(report_lines) + '\n')
 
     print(f'Dimension 2 aggregate report generated at: {out_path}')
     if missing_tests:

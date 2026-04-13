@@ -16,7 +16,12 @@ from llm_utils import llm_call, require_json
 DEFAULT_STEPS       = 20
 DEFAULT_TEMP        = 0.7
 DEPTH_STEPS         = 3
+DEPTH_COOLDOWN_STEPS = 2
+DEPTH_COPY_OVERLAP  = 0.85
 VISITED_PENALTY     = 0.45
+RECENT_CLUSTER_WINDOW = 4
+RECENT_CLUSTER_PENALTY = 0.18
+EXPLORATION_JUMP_PROB = 0.28
 
 # mode modifiers
 MODE_TEMP_BOOST = {
@@ -97,12 +102,17 @@ If something is unresolved or a new hypothesis emerges, ask ONE empirically test
 Classify any insight strictly:
 - INSIGHT: none (Default)
 - INSIGHT: surface (Shares vocabulary, topic, or abstract theme. NOT a deep insight.)
-- INSIGHT: structural (Requires an exact 1-to-1 mechanistic mapping. e.g., A acts on B exactly as X acts on Y. If you cannot state the mechanism map explicitly, it is merely surface.)
-- INSIGHT: isomorphism (Exact formal/mathematical equivalence)
+- INSIGHT: structural (Requires an explicit 1-to-1 role, mechanism, or constraint mapping. If you cannot state at least two concrete correspondences, it is merely surface.)
+- INSIGHT: isomorphism (Requires the same formal or mathematical structure under renaming of variables, state updates, or objective functions.)
+
+If you output INSIGHT: structural or INSIGHT: isomorphism, the narration MUST contain one sentence beginning exactly with "MAP:" that names at least two explicit correspondences.
+For isomorphism, the MAP sentence must mention the shared variables, update rule, objective, or conserved quantity.
 
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
-GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+BAD isomorphism: "Both systems seek equilibrium." (Too generic; no shared formal rule is stated.)
+GOOD structural insight: "MAP: synaptic weight pruning -> parameter pruning; REM noise bursts -> annealing noise; both remove brittle local configurations while preserving global performance."
+GOOD isomorphism insight: "MAP: free-energy minimization dF/dt < 0 -> gradient descent dL/dt < 0; local state update -> parameter update; both follow the same downhill optimization form under renamed variables."
 """
 
 NARRATION_WANDERING = """
@@ -119,12 +129,17 @@ If something is intriguing or a new hypothesis emerges, ask ONE empirically test
 Classify any insight strictly:
 - INSIGHT: none (Default)
 - INSIGHT: surface (Shares vocabulary, topic, or abstract theme. NOT a deep insight.)
-- INSIGHT: structural (Requires an exact 1-to-1 mechanistic mapping. e.g., A acts on B exactly as X acts on Y. If you cannot state the mechanism map explicitly, it is merely surface.)
-- INSIGHT: isomorphism (Exact formal/mathematical equivalence)
+- INSIGHT: structural (Requires an explicit 1-to-1 role, mechanism, or constraint mapping. If you cannot state at least two concrete correspondences, it is merely surface.)
+- INSIGHT: isomorphism (Requires the same formal or mathematical structure under renaming of variables, state updates, or objective functions.)
+
+If you output INSIGHT: structural or INSIGHT: isomorphism, the narration MUST contain one sentence beginning exactly with "MAP:" that names at least two explicit correspondences.
+For isomorphism, the MAP sentence must mention the shared variables, update rule, objective, or conserved quantity.
 
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
-GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+BAD isomorphism: "Both systems seek equilibrium." (Too generic; no shared formal rule is stated.)
+GOOD structural insight: "MAP: synaptic weight pruning -> parameter pruning; REM noise bursts -> annealing noise; both remove brittle local configurations while preserving global performance."
+GOOD isomorphism insight: "MAP: free-energy minimization dF/dt < 0 -> gradient descent dL/dt < 0; local state update -> parameter update; both follow the same downhill optimization form under renamed variables."
 """
 
 NARRATION_TRANSITIONAL = """
@@ -146,12 +161,17 @@ If something sparks or a new hypothesis emerges, ask ONE empirically testable, n
 Classify any insight strictly:
 - INSIGHT: none (Default)
 - INSIGHT: surface (Shares vocabulary, topic, or abstract theme. NOT a deep insight.)
-- INSIGHT: structural (Requires an exact 1-to-1 mechanistic mapping. e.g., A acts on B exactly as X acts on Y. If you cannot state the mechanism map explicitly, it is merely surface.)
-- INSIGHT: isomorphism (Exact formal/mathematical equivalence)
+- INSIGHT: structural (Requires an explicit 1-to-1 role, mechanism, or constraint mapping. If you cannot state at least two concrete correspondences, it is merely surface.)
+- INSIGHT: isomorphism (Requires the same formal or mathematical structure under renaming of variables, state updates, or objective functions.)
+
+If you output INSIGHT: structural or INSIGHT: isomorphism, the narration MUST contain one sentence beginning exactly with "MAP:" that names at least two explicit correspondences.
+For isomorphism, the MAP sentence must mention the shared variables, update rule, objective, or conserved quantity.
 
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
-GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+BAD isomorphism: "Both systems seek equilibrium." (Too generic; no shared formal rule is stated.)
+GOOD structural insight: "MAP: synaptic weight pruning -> parameter pruning; REM noise bursts -> annealing noise; both remove brittle local configurations while preserving global performance."
+GOOD isomorphism insight: "MAP: free-energy minimization dF/dt < 0 -> gradient descent dL/dt < 0; local state update -> parameter update; both follow the same downhill optimization form under renamed variables."
 """
 
 MISSION_ADVANCE_PROMPT = """
@@ -217,6 +237,72 @@ Examples:
 Respond ONLY "yes" or "no".
 """
 
+INSIGHT_VALIDATION_PROMPT = """
+You are validating a claimed scientific insight depth.
+
+Concept A: "{from_node}"
+Concept B: "{to_node}"
+Claimed narration: "{narration}"
+Claimed depth: {claimed_depth}
+
+Depth rules:
+- none: no real insight
+- surface: shared vocabulary, topic, or broad theme only
+- structural: requires an explicit mechanism or role mapping between A and B
+- isomorphism: requires the same formal or mathematical structure, not just similar behavior
+
+Be conservative. If the mapping is suggestive but not explicit, downgrade it.
+If the claim equates mechanism with metaphor, downgrade it.
+Downgrade to surface when the relation is primarily:
+- historical progression or intellectual transition
+- conceptual prerequisite or enabling background
+- abstract theory being realized by a concrete mechanism
+- broad functional similarity with different underlying mechanisms
+- causal sequence or precondition rather than mapped roles
+- shared constraints, shared vocabulary, or shared domain only
+
+For structural or isomorphic depth, require a preserved mapping of roles, variables, constraints, or update rules.
+
+Respond with JSON:
+{{
+  "depth": "none" | "surface" | "structural" | "isomorphism",
+  "reason": "one sentence",
+  "has_explicit_mapping": true or false
+}}
+
+Respond ONLY with JSON.
+"""
+
+INSIGHT_REFINEMENT_PROMPT = """
+You are sharpening a dream-derived scientific insight so that only real deep mappings survive.
+
+Concept A: "{from_node}"
+Concept B: "{to_node}"
+Draft narration: "{narration}"
+Draft depth: {claimed_depth}
+Mission context: "{mission}"
+
+Rules:
+- surface = shared topic, shared vocabulary, historical progression, prerequisite relation, substrate-realization relation, or broad functional similarity only.
+- structural = at least two explicit role, mechanism, or constraint correspondences.
+- isomorphism = the same formal structure under renamed variables, update rules, objectives, equilibria, or conservation constraints.
+- If the claim does NOT meet structural or isomorphism standards, downgrade it.
+- If depth is structural or isomorphism, include a sentence beginning exactly with "MAP:".
+- The MAP sentence must name at least two explicit correspondences.
+- For isomorphism, the MAP sentence must mention the shared formal rule, variables, objective, update law, or conserved quantity.
+- Avoid generic English logic such as "both optimize", "both balance", "both involve states", or "both have constraints" unless the concrete mapping is stated.
+
+Respond EXACTLY in JSON:
+{{
+  "depth": "none" | "surface" | "structural" | "isomorphism",
+  "narration": "1-3 technically precise sentences",
+  "mapping_pairs": ["A_role -> B_role", "A_constraint -> B_constraint"],
+  "has_explicit_mapping": true or false,
+  "has_formal_anchor": true or false,
+  "reason": "one sentence"
+}}
+"""
+
 DEPTH_NARRATION_PROMPT = """
 You are a scientific mind that found something significant while dreaming.
 {mission_line}
@@ -225,6 +311,8 @@ It connects to: "{question}"
 Connection: {explanation}
 
 Explore this in 2-3 sentences. Be technically precise. DO NOT write qualitative fluff.
+Do NOT repeat the landed statement or the connection verbatim.
+If you cannot add a materially new mechanistic angle, respond EXACTLY with: NO_DEPTH
 End with ONE highly specific, empirically testable research question starting with "Q:". 
 The question MUST propose a specific measurement, variable, or intervention. Avoid generic inquiries.
 """
@@ -373,6 +461,122 @@ class Dreamer:
         q_embeddings.append(self._embed(q))
         return True
 
+    def _statement_key(self, statement):
+        if not statement:
+            return ""
+        return re.sub(r"\s+", " ", statement).strip().lower()
+
+    def _token_set(self, text):
+        if not text:
+            return set()
+        return {
+            tok for tok in re.findall(r"[a-z0-9]+", text.lower())
+            if len(tok) > 2
+        }
+
+    def _is_mostly_repeated_text(self, text, reference):
+        text_key = self._statement_key(text)
+        ref_key = self._statement_key(reference)
+        if not text_key or not ref_key:
+            return False
+        if text_key == ref_key or text_key in ref_key or ref_key in text_key:
+            return True
+        text_tokens = self._token_set(text)
+        ref_tokens = self._token_set(reference)
+        if not text_tokens or not ref_tokens:
+            return False
+        overlap = len(text_tokens & ref_tokens) / max(1, min(len(text_tokens), len(ref_tokens)))
+        return overlap >= DEPTH_COPY_OVERLAP
+
+    def _depth_seed_is_novel(self, node_data, narration, question):
+        statement = node_data.get('statement', '')
+        if self._is_mostly_repeated_text(narration, statement):
+            return False
+        if question and self._is_mostly_repeated_text(question, statement):
+            return False
+        return True
+
+    def _validate_insight_depth(self, from_node, to_node, narration, claimed_depth):
+        if not claimed_depth or claimed_depth == "surface":
+            return claimed_depth, narration
+
+        try:
+            raw = self._llm(INSIGHT_VALIDATION_PROMPT.format(
+                from_node=from_node,
+                to_node=to_node,
+                narration=narration,
+                claimed_depth=claimed_depth
+            ), temperature=0.0)
+            validation = require_json(raw, default={})
+            depth = validation.get("depth", "surface")
+            reason = str(validation.get("reason", "")).lower()
+            mapping_flag = validation.get("has_explicit_mapping", False)
+            if isinstance(mapping_flag, str):
+                has_explicit_mapping = mapping_flag.strip().lower() in {"true", "1", "yes"}
+            else:
+                has_explicit_mapping = bool(mapping_flag)
+            if depth not in {"none", "surface", "structural", "isomorphism"}:
+                return "surface", narration
+            if depth in {"structural", "isomorphism"} and not has_explicit_mapping:
+                return "surface", narration
+            if any(phrase in reason for phrase in (
+                "historical progression",
+                "intellectual transition",
+                "conceptual prerequisite",
+                "enabling background",
+                "broad functional similarity",
+                "shared vocabulary",
+                "shared domain",
+                "causal sequence",
+                "precondition",
+                "realized by a concrete mechanism",
+                "realized by mechanism",
+            )):
+                return "surface", narration
+            if depth == "none":
+                return "none", narration
+
+            mission = self._mission_text() or "No mission"
+            raw_refinement = self._llm(INSIGHT_REFINEMENT_PROMPT.format(
+                from_node=from_node,
+                to_node=to_node,
+                narration=narration,
+                claimed_depth=depth,
+                mission=mission,
+            ), temperature=0.0)
+            refined = require_json(raw_refinement, default={})
+            refined_depth = refined.get("depth", depth)
+            refined_narration = str(refined.get("narration", narration)).strip() or narration
+            mapping_pairs = refined.get("mapping_pairs", [])
+            if not isinstance(mapping_pairs, list):
+                mapping_pairs = []
+            mapping_pairs = [str(pair).strip() for pair in mapping_pairs if str(pair).strip()]
+            refined_mapping_flag = refined.get("has_explicit_mapping", has_explicit_mapping)
+            if isinstance(refined_mapping_flag, str):
+                has_explicit_mapping = refined_mapping_flag.strip().lower() in {"true", "1", "yes"}
+            else:
+                has_explicit_mapping = bool(refined_mapping_flag)
+            formal_anchor_flag = refined.get("has_formal_anchor", False)
+            if isinstance(formal_anchor_flag, str):
+                has_formal_anchor = formal_anchor_flag.strip().lower() in {"true", "1", "yes"}
+            else:
+                has_formal_anchor = bool(formal_anchor_flag)
+
+            if refined_depth not in {"none", "surface", "structural", "isomorphism"}:
+                refined_depth = depth
+            if refined_depth in {"structural", "isomorphism"} and (
+                not has_explicit_mapping or len(mapping_pairs) < 2
+            ):
+                return "surface", refined_narration
+            if refined_depth == "isomorphism" and not has_formal_anchor:
+                refined_depth = "structural"
+            if refined_depth in {"structural", "isomorphism"} and "MAP:" not in refined_narration:
+                map_sentence = "MAP: " + "; ".join(mapping_pairs[:3]) + "."
+                refined_narration = f"{refined_narration} {map_sentence}".strip()
+            return refined_depth, refined_narration
+        except (json.JSONDecodeError, ValueError, TypeError):
+            return "surface", narration
+
     # ── Node selection ────────────────────────────────────────────────────────
 
     def _select_start_node(self, mode, seed_id=None):
@@ -435,7 +639,8 @@ class Dreamer:
 
     # ── Edge scoring ──────────────────────────────────────────────────────────
 
-    def _score_edge(self, edge_data, temperature, scientificness, visited, target_id):
+    def _score_edge(self, edge_data, temperature, scientificness, visited, target_id,
+                    recent_clusters=None):
         weight = edge_data.get('weight', 0.5)
         etype  = edge_data.get('type', '')
 
@@ -459,28 +664,50 @@ class Dreamer:
         if target_id in visited:
             weight = (weight * 0.1) - VISITED_PENALTY
 
+        if recent_clusters:
+            target_node = self.brain.get_node(target_id) or {}
+            target_cluster = target_node.get('cluster', '')
+            if target_cluster and target_cluster in recent_clusters[-RECENT_CLUSTER_WINDOW:]:
+                weight -= RECENT_CLUSTER_PENALTY
+
         noise = random.gauss(0, temperature * 0.3)
         return max(0.001, weight + noise)
 
     # ── Single hop ────────────────────────────────────────────────────────────
 
-    def _hop(self, current_id, temperature, scientificness, visited):
+    def _hop(self, current_id, temperature, scientificness, visited,
+             blocked_ids=None, recent_clusters=None):
+        blocked_ids = set(blocked_ids or ())
         neighbors = self.brain.neighbors(current_id)
+        if blocked_ids:
+            neighbors = [nid for nid in neighbors if nid not in blocked_ids]
         if not neighbors:
             all_ids   = [nid for nid, _ in self.brain.all_nodes()]
-            unvisited = [n for n in all_ids if n not in visited]
-            return random.choice(unvisited if unvisited else all_ids), None
+            candidates = [n for n in all_ids if n not in blocked_ids]
+            unvisited = [n for n in candidates if n not in visited]
+            pool = unvisited or candidates or all_ids
+            return random.choice(pool), None
 
         scored = []
         for nid in neighbors:
             edge = self.brain.get_edge(current_id, nid)
             if edge:
                 score = self._score_edge(
-                    edge, temperature, scientificness, visited, nid)
+                    edge, temperature, scientificness, visited, nid,
+                    recent_clusters=recent_clusters)
                 scored.append((nid, edge, score))
 
         if not scored:
             return random.choice(neighbors), None
+
+        unvisited_scored = [item for item in scored if item[0] not in visited]
+        if unvisited_scored:
+            scored = unvisited_scored
+        else:
+            all_ids = [nid for nid, _ in self.brain.all_nodes()]
+            candidates = [n for n in all_ids if n not in blocked_ids and n not in visited]
+            if candidates and random.random() < EXPLORATION_JUMP_PROB:
+                return random.choice(candidates), None
 
         total = sum(s for _, _, s in scored)
         roll  = random.uniform(0, total)
@@ -560,7 +787,6 @@ class Dreamer:
     def _depth_explore(self, node_id, node_data, question, explanation,
                        temperature, scientificness, visited, log,
                        questions, q_embeddings, step_offset):
-        print(f"      ↳ Depth [{DEPTH_STEPS} steps]")
         mission = self._mission_text()
         mission_line = f"Central question: \"{mission}\"" if mission else ""
 
@@ -569,18 +795,46 @@ class Dreamer:
             node=node_data['statement'],
             question=question,
             explanation=explanation), temperature=0.5)
+        if raw.strip().upper().startswith("NO_DEPTH"):
+            return node_id, 0
         lines  = raw.strip().split('\n')
         q_line = next((l for l in lines if l.startswith('Q:')), "")
         followup = q_line[2:].strip() if q_line else ""
         self._add_question(followup, questions, q_embeddings)
 
         current_id, current_data = node_id, node_data
+        local_visited = set(visited)
+        local_visited.add(node_id)
+        seen_statements = {self._statement_key(node_data.get('statement', ''))}
+        explored_steps = 0
+        printed_header = False
         for d in range(DEPTH_STEPS):
-            next_id, edge = self._hop(
-                current_id, temperature * 0.5, scientificness, visited)
-            next_data = self.brain.get_node(next_id)
+            next_id = None
+            next_data = None
+            edge = None
+            for _ in range(4):
+                candidate_id, candidate_edge = self._hop(
+                    current_id, temperature * 0.5, scientificness,
+                    local_visited, blocked_ids={current_id})
+                candidate_data = self.brain.get_node(candidate_id)
+                if not candidate_data:
+                    local_visited.add(candidate_id)
+                    continue
+                statement_key = self._statement_key(
+                    candidate_data.get('statement', '')
+                )
+                if statement_key and statement_key in seen_statements:
+                    local_visited.add(candidate_id)
+                    continue
+                next_id, edge, next_data = candidate_id, candidate_edge, candidate_data
+                if statement_key:
+                    seen_statements.add(statement_key)
+                break
             if not next_data:
-                continue
+                break
+            if not printed_header:
+                print(f"      ↳ Depth [{DEPTH_STEPS} steps]")
+                printed_header = True
             edge_type      = edge.get('type', 'associated') if edge else 'associated'
             edge_narration = edge.get('narration', '') if edge else ''
             raw = self._llm(self._narration_prompt(
@@ -600,11 +854,13 @@ class Dreamer:
                 insight_depth=depth, mission_advance=mission_advance, 
                 mission_strength=mission_strength)
             log.steps.append(ds)
+            local_visited.add(next_id)
             visited.add(next_id)
             self.brain.update_node(next_id, activated_at=time.time())
             current_id, current_data = next_id, next_data
             print(f"      depth {d+1}: {next_data['statement']}")
-        return current_id
+            explored_steps += 1
+        return current_id, explored_steps
 
     # ── NREM ─────────────────────────────────────────────────────────────────
 
@@ -641,6 +897,8 @@ class Dreamer:
 
         log          = DreamLog(mode=mode.value, brain_mode=brain_mode)
         visited      = visited_set if visited_set is not None else set()
+        depth_roots  = set()
+        last_depth_step = -DEPTH_COOLDOWN_STEPS
         questions    = []
         q_embeddings = []
         mission      = self._mission_text()
@@ -661,9 +919,13 @@ class Dreamer:
         print(f"   Start: {current['statement']}\n")
 
         step = 0
+        recent_clusters = []
         while step < steps:
+            source_id = current_id
+            source_node = current
             next_id, edge = self._hop(current_id, temperature,
-                                      scientificness, visited)
+                                      scientificness, visited,
+                                      recent_clusters=recent_clusters)
             next_node = self.brain.get_node(next_id)
             if not next_node:
                 step += 1
@@ -678,12 +940,21 @@ class Dreamer:
             edge_narration = edge.get('narration', '') if edge else ''
 
             raw = self._llm(self._narration_prompt(
-                current['statement'], edge_type,
-                edge_narration, next_node['statement']), temperature=0.5)
+                source_node['statement'], edge_type,
+                edge_narration, next_node['statement']), temperature=min(0.45, temperature))
             narration, question, is_insight, insight_depth = \
                 self._parse_narration(raw)
+            raw_insight_depth = insight_depth
+            if is_insight and insight_depth in ["structural", "isomorphism"]:
+                insight_depth, narration = self._validate_insight_depth(
+                    source_node['statement'],
+                    next_node['statement'],
+                    narration,
+                    insight_depth
+                )
+                is_insight = insight_depth != "none"
 
-            self._add_question(question, questions, q_embeddings)
+            question_added = self._add_question(question, questions, q_embeddings)
 
             match_grade, match_explanation, matched_q = \
                 self._check_answers(next_id, next_node)
@@ -698,27 +969,41 @@ class Dreamer:
 
             # depth
             depth_triggered = False
+            deep_insight = (
+                is_insight and insight_depth in ['structural', 'isomorphism']
+            )
+            non_answer_depth_ready = (step - last_depth_step) >= DEPTH_COOLDOWN_STEPS
+            depth_question = ""
+            depth_explanation = ""
             if match_grade in ['partial', 'strong'] and matched_q:
-                depth_triggered = True
-                current_id = self._depth_explore(
-                    next_id, next_node, matched_q, match_explanation,
-                    temperature, scientificness, visited, log,
-                    questions, q_embeddings, step + 1000)
-                current = self.brain.get_node(current_id)
-                visited.add(current_id)
-            elif (is_insight or
-                  next_node.get('status') == NodeStatus.CONTRADICTED.value or
-                  next_node.get('incubation_age', 0) > 3 or
-                  mission_advance):
-                depth_triggered = True
-                current_id = self._depth_explore(
+                depth_question = matched_q
+                depth_explanation = match_explanation
+            elif (non_answer_depth_ready and
+                  ((deep_insight and next_id not in depth_roots and question_added and
+                    self._depth_seed_is_novel(next_node, narration, question)) or
+                   next_node.get('status') == NodeStatus.CONTRADICTED.value or
+                   next_node.get('incubation_age', 0) > 3 or
+                   (mission_advance and mission_strength >= 0.7))):
+                depth_question = question or "What mechanism here is most directly testable?"
+                depth_explanation = narration if deep_insight else (
+                    mission_explanation or "Contradiction, incubation, or strong mission relevance detected."
+                )
+
+            if depth_question:
+                depth_roots.add(next_id)
+                current_id, explored_steps = self._depth_explore(
                     next_id, next_node,
-                    "An interesting connection worth exploring.",
-                    mission_explanation or "Insight or tension detected.",
+                    depth_question,
+                    depth_explanation,
                     temperature, scientificness, visited, log,
-                    questions, q_embeddings, step + 1000)
-                current = self.brain.get_node(current_id)
-                visited.add(current_id)
+                    questions, q_embeddings, 1000 + step * DEPTH_STEPS)
+                depth_triggered = explored_steps > 0
+                if depth_triggered:
+                    last_depth_step = step
+                    current = self.brain.get_node(current_id)
+                    visited.add(current_id)
+                else:
+                    depth_roots.discard(next_id)
 
             # new edge on insight
             new_edge = False
@@ -734,26 +1019,41 @@ class Dreamer:
                 requires_review = self.critic is not None and insight_depth in ["structural", "isomorphism"]
                 
                 if not requires_review:
-                    if not (self.brain.graph.has_edge(current_id, next_id) or
-                            self.brain.graph.has_edge(next_id, current_id)):
+                    if source_id != next_id and not (
+                        self.brain.graph.has_edge(source_id, next_id) or
+                        self.brain.graph.has_edge(next_id, source_id)
+                    ):
                         dream_edge = Edge(
                             type=etype, narration=narration,
                             weight=ANALOGY_WEIGHTS.get(etype, 0.4),
                             confidence=0.45, source=EdgeSource.DREAM,
                             analogy_depth=insight_depth)
-                        self.brain.add_edge(current_id, next_id, dream_edge)
+                        self.brain.add_edge(source_id, next_id, dream_edge)
                         new_edge = True
                     self.brain.restructure_around_insight(
-                        current_id, next_id, narration, edge_type=etype.value)
+                        source_id, next_id, narration, edge_type=etype.value)
                 else:
                     print(f"            [System 2] High-depth insight buffered for morning review")
+                    from critic.critic import CandidateThought
+                    candidate = CandidateThought(
+                        claim         = narration,
+                        source_module = "dreamer",
+                        proposed_type = "analogy",
+                        importance    = float(ANALOGY_WEIGHTS.get(etype, 0.4)),
+                        edge_type     = etype.value,
+                        node_a_id     = source_id,
+                        node_b_id     = next_id,
+                        context       = f"Found during dream step from '{source_node['statement']}' to '{next_node['statement']}'"
+                    )
+                    self.critic.route_deferred(candidate)
 
                 log.insights.append({
-                    "step": step, "from": current['statement'],
+                    "step": step, "from": source_node['statement'],
                     "to": next_node['statement'],
-                    "from_node_id": current_id,
+                    "from_node_id": source_id,
                     "to_node_id": next_id,
                     "narration": narration, "depth": insight_depth,
+                    "raw_depth": raw_insight_depth,
                     "mission_linked": mission_advance,
                     "requires_review": requires_review
                 })
@@ -783,7 +1083,7 @@ class Dreamer:
                         next_id, mission_explanation, mission_strength)
 
             ds = DreamStep(
-                step=step, from_id=current_id, to_id=next_id,
+                step=step, from_id=source_id, to_id=next_id,
                 edge_type=edge_type, edge_narration=edge_narration,
                 narration=narration, question=question,
                 is_insight=is_insight, insight_depth=insight_depth,
@@ -795,6 +1095,11 @@ class Dreamer:
             log.steps.append(ds)
             self.brain.update_node(next_id, activated_at=time.time())
             visited.add(next_id)
+            target_cluster = next_node.get('cluster', '')
+            if target_cluster:
+                recent_clusters.append(target_cluster)
+                if len(recent_clusters) > RECENT_CLUSTER_WINDOW:
+                    recent_clusters = recent_clusters[-RECENT_CLUSTER_WINDOW:]
 
             ind = ""
             if is_insight:
@@ -845,9 +1150,12 @@ class Dreamer:
                         node_b_id=ins["to_node_id"]
                     )
                     critic_log = self.critic.evaluate_with_refinement(candidate)
+                    final_claim = critic_log.final_claim or candidate.claim
+                    ins["critic_verdict"] = critic_log.verdict.value
+                    ins["critic_confidence"] = critic_log.confidence
+                    ins["critic_final_claim"] = final_claim
                     if critic_log.verdict == Verdict.ACCEPT:
                         etype = EdgeType.DEEP_ISOMORPHISM if depth == "isomorphism" else EdgeType.STRUCTURAL_ANALOGY
-                        final_claim = critic_log.refinement_note or candidate.claim
                         if not (self.brain.graph.has_edge(candidate.node_a_id, candidate.node_b_id) or
                                 self.brain.graph.has_edge(candidate.node_b_id, candidate.node_a_id)):
                             dream_edge = Edge(
@@ -861,7 +1169,19 @@ class Dreamer:
                             final_claim, edge_type=etype.value
                         )
                     elif critic_log.verdict == Verdict.DEFER:
-                        self.critic.route_deferred(candidate)
+                        deferred_candidate = CandidateThought(
+                            claim=final_claim,
+                            source_module=candidate.source_module,
+                            proposed_type=candidate.proposed_type,
+                            importance=candidate.importance,
+                            context=candidate.context,
+                            edge_type=candidate.edge_type,
+                            node_a_id=candidate.node_a_id,
+                            node_b_id=candidate.node_b_id,
+                            crosses_domains=candidate.crosses_domains,
+                            contradicts_existing=candidate.contradicts_existing,
+                        )
+                        self.critic.route_deferred(deferred_candidate)
 
         import os
         os.makedirs("logs", exist_ok=True)

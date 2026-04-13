@@ -11,7 +11,12 @@ Judge rubric (1-5 per node):
   2 — Keyword-like or too vague to stand alone
   1 — Meaningless, hallucinated, or pure noise
 
-Pass criterion: ≥ 80% of nodes score 4 or above.
+Pass criterion:
+  - ≥ 80% of judged nodes score 4 or above
+  - all corpus articles must successfully yield nodes
+
+Benchmark level:
+  - module-level
 
 Usage:
     python test_d1_node_quality.py \
@@ -143,6 +148,7 @@ def fetch_wikipedia(title: str) -> str:
         "action": "query", "titles": title,
         "prop": "extracts", "format": "json",
         "explaintext": 1, "exsectionformat": "plain",
+        "redirects": 1,
     }
     resp = requests.get(api, params=params, timeout=20,
                         headers={"User-Agent": "AutoScientist-Benchmark/1.0"})
@@ -152,13 +158,13 @@ def fetch_wikipedia(title: str) -> str:
     return ""
 
 
-def ingest_article(brain, ingestor, emb_index, article: dict) -> list:
-    """Fetch and ingest one article; return list of (node_id, statement)."""
+def ingest_article(brain, ingestor, emb_index, article: dict) -> dict:
+    """Fetch and ingest one article; return coverage info plus created nodes."""
     print(f"  Fetching: {article['title']}...")
     text = fetch_wikipedia(article["title"])
     if not text:
         print(f"    WARNING: empty text for {article['title']}")
-        return []
+        return {"text_found": False, "nodes": []}
 
     nodes_before = set(nid for nid, _ in brain.all_nodes())
     from graph.brain import EdgeSource
@@ -178,7 +184,7 @@ def ingest_article(brain, ingestor, emb_index, article: dict) -> list:
                 "domain": article["domain"],
             })
     print(f"    Extracted {len(results)} nodes")
-    return results
+    return {"text_found": True, "nodes": results}
 
 
 def judge_node(node: dict, model: str) -> dict:
@@ -259,9 +265,14 @@ def main():
         print("=" * 60)
         print("PHASE 1: Ingesting benchmark corpus")
         print("=" * 60)
+        article_ingest_stats = {}
         for article in CORPUS:
-            nodes = ingest_article(brain, ingestor, emb_index, article)
-            all_nodes.extend(nodes)
+            ingest_result = ingest_article(brain, ingestor, emb_index, article)
+            article_ingest_stats[article["id"]] = {
+                "text_found": ingest_result["text_found"],
+                "node_count": len(ingest_result["nodes"]),
+            }
+            all_nodes.extend(ingest_result["nodes"])
             time.sleep(1)
 
         # save cache
@@ -269,6 +280,14 @@ def main():
             json.dump(all_nodes, f, indent=2)
         print(f"\nTotal nodes ingested: {len(all_nodes)}")
         print(f"Cache saved to: {args.cache}")
+    if args.skip_ingest and os.path.exists(args.cache):
+        article_ingest_stats = {}
+        for article in CORPUS:
+            node_count = sum(1 for n in all_nodes if n["article_id"] == article["id"])
+            article_ingest_stats[article["id"]] = {
+                "text_found": node_count > 0,
+                "node_count": node_count,
+            }
 
     # ── Judge nodes ──
     print("\n" + "=" * 60)
@@ -283,10 +302,17 @@ def main():
         nodes_by_article.setdefault(aid, []).append(n)
 
     nodes_to_judge = []
+    seen_node_ids = set()
     for aid, nodes in nodes_by_article.items():
         # prefer longer, richer statements for judging
         sorted_nodes = sorted(nodes, key=lambda x: len(x["statement"]), reverse=True)
-        nodes_to_judge.extend(sorted_nodes[:args.max_nodes_per_article])
+        for node in sorted_nodes:
+            if node["node_id"] in seen_node_ids:
+                continue
+            nodes_to_judge.append(node)
+            seen_node_ids.add(node["node_id"])
+            if sum(1 for n in nodes_to_judge if n["article_id"] == aid) >= args.max_nodes_per_article:
+                break
 
     print(f"Judging {len(nodes_to_judge)} nodes "
           f"({args.max_nodes_per_article} max per article)...")
@@ -306,6 +332,7 @@ def main():
         coverage_by_article[article["id"]] = {
             "coverage_score": compute_coverage_score(article_nodes, article),
             "key_concepts": article["key_concepts"],
+            "text_found": article_ingest_stats[article["id"]]["text_found"],
             "node_count": len(article_nodes),
         }
 
@@ -326,6 +353,18 @@ def main():
     pct_nuance = sum(
         1 for j in judgments if j["judgment"].get("preserves_nuance")
     ) / len(judgments) if judgments else 0
+    articles_with_text = sum(
+        1 for article in CORPUS if coverage_by_article[article["id"]]["text_found"]
+    )
+    articles_with_nodes = sum(
+        1 for article in CORPUS if coverage_by_article[article["id"]]["node_count"] > 0
+    )
+    article_text_coverage_fraction = (
+        articles_with_text / len(CORPUS) if CORPUS else 0.0
+    )
+    article_coverage_fraction = (
+        articles_with_nodes / len(CORPUS) if CORPUS else 0.0
+    )
 
     # per-article breakdown
     per_article = {}
@@ -343,6 +382,7 @@ def main():
             "median_score": statistics.median(art_scores),
             "pct_4_plus": round(
                 sum(1 for s in art_scores if s >= 4) / len(art_scores), 3),
+            "text_found": coverage_by_article[article["id"]]["text_found"],
             "coverage_score": round(
                 coverage_by_article[article["id"]]["coverage_score"], 3),
             "score_distribution": {str(i): art_scores.count(i) for i in range(1,6)},
@@ -391,9 +431,20 @@ def main():
             "pct_self_contained": round(pct_self_contained, 3),
             "pct_says_how_or_why": round(pct_how_why, 3),
             "pct_preserves_nuance": round(pct_nuance, 3),
+            "articles_with_text": articles_with_text,
+            "article_text_coverage_fraction": round(article_text_coverage_fraction, 3),
+            "articles_with_nodes": articles_with_nodes,
+            "article_coverage_fraction": round(article_coverage_fraction, 3),
             "score_distribution": score_dist,
             "parse_errors": parse_errors,
-            "PASS": pct_4_plus >= 0.80,
+            "PASS_quality": pct_4_plus >= 0.80,
+            "PASS_text_coverage": articles_with_text == len(CORPUS),
+            "PASS_corpus_coverage": articles_with_nodes == len(CORPUS),
+            "PASS": (
+                articles_with_text == len(CORPUS) and
+                pct_4_plus >= 0.80 and
+                articles_with_nodes == len(CORPUS)
+            ),
             "pass_threshold": 0.80,
         },
         "per_article": per_article,
@@ -422,6 +473,8 @@ def main():
     print(f"% preserves nuance  : {pct_nuance:.1%}")
     print(f"Score distribution  : {score_dist}")
     print(f"Parse errors        : {parse_errors}")
+    print(f"Articles with text  : {articles_with_text}/{len(CORPUS)}")
+    print(f"Articles with nodes : {articles_with_nodes}/{len(CORPUS)}")
     print()
     print("Per-article breakdown:")
     for aid, data in per_article.items():

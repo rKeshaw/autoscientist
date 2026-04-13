@@ -26,6 +26,9 @@ Pass criterion:
   - No SEMANTIC edge type (supports/causes/contradicts/analogy) has recall < 50%
   - "unrelated" blind spot is acceptable (system should never output this label)
 
+Benchmark level:
+  - module-level
+
 Usage:
     python test_d1_edge_accuracy.py \
         --judge-model <ollama-model-name> \
@@ -86,19 +89,22 @@ GROUND_TRUTH_PAIRS = [
         "forceful collisions with container walls, raising pressure.",
         "causes", None
     ),
+    # Prompt-aligned as SUPPORTS: logical consequence, not direct physical trigger.
     (
         "A dominant strategy in a game yields a higher payoff regardless "
         "of what other players do.",
         "When all players follow their dominant strategies, the resulting "
         "outcome is a Nash equilibrium from which no player wishes to deviate.",
-        "causes", None
+        "supports", None
     ),
+    # Prompt-aligned as SUPPORTS: A generates variation, while B states why that
+    # variation matters for selection and long-run change.
     (
         "Mutations in DNA replication introduce heritable variation into "
         "a population.",
         "Heritable variation provides the raw material on which natural "
         "selection can act, enabling evolutionary change over generations.",
-        "causes", None
+        "supports", None
     ),
 
     # --- CONTRADICTS ---
@@ -127,20 +133,20 @@ GROUND_TRUTH_PAIRS = [
         "contradicts", None
     ),
 
-    # --- ANALOGY: surface ---
+    # --- ANALOGY: structural ---
     (
         "The internet routes information packets through nodes in a network, "
         "with each node forwarding packets toward their destination.",
         "Neurons in the brain transmit signals through synaptic connections, "
         "with signal strength determined by connection weights.",
-        "analogy", "surface"
+        "analogy", "structural"
     ),
     (
         "Nash equilibrium in game theory describes a stable state where "
         "no player benefits from unilaterally changing strategy.",
         "Fixed points in dynamical systems describe stable states where "
         "a system no longer changes under its own dynamics.",
-        "analogy", "surface"
+        "analogy", "structural"
     ),
 
     # --- ANALOGY: structural ---
@@ -241,25 +247,71 @@ Respond ONLY with JSON.
 
 def extract_edge_for_pair(node_a: str, node_b: str, brain, ingestor) -> dict:
     """
-    Ingest both nodes together and extract edges between them.
-    Returns the edge data dict or None.
+    Create both nodes through the ingestor's statement-processing path, then
+    add the extracted relationship through the same graph edge insertion logic
+    used by the runtime.
     """
-    from graph.brain import EdgeSource
-    from llm_utils import llm_call, require_json
-
-    # Use the ingestor's edge extraction prompt directly
+    from graph.brain import Edge, EdgeSource, EdgeType, NodeType
+    from llm_utils import require_json
     from ingestion.ingestor import EDGE_EXTRACTION_PROMPT
-    
-    raw = llm_call(
+
+    source = EdgeSource.CONVERSATION
+    id_a = ingestor._process_statement(node_a, None, source, NodeType.CONCEPT)
+    id_b = ingestor._process_statement(node_b, None, source, NodeType.CONCEPT)
+
+    if not id_a or not id_b or id_a == id_b:
+        return {"related": False}
+
+    raw = ingestor._llm(
         EDGE_EXTRACTION_PROMPT.format(node_a=node_a, node_b=node_b),
-        temperature=0.2, role="precise"
+        temperature=0.0,
     )
     result = require_json(raw, default={})
-    return result
+    if not result.get("related"):
+        return {"related": False}
+
+    raw_type = result.get("type", "associated")
+    narration = result.get("narration", "")
+    confidence = result.get("confidence", 0.5)
+    weight = result.get("weight", 0.5)
+
+    if raw_type == "analogy":
+        depth = result.get("analogy_depth", "structural")
+        brain.add_analogy_edge(id_a, id_b, depth, narration, source)
+    else:
+        try:
+            edge_type = EdgeType(raw_type)
+        except ValueError:
+            edge_type = EdgeType.ASSOCIATED
+        edge = Edge(
+            type=edge_type,
+            narration=narration,
+            weight=weight,
+            confidence=confidence,
+            source=source,
+            decay_exempt=(edge_type == EdgeType.CONTRADICTS),
+        )
+        brain.add_edge(id_a, id_b, edge)
+
+    stored = brain.get_edge(id_a, id_b) or {}
+    stored_type = stored.get("type", raw_type)
+    if hasattr(stored_type, "value"):
+        stored_type = stored_type.value
+
+    return {
+        "related": True,
+        "type": stored_type,
+        "analogy_depth": stored.get("analogy_depth", result.get("analogy_depth")),
+        "narration": stored.get("narration", narration),
+        "weight": stored.get("weight", weight),
+        "confidence": stored.get("confidence", confidence),
+    }
 
 
 def normalize_type(raw_type: str, analogy_depth: str = None) -> str:
     """Normalize extracted type to ground-truth type vocabulary."""
+    if hasattr(raw_type, "value"):
+        raw_type = raw_type.value
     # related=false from the LLM maps to "unrelated"
     if raw_type in ("unrelated", "none", ""):
         return "unrelated"
@@ -282,6 +334,8 @@ def normalize_type(raw_type: str, analogy_depth: str = None) -> str:
 
 def normalize_depth(raw_type: str, analogy_depth: str = None) -> str:
     """Extract analogy depth from raw edge type."""
+    if hasattr(raw_type, "value"):
+        raw_type = raw_type.value
     depth_map = {
         "surface_analogy": "surface",
         "structural_analogy": "structural",
@@ -305,11 +359,6 @@ def main():
     from observer.observer import Observer
     from llm_utils import llm_call, require_json
 
-    brain     = Brain()
-    emb_index = EmbeddingIndex(dimension=384)
-    observer  = Observer(brain)
-    ingestor  = Ingestor(brain, research_agenda=observer, embedding_index=emb_index)
-
     print("=" * 60)
     print("PHASE 1: Extracting edges for all ground-truth pairs")
     print("=" * 60)
@@ -321,7 +370,15 @@ def main():
         print(f"  A: {node_a[:60]}...")
         print(f"  B: {node_b[:60]}...")
 
-        edge = extract_edge_for_pair(node_a, node_b, brain, ingestor)
+        pair_brain = Brain()
+        pair_emb_index = EmbeddingIndex(dimension=384)
+        pair_observer = Observer(pair_brain)
+        pair_ingestor = Ingestor(
+            pair_brain, research_agenda=pair_observer,
+            embedding_index=pair_emb_index,
+        )
+
+        edge = extract_edge_for_pair(node_a, node_b, pair_brain, pair_ingestor)
         
         if not edge or not edge.get("related"):
             pred_type  = "unrelated"

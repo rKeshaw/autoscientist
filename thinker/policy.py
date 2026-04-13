@@ -20,10 +20,8 @@ class CognitivePolicy:
         "analogical",
         "dialectical",
         "reductive",
-        "emergence",
-        "first_principles",
-        "lateral",
-        "empirical"
+        "experimental",
+        "integrative",
     ]
 
     def __init__(self, epsilon: float = 0.2, learning_rate: float = 0.1):
@@ -40,25 +38,43 @@ class CognitivePolicy:
             # Initialize with slight optimism to encourage early exploration
             self.q_table[state_key] = {action: 0.5 for action in self.DEFAULT_ACTIONS}
 
-    def choose_pattern(self, node_type: str, cluster: str) -> str:
-        """Epsilon-greedy action selection."""
-        state_key = self._state_key(node_type, cluster)
+    def _sanitize_state(self, state_key: str):
         self._init_state(state_key)
+        prior = self.q_table.get(state_key, {})
+        self.q_table[state_key] = {
+            action: float(prior.get(action, 0.5))
+            for action in self.DEFAULT_ACTIONS
+        }
+
+    def choose_pattern(self, node_type: str, cluster: str,
+                       preferred_action: str = "") -> str:
+        """Epsilon-greedy action selection with a semantic preference tie-break."""
+        state_key = self._state_key(node_type, cluster)
+        self._sanitize_state(state_key)
+        actions = list(self.q_table[state_key].keys())
+        preferred_action = (
+            preferred_action if preferred_action in self.q_table[state_key] else ""
+        )
         
         # Exploration
         if random.random() < self.epsilon:
             print(f"  [Procedural] Exploring random pattern for {state_key}")
-            return random.choice(list(self.q_table[state_key].keys()))
+            return random.choice(actions)
             
         # Exploitation
         best_val = -float('inf')
-        best_action = random.choice(self.DEFAULT_ACTIONS)
+        best_action = preferred_action or random.choice(actions)
         for action, val in self.q_table[state_key].items():
-            if val > best_val:
-                best_val = val
+            effective_val = val + (0.12 if action == preferred_action else 0.0)
+            if effective_val > best_val:
+                best_val = effective_val
                 best_action = action
                 
-        print(f"  [Procedural] Exploiting best pattern '{best_action}' (val={best_val:.2f}) for {state_key}")
+        pref_note = f", preferred={preferred_action}" if preferred_action else ""
+        print(
+            f"  [Procedural] Exploiting best pattern '{best_action}' "
+            f"(val={best_val:.2f}{pref_note}) for {state_key}"
+        )
         return best_action
 
     def update(self, node_type: str, cluster: str, action: str, reward: float, dopamine: float = 0.5):
@@ -67,11 +83,11 @@ class CognitivePolicy:
         Dopamine level modulates the learning rate.
         """
         state_key = self._state_key(node_type, cluster)
-        self._init_state(state_key)
+        self._sanitize_state(state_key)
+        if action not in self.DEFAULT_ACTIONS:
+            print(f"  [Procedural] Skipping unsupported pattern '{action}' for {state_key}")
+            return
         
-        if action not in self.q_table[state_key]:
-            self.q_table[state_key][action] = 0.5
-            
         old_val = self.q_table[state_key][action]
         
         # If dopamine is high, we learn faster from positive rewards.
@@ -89,6 +105,8 @@ class CognitivePolicy:
             try:
                 with open(self.POLICY_PATH, 'r') as f:
                     self.q_table = json.load(f)
+                for state_key in list(self.q_table.keys()):
+                    self._sanitize_state(state_key)
                 print(f"Loaded procedural policy with {len(self.q_table)} states.")
             except Exception as e:
                 print(f"Failed to load policy: {e}")
@@ -96,4 +114,3 @@ class CognitivePolicy:
                 
     def _save(self):
         atomic_write_json(self.POLICY_PATH, self.q_table)
-

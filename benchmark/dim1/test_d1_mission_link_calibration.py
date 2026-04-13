@@ -72,6 +72,73 @@ def _has_mission_link(brain, node_id, mission_id):
     return False, 0.0
 
 
+def _compute_metrics(evaluations):
+    tp = sum(1 for e in evaluations if e['ground_truth_relevant'] and e['mission_linked'])
+    fp = sum(1 for e in evaluations if (not e['ground_truth_relevant']) and e['mission_linked'])
+    tn = sum(1 for e in evaluations if (not e['ground_truth_relevant']) and (not e['mission_linked']))
+    fn = sum(1 for e in evaluations if e['ground_truth_relevant'] and (not e['mission_linked']))
+    precision = tp / max(tp + fp, 1)
+    recall = tp / max(tp + fn, 1)
+    f1 = 0.0 if (precision + recall) == 0 else (2 * precision * recall) / (precision + recall)
+    relevant_strengths = [
+        e['link_strength']
+        for e in evaluations
+        if e['ground_truth_relevant'] and e['mission_linked']
+    ]
+    irrelevant_strengths = [
+        e['link_strength']
+        for e in evaluations
+        if (not e['ground_truth_relevant']) and e['mission_linked']
+    ]
+    return {
+        'nodes_evaluated': len(evaluations),
+        'true_positives': tp,
+        'false_positives': fp,
+        'true_negatives': tn,
+        'false_negatives': fn,
+        'precision': round(precision, 3),
+        'recall': round(recall, 3),
+        'f1': round(f1, 3),
+        'mean_relevant_link_strength': round(
+            sum(relevant_strengths) / max(len(relevant_strengths), 1), 3
+        ),
+        'mean_irrelevant_link_strength': round(
+            sum(irrelevant_strengths) / max(len(irrelevant_strengths), 1), 3
+        ),
+    }
+
+
+def _dedupe_evaluations(brain, mission_id, evaluations):
+    by_node_id = {}
+    for eval_ in evaluations:
+        entry = by_node_id.setdefault(eval_['node_id'], {
+            'node_id': eval_['node_id'],
+            'sample_labels': [],
+            'source_texts': [],
+        })
+        entry['sample_labels'].append('relevant' if eval_['ground_truth_relevant'] else 'irrelevant')
+        entry['source_texts'].append(eval_['source_text'])
+
+    deduped = []
+    for node_id, entry in by_node_id.items():
+        node = brain.get_node(node_id) or {}
+        linked, strength = _has_mission_link(brain, node_id, mission_id)
+        labels = sorted(set(entry['sample_labels']))
+        label_conflict = len(labels) > 1
+        deduped.append({
+            'node_id': node_id,
+            'statement': node.get('statement', ''),
+            'ground_truth_relevant': labels == ['relevant'],
+            'mission_linked': linked,
+            'link_strength': round(strength, 3),
+            'sample_count': len(entry['sample_labels']),
+            'sample_labels': labels,
+            'label_conflict': label_conflict,
+            'source_texts': entry['source_texts'],
+        })
+    return deduped
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -93,7 +160,7 @@ def main():
     observer = Observer(brain)
     ingestor = Ingestor(brain, research_agenda=observer, embedding_index=emb_index)
 
-    evaluations = []
+    raw_evaluations = []
 
     print('=' * 60)
     print('PHASE 1: Ingesting labeled mission-relevance samples')
@@ -104,7 +171,7 @@ def main():
         for nid in new_ids:
             node = brain.get_node(nid)
             linked, strength = _has_mission_link(brain, nid, mission_id)
-            evaluations.append({
+            raw_evaluations.append({
                 'node_id': nid,
                 'statement': (node or {}).get('statement', ''),
                 'ground_truth_relevant': sample['label'] == 'relevant',
@@ -113,19 +180,18 @@ def main():
                 'source_text': sample['text'],
             })
 
-    tp = sum(1 for e in evaluations if e['ground_truth_relevant'] and e['mission_linked'])
-    fp = sum(1 for e in evaluations if (not e['ground_truth_relevant']) and e['mission_linked'])
-    tn = sum(1 for e in evaluations if (not e['ground_truth_relevant']) and (not e['mission_linked']))
-    fn = sum(1 for e in evaluations if e['ground_truth_relevant'] and (not e['mission_linked']))
-
-    precision = tp / max(tp + fp, 1)
-    recall = tp / max(tp + fn, 1)
-    f1 = 0.0 if (precision + recall) == 0 else (2 * precision * recall) / (precision + recall)
-
-    relevant_strengths = [e['link_strength'] for e in evaluations if e['ground_truth_relevant'] and e['mission_linked']]
-    irrelevant_strengths = [e['link_strength'] for e in evaluations if (not e['ground_truth_relevant']) and e['mission_linked']]
-
-    passed = precision >= 0.75 and recall >= 0.70
+    evaluations = _dedupe_evaluations(brain, mission_id, raw_evaluations)
+    label_conflicts = [e for e in evaluations if e['label_conflict']]
+    raw_summary = _compute_metrics(raw_evaluations)
+    unique_summary = _compute_metrics([e for e in evaluations if not e['label_conflict']])
+    precision = unique_summary['precision']
+    recall = unique_summary['recall']
+    f1 = unique_summary['f1']
+    passed = (
+        precision >= 0.75 and
+        recall >= 0.70 and
+        not label_conflicts
+    )
 
     report = {
         'test': 'D1 - Mission-Link Calibration',
@@ -135,19 +201,18 @@ def main():
             'samples': len(SAMPLES),
         },
         'summary': {
-            'nodes_evaluated': len(evaluations),
-            'true_positives': tp,
-            'false_positives': fp,
-            'true_negatives': tn,
-            'false_negatives': fn,
-            'precision': round(precision, 3),
-            'recall': round(recall, 3),
-            'f1': round(f1, 3),
-            'mean_relevant_link_strength': round(sum(relevant_strengths) / max(len(relevant_strengths), 1), 3),
-            'mean_irrelevant_link_strength': round(sum(irrelevant_strengths) / max(len(irrelevant_strengths), 1), 3),
+            **unique_summary,
+            'raw_nodes_evaluated': raw_summary['nodes_evaluated'],
+            'raw_precision': raw_summary['precision'],
+            'raw_recall': raw_summary['recall'],
+            'raw_f1': raw_summary['f1'],
+            'label_conflicts': len(label_conflicts),
             'PASS': passed,
         },
+        'raw_summary': raw_summary,
+        'raw_evaluations': raw_evaluations,
         'evaluations': evaluations,
+        'label_conflicts': label_conflicts,
         'false_links': [e for e in evaluations if (not e['ground_truth_relevant']) and e['mission_linked']],
         'missed_links': [e for e in evaluations if e['ground_truth_relevant'] and (not e['mission_linked'])],
     }
@@ -158,7 +223,9 @@ def main():
     print('\n' + '=' * 60)
     print('RESULTS - D1: Mission-Link Calibration')
     print('=' * 60)
-    print(f"Nodes evaluated  : {len(evaluations)}")
+    print(f"Raw evaluations  : {len(raw_evaluations)}")
+    print(f"Unique nodes     : {len(evaluations)}")
+    print(f"Label conflicts  : {len(label_conflicts)}")
     print(f"Precision        : {precision:.2%} (pass >= 75%)")
     print(f"Recall           : {recall:.2%} (pass >= 70%)")
     print(f"F1               : {f1:.2%}")

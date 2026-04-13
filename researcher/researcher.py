@@ -33,6 +33,15 @@ Question to research: {question}
 Generate {n} distinct search queries that would help answer this question.
 Each query should approach the question from a different angle.
 Keep each query concise — 4 to 8 words.
+
+CRITICAL: If the question spans TWO domains (e.g. biology and machine learning),
+at least one query MUST explicitly mention BOTH domains or use bridging language
+that connects them. Do NOT write queries that cover only one side.
+
+Example for "How does synaptic consolidation relate to experience replay in RL?":
+  GOOD: ["synaptic consolidation experience replay comparison", "hippocampal replay reinforcement learning"]
+  BAD:  ["synaptic consolidation during sleep", "experience replay DQN algorithm"]
+  (BAD because each query covers only one domain — they won't find cross-domain papers)
  
 Respond ONLY with a JSON array of strings.
 Example: ["query one here", "query two here"]
@@ -148,22 +157,28 @@ class Researcher:
     # ── Web search ────────────────────────────────────────────────────────────
  
     def _web_search(self, query: str) -> list:
-        try:
-            from ddgs import DDGS
-            results = []
-            with DDGS() as ddgs:
-                for r in ddgs.text(query, max_results=MAX_RESULTS_PER_QUERY):
-                    text = r.get('body', '')
-                    if len(text) > MIN_TEXT_LENGTH:
-                        results.append((
-                            r.get('title', query),
-                            text,
-                            r.get('href', '')
-                        ))
-            return results
-        except Exception as e:
-            print(f"      Web search error: {e}")
-            return []
+        from ddgs import DDGS
+        import time
+        for attempt in range(3):
+            try:
+                results = []
+                with DDGS() as ddgs:
+                    for r in ddgs.text(query, max_results=MAX_RESULTS_PER_QUERY):
+                        text = r.get('body', '')
+                        if len(text) > MIN_TEXT_LENGTH:
+                            results.append((
+                                r.get('title', query),
+                                text,
+                                r.get('href', '')
+                            ))
+                return results
+            except Exception as e:
+                print(f"      Web search error on attempt {attempt+1}: {e}")
+                if attempt < 2:
+                    time.sleep(2 * (attempt + 1))  # 2s, 4s backoff before retry
+                else:
+                    return []
+        return []
 
     # ── arXiv search ──────────────────────────────────────────────────────────
  

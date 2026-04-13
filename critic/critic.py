@@ -26,13 +26,13 @@ Usage:
         # add to graph with verdict_log.confidence
 """
 
+import re
 import time
-import json
 from enum import Enum
 from dataclasses import dataclass, field
 from graph.brain import Brain, NodeType
 from config import CRITIC as CRITIC_CFG
-from llm_utils import llm_call, llm_chat, require_json
+from llm_utils import llm_call, llm_json
 from embedding import embed as shared_embed
 
 
@@ -70,6 +70,10 @@ class DialogueTurn:
     role:    str   # "system2_challenge" or "system1_defense"
     content: str
     turn:    int
+    claim:   str = ""
+    issue_label: str = ""
+    repeated: bool = False
+    addressed: bool = False
 
 
 # ── Critic log ────────────────────────────────────────────────────────────────
@@ -84,6 +88,9 @@ class CriticLog:
     confidence:        float = 0.0
     is_novel:          bool = True
     dialogue:          list = field(default_factory=list)
+    final_claim:       str = ""
+    verdict_reason:    str = ""
+    verdict_parse_failed: bool = False
     rejection_reason:  str = ""
     refinement_note:   str = ""
     started_at:        float = field(default_factory=time.time)
@@ -99,9 +106,20 @@ class CriticLog:
             "confidence":       self.confidence,
             "is_novel":         self.is_novel,
             "dialogue":         [
-                {"role": t.role, "content": t.content, "turn": t.turn}
+                {
+                    "role": t.role,
+                    "content": t.content,
+                    "turn": t.turn,
+                    "claim": t.claim,
+                    "issue_label": t.issue_label,
+                    "repeated": t.repeated,
+                    "addressed": t.addressed,
+                }
                 for t in self.dialogue
             ],
+            "final_claim":      self.final_claim,
+            "verdict_reason":   self.verdict_reason,
+            "verdict_parse_failed": self.verdict_parse_failed,
             "rejection_reason": self.rejection_reason,
             "refinement_note":  self.refinement_note,
             "duration":         self.duration,
@@ -112,58 +130,77 @@ class CriticLog:
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-CHALLENGE_PROMPT = """You are System 2 — the slow, skeptical, analytical part of a scientific mind.
+CHALLENGE_PROMPT = """A scientific claim is under adversarial review.
 
-System 1 (the fast, creative, intuitive part) has produced the following claim:
+ACTIVE CLAIM:
+"{claim}"
 
-CLAIM: "{claim}"
-
-CONTEXT that led to this claim:
+SOURCE CONTEXT:
 {context}
 
-Your job is to find the WEAKEST point of this claim. Be rigorous. Ask yourself:
-1. Is the evidence cited actually sufficient, or is System 1 pattern-matching on surface similarity?
-2. What specific mechanism or mapping is being claimed? Is it stated precisely enough to be testable?
-3. Is there an obvious counterexample or alternative explanation that System 1 missed?
-4. Is this actually novel, or is it restating something already known in different words?
+PRIOR REVIEW HISTORY:
+{history}
 
-Respond with ONE focused, precise challenge (2-3 sentences). Target the weakest link.
-Do NOT be vague. Be specific about what you find problematic and what would satisfy you.
+Review instructions:
+1. Consider the prior review history before raising a new objection.
+2. Identify the most important unresolved flaw. Do not restate an objection that has already been addressed unless it remains unresolved for a specific reason.
+3. Use formal scientific prose. Avoid first-person and second-person pronouns.
+4. Do not introduce unsupported equations, symbols, or quantitative claims.
+5. If no materially distinct unresolved flaw remains, state that explicitly.
+6. A structural or isomorphic claim is only acceptable if it preserves explicit role, variable, or constraint correspondences. Generic pattern language such as "both optimize" or "both balance stability and change" is a real defect, not an acceptable shortcut.
+
+Respond EXACTLY in JSON:
+{{
+  "issue_label": "mechanism" | "evidence" | "scope" | "novelty" | "counterexample" | "resolved",
+  "challenge": "<2-3 sentence formal objection or resolution statement>",
+  "repeat_of_prior": true or false
+}}
 """
 
-DEFENSE_PROMPT = """You are System 1 — the fast, creative, intuitive part of a scientific mind.
+DEFENSE_PROMPT = """A scientific claim is being defended against a specific objection.
 
-Your earlier insight was challenged by System 2 (the slow, skeptical part):
+ACTIVE CLAIM:
+"{claim}"
 
-YOUR ORIGINAL CLAIM: "{claim}"
+CURRENT OBJECTION:
+"{challenge}"
 
-SYSTEM 2'S CHALLENGE: "{challenge}"
-
-AVAILABLE KNOWLEDGE:
+SOURCE CONTEXT:
 {context}
 
-Defend your claim against this specific challenge. Be precise:
-1. If you can address the challenge with specific evidence or reasoning, do so.
-2. If you need to NARROW or QUALIFY your claim to make it defensible, do so honestly.
-3. If you realize the challenge is valid and your claim is weak, admit it.
+PRIOR REVIEW HISTORY:
+{history}
 
-Respond in 2-4 sentences. Be honest — a narrower true claim is better than a broad false one.
+Response instructions:
+1. Address only the current objection.
+2. If the claim must be narrowed, qualified, or partially withdrawn, do so explicitly.
+3. Use formal scientific prose. Avoid first-person and second-person pronouns.
+4. Do not introduce unsupported equations, symbols, or parameter names unless they already appear in the available context and are explicitly defined.
+5. A valid response may preserve a structural analogy only if the revised claim still states concrete correspondences between mechanisms, constraints, variables, or update rules. If narrowing removes the mapping, the objection is NOT resolved.
+
+Respond EXACTLY in JSON:
+{{
+  "defense": "<2-4 sentence formal response>",
+  "revised_claim": "<best current version of the claim after this response; repeat the active claim only if no change is needed>",
+  "challenge_addressed": true or false
+}}
 """
 
-VERDICT_PROMPT = """You are System 2 delivering a final verdict on a candidate thought.
+VERDICT_PROMPT = """A scientific claim has completed adversarial review.
 
 ORIGINAL CLAIM: "{claim}"
+BEST-SUPPORTED CURRENT CLAIM: "{final_claim}"
 
 ADVERSARIAL DIALOGUE:
 {dialogue_text}
 
-Based on this dialogue, deliver your verdict.
+Based on the dialogue, deliver a final verdict.
 
 Verdict definitions:
 - ACCEPT: The claim survived scrutiny. The defense addressed challenges adequately.
-  The insight is genuinely novel, precisely stated, and supported by evidence.
+  The insight is genuinely novel, precisely stated, still contains explicit correspondences, and does not retreat into generic pattern language.
 - REFINE: There is a kernel of truth, but the formulation needs work.
-  The claim should be reformulated with System 2's feedback incorporated.
+  The claim should be reformulated with System 2's feedback incorporated. Use REFINE when the thesis may be salvageable but the current wording lacks explicit mapping, becomes too generic, or overstates the evidence.
 - REJECT: The claim is incoherent, based on surface-level pattern matching,
   is merely restating known knowledge, or the defense failed to address
   the core challenge. Log the reason for rejection.
@@ -180,10 +217,12 @@ Respond with a JSON object:
   "verdict": "accept" | "refine" | "reject" | "defer",
   "confidence": 0.0 to 1.0 (only meaningful for ACCEPT),
   "reason": "one sentence explaining your verdict",
+  "final_claim": "best-supported current wording after review",
   "refined_claim": "if REFINE: the improved version of the claim (else omit)",
   "rejection_reason": "if REJECT: specific reason (else omit)"
 }}
 
+Use formal scientific prose in all textual fields.
 Respond ONLY with JSON. No preamble.
 """
 
@@ -203,24 +242,80 @@ Definitions:
 Respond with ONLY "novel" or "redundant".
 """
 
-REFINEMENT_PROMPT = """You are System 1 refining a claim based on System 2's feedback.
+TRIVIALITY_CHECK_PROMPT = """You are checking whether a scientific claim makes a non-trivial contribution.
 
-YOUR ORIGINAL CLAIM: "{original_claim}"
+CLAIM: "{claim}"
 
-SYSTEM 2'S FEEDBACK: "{feedback}"
+RELATED KNOWLEDGE:
+{context}
 
-SYSTEM 2 SUGGESTED REFINED VERSION: "{refined_suggestion}"
+Is this claim:
+- SUBSTANTIVE: It proposes a specific mechanism, connection, prediction, or synthesis not obvious from basic definitions. Even a well-known idea counts as substantive if it articulates a non-obvious relationship.
+- TRIVIAL: It merely restates a textbook definition, is a tautology, or states something any educated reader would already know without needing to be told.
+
+Respond with ONLY "substantive" or "trivial".
+"""
+
+THESIS_SURVIVAL_PROMPT = """You are checking whether a claim's core thesis survived adversarial review.
+
+ORIGINAL CLAIM: "{original}"
+
+FINAL CLAIM (after review): "{final}"
+
+Does the FINAL claim still affirm the ORIGINAL claim's central thesis?
+
+- SUPPORTS: The final claim preserves the original's core idea, even if
+  qualified, narrowed, or rephrased. The central assertion is intact.
+- ABANDONS: The final claim contradicts, negates, or fundamentally replaces
+  the original's central assertion. For example, if the original claims
+  "X proves Y" but the final says "X does NOT prove Y" or omits Y entirely,
+  that is ABANDONS.
+
+Respond with ONLY "supports" or "abandons".
+"""
+
+REFINEMENT_PROMPT = """Refine the following scientific claim using the review feedback.
+
+CURRENT CLAIM: "{original_claim}"
+
+REVIEW FEEDBACK: "{feedback}"
+
+SUGGESTED REFINED VERSION: "{refined_suggestion}"
 
 AVAILABLE KNOWLEDGE:
 {context}
 
-Produce a refined version of your claim that:
-1. Addresses System 2's specific concerns
-2. Is more precisely stated
-3. Maintains the core insight if one exists
-4. Is honest about limitations
+Produce a refined claim that:
+1. Addresses the specific concerns raised in review.
+2. Is more precise and mechanistically grounded.
+3. Preserves the core insight only if it remains defensible.
+4. Keeps explicit role, variable, or constraint correspondences if the claim is still meant to be structural or isomorphic.
+5. Avoids retreating into generic language such as "both involve optimization" or "both balance exploration and stability."
+6. Uses formal scientific prose without first-person or second-person pronouns.
 
 Respond with ONLY the refined claim (1-3 sentences). No preamble.
+"""
+
+ACCEPT_QUALITY_PROMPT = """You are checking whether a post-review claim is still scientifically substantive.
+
+Original claim: "{original}"
+Final claim: "{final}"
+Context:
+{context}
+
+Judge the FINAL claim conservatively.
+
+- has_explicit_mapping = true only if the final claim still states concrete role, variable, mechanism, update-rule, or constraint correspondences.
+- specific_enough = true only if the final claim remains mechanistic or formally informative, rather than broad high-level English logic.
+- watered_down = true if the final claim mostly retreats into safer wording, abstract common sense, or generic statements such as "both optimize", "both involve trade-offs", or "both have constraints".
+
+Respond EXACTLY in JSON:
+{{
+  "has_explicit_mapping": true or false,
+  "specific_enough": true or false,
+  "watered_down": true or false,
+  "reason": "one or two sentences"
+}}
 """
 
 
@@ -241,6 +336,18 @@ class Critic:
         self.index          = embedding_index
         self.insight_buffer = insight_buffer
 
+    _FORMAL_REPLACEMENTS = (
+        (r"\bSystem 2 is correct\b", "The objection is well-founded"),
+        (r"\bThe challenge is valid\b", "The objection is well-founded"),
+        (r"\bI must narrow the claim\b", "The claim must be narrowed"),
+        (r"\bI will narrow the claim\b", "The claim is narrowed as follows"),
+        (r"\bI must qualify the claim\b", "The claim requires qualification"),
+        (r"\bI will qualify the claim\b", "The claim is qualified as follows"),
+        (r"\bTo strengthen this, you must\b", "To strengthen the claim, it must"),
+        (r"\byou must\b", "the claim must"),
+        (r"\bYour earlier insight\b", "The earlier claim"),
+    )
+
     # ── Laziness gate ─────────────────────────────────────────────────────────
 
     def needs_review(self, candidate: CandidateThought) -> bool:
@@ -249,26 +356,33 @@ class Critic:
         claims. Most routine thoughts flow through unchecked.
 
         Returns True if the candidate should go through adversarial review.
+
+        Override flags (crosses_domains, contradicts_existing) take priority
+        over BYPASS_TYPES: an instance-level risk signal always outranks
+        a category-level bypass.
         """
-        # Always bypass types that are low-stakes
-        claim_type = candidate.edge_type or candidate.proposed_type
-        if claim_type in CRITIC_CFG.BYPASS_TYPES:
-            return False
-
-        # Always review types that are high-stakes
-        if claim_type in CRITIC_CFG.ALWAYS_REVIEW_TYPES:
-            return True
-
-        # Review if importance exceeds threshold
-        if candidate.importance > CRITIC_CFG.ACTIVATION_THRESHOLD:
-            return True
-
-        # Review if it crosses domain boundaries
+        # ── Instance-level risk overrides ──
+        # These are semantic signals about the *content* of this specific
+        # claim — they override any type-based shortcut.
         if candidate.crosses_domains:
             return True
 
-        # Review if it contradicts existing knowledge
         if candidate.contradicts_existing:
+            return True
+
+        # ── Type-based routing ──
+        claim_type = candidate.edge_type or candidate.proposed_type
+
+        # Bypass types: low-stakes categories (e.g. concept, associated)
+        if claim_type in CRITIC_CFG.BYPASS_TYPES:
+            return False
+
+        # Always-review types: high-stakes categories
+        if claim_type in CRITIC_CFG.ALWAYS_REVIEW_TYPES:
+            return True
+
+        # ── Importance threshold ──
+        if candidate.importance > CRITIC_CFG.ACTIVATION_THRESHOLD:
             return True
 
         return False
@@ -298,6 +412,7 @@ class Critic:
         if not self.needs_review(candidate):
             log.verdict   = Verdict.ACCEPT
             log.confidence = candidate.importance
+            log.final_claim = candidate.claim
             log.bypassed  = True
             log.duration  = time.time() - start
             print(f"  ⊘ Critic bypass [{candidate.proposed_type}]: "
@@ -312,6 +427,7 @@ class Critic:
         log.is_novel = is_novel
         if not is_novel:
             log.verdict = Verdict.REJECT
+            log.final_claim = candidate.claim
             log.rejection_reason = ("Redundant — this claim restates existing "
                                     "knowledge without adding new insight.")
             log.confidence = 0.0
@@ -320,14 +436,30 @@ class Critic:
             self.brain.increase_frustration(0.2)
             return log
 
+        # ── Triviality check ──
+        if self._check_triviality(candidate.claim, candidate.context):
+            log.verdict = Verdict.REJECT
+            log.final_claim = candidate.claim
+            log.rejection_reason = ("Trivial — this claim restates a well-known "
+                                    "definition or tautology without adding "
+                                    "non-obvious insight.")
+            log.confidence = 0.0
+            log.duration = time.time() - start
+            print(f"  ✗ REJECT (trivial): {candidate.claim[:60]}...")
+            self.brain.increase_frustration(0.1)
+            return log
+
         # ── Adversarial dialogue ──
-        dialogue_turns = self._run_dialogue(candidate)
+        dialogue_turns, defended_claim = self._run_dialogue(candidate)
         log.dialogue = dialogue_turns
 
         # ── Final verdict ──
-        verdict_result = self._final_verdict(candidate, dialogue_turns)
+        verdict_result = self._final_verdict(candidate, dialogue_turns, defended_claim)
         log.verdict = verdict_result["verdict"]
         log.confidence = verdict_result.get("confidence", 0.0)
+        log.final_claim = verdict_result.get("final_claim", defended_claim or candidate.claim)
+        log.verdict_reason = verdict_result.get("reason", "")
+        log.verdict_parse_failed = verdict_result.get("parse_failed", False)
         log.rejection_reason = verdict_result.get("rejection_reason", "")
         log.refinement_note = verdict_result.get("refined_claim", "")
 
@@ -350,7 +482,7 @@ class Critic:
 
     # ── Adversarial dialogue ──────────────────────────────────────────────────
 
-    def _run_dialogue(self, candidate: CandidateThought) -> list[DialogueTurn]:
+    def _run_dialogue(self, candidate: CandidateThought) -> tuple[list[DialogueTurn], str]:
         """
         Multi-turn adversarial dialogue between System 1 and System 2.
 
@@ -362,50 +494,139 @@ class Critic:
         turns = []
         current_claim = candidate.claim
         context = candidate.context or self._build_context(candidate)
+        prior_challenges = []
+        issue_resolution = {}
 
         for turn_num in range(CRITIC_CFG.MAX_DIALOGUE_TURNS):
+            history = self._dialogue_history_text(turns)
+
             # ── System 2 challenges ──
-            challenge = llm_call(
+            challenge_result = llm_json(
                 CHALLENGE_PROMPT.format(
                     claim=current_claim,
-                    context=context
+                    context=context,
+                    history=history
                 ),
-                temperature=0.2,
-                role="critic"
+                temperature=0.15,
+                default={
+                    "issue_label": "evidence",
+                    "challenge": "No specific unresolved flaw was identified.",
+                    "repeat_of_prior": False,
+                }
             )
+            challenge = self._formalize_dialogue_text(
+                challenge_result.get("challenge", "")
+            )
+            issue_label = str(
+                challenge_result.get("issue_label", "evidence")
+            ).strip().lower()
+            repeated = self._as_bool(challenge_result.get("repeat_of_prior", False))
+            if self._is_repeated_objection(challenge, prior_challenges):
+                repeated = True
+
+            prior_addressed = issue_resolution.get(issue_label, False)
+            if repeated and prior_challenges and prior_addressed:
+                challenge = (
+                    "No materially distinct unresolved flaw remained after the "
+                    "earlier objections. Final adjudication should rely on the "
+                    "issues already raised."
+                )
+                issue_label = "resolved"
+                repeated = True
+            elif repeated and prior_challenges and not prior_addressed:
+                repeated = False
+
+            if not challenge:
+                challenge = (
+                    "No materially distinct unresolved flaw was identified "
+                    "after consideration of the prior review history."
+                )
+                issue_label = "resolved"
+
             turns.append(DialogueTurn(
                 role="system2_challenge",
                 content=challenge,
-                turn=turn_num + 1
+                turn=turn_num + 1,
+                claim=current_claim,
+                issue_label=issue_label,
+                repeated=repeated,
+                addressed=(issue_label == "resolved"),
             ))
             print(f"    S2 [{turn_num+1}]: {challenge[:80]}...")
+            prior_challenges.append(challenge)
+
+            if issue_label == "resolved":
+                break
 
             # ── System 1 defends ──
-            defense = llm_call(
+            defense_result = llm_json(
                 DEFENSE_PROMPT.format(
                     claim=current_claim,
                     challenge=challenge,
-                    context=context
+                    context=context,
+                    history=history
                 ),
-                temperature=0.4,
-                role="creative"
+                temperature=0.3,
+                default={
+                    "defense": "The objection could not be resolved with additional specificity.",
+                    "revised_claim": current_claim,
+                    "challenge_addressed": False,
+                }
             )
+            defense = self._formalize_dialogue_text(
+                defense_result.get("defense", "")
+            )
+            revised_claim = self._formalize_dialogue_text(
+                defense_result.get("revised_claim", "")
+            )
+            challenge_addressed = self._as_bool(
+                defense_result.get("challenge_addressed", False)
+            )
+            if not defense:
+                defense = "The objection could not be resolved with additional specificity."
+                challenge_addressed = False
+            if not revised_claim or len(revised_claim) < 20:
+                revised_claim = current_claim
+            if "could not be resolved with additional specificity" in defense.lower():
+                challenge_addressed = False
+
             turns.append(DialogueTurn(
                 role="system1_defense",
                 content=defense,
-                turn=turn_num + 1
+                turn=turn_num + 1,
+                claim=revised_claim,
+                issue_label=issue_label,
+                addressed=challenge_addressed,
             ))
             print(f"    S1 [{turn_num+1}]: {defense[:80]}...")
 
-            # Update context with the defense for next round
-            context += f"\n\nPrevious defense: {defense}"
+            issue_resolution[issue_label] = challenge_addressed
+            current_claim = revised_claim
 
-        return turns
+            if self._should_end_dialogue_early(
+                candidate.claim, current_claim, turns
+            ):
+                turns.append(DialogueTurn(
+                    role="system2_challenge",
+                    content=(
+                        "The outstanding objection has been addressed with "
+                        "sufficient qualification for final adjudication."
+                    ),
+                    turn=turn_num + 1,
+                    claim=current_claim,
+                    issue_label="resolved",
+                    repeated=False,
+                    addressed=True,
+                ))
+                break
+
+        return turns, current_claim
 
     # ── Verdict ───────────────────────────────────────────────────────────────
 
     def _final_verdict(self, candidate: CandidateThought,
-                       dialogue: list[DialogueTurn]) -> dict:
+                       dialogue: list[DialogueTurn],
+                       final_claim: str) -> dict:
         """
         System 2 delivers final judgment after the adversarial dialogue.
 
@@ -413,24 +634,41 @@ class Critic:
         refined_claim (if REFINE), rejection_reason (if REJECT).
         """
         dialogue_text = "\n\n".join(
-            f"[{t.role.upper()} — Turn {t.turn}]: {t.content}"
+            (
+                f"[{t.role.upper()} — Turn {t.turn}] "
+                f"(active_claim={t.claim or candidate.claim}): {t.content}"
+            )
             for t in dialogue
         )
 
-        raw = llm_call(
-            VERDICT_PROMPT.format(
-                claim=candidate.claim,
-                dialogue_text=dialogue_text
-            ),
-            temperature=0.15,
-            role="critic"
-        )
-
-        result = require_json(raw, default={
+        default_result = {
             "verdict": "defer",
             "confidence": 0.0,
-            "reason": "Failed to parse verdict"
-        })
+            "reason": "Failed to parse verdict",
+            "final_claim": final_claim or candidate.claim,
+        }
+
+        result = llm_json(
+            VERDICT_PROMPT.format(
+                claim=candidate.claim,
+                final_claim=final_claim or candidate.claim,
+                dialogue_text=dialogue_text
+            ),
+            temperature=0.1,
+            default=default_result
+        )
+        parse_failed = result.get("reason") == "Failed to parse verdict"
+        if parse_failed:
+            result = llm_json(
+                VERDICT_PROMPT.format(
+                    claim=candidate.claim,
+                    final_claim=final_claim or candidate.claim,
+                    dialogue_text=dialogue_text
+                ),
+                temperature=0.0,
+                default=default_result
+            )
+            parse_failed = result.get("reason") == "Failed to parse verdict"
 
         # Parse verdict string to enum
         verdict_str = result.get("verdict", "defer").lower().strip()
@@ -442,18 +680,112 @@ class Critic:
         }
         verdict = verdict_map.get(verdict_str, Verdict.DEFER)
 
-        # Enforce confidence floor for ACCEPT
-        confidence = float(result.get("confidence", 0.0))
-        if verdict == Verdict.ACCEPT and confidence < CRITIC_CFG.ACCEPT_CONFIDENCE_FLOOR:
-            verdict = Verdict.DEFER
-            result["reason"] = (f"Confidence {confidence:.2f} below floor "
-                                f"{CRITIC_CFG.ACCEPT_CONFIDENCE_FLOOR}. Deferring.")
+        # Parse confidence early; the stricter floor is enforced after any
+        # provisional-accept logic so both direct and rescued ACCEPTs use the
+        # same standard.
+        try:
+            confidence = float(result.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+
+        verdict_final_claim = self._formalize_dialogue_text(
+            result.get("final_claim", "")
+        ) or final_claim or candidate.claim
+        refined_claim = self._formalize_dialogue_text(
+            result.get("refined_claim", "")
+        )
+        if verdict == Verdict.REFINE and not refined_claim:
+            refined_claim = verdict_final_claim
+
+        if verdict in {Verdict.DEFER, Verdict.REFINE} and self._dialogue_supports_provisional_accept(
+            candidate.claim,
+            verdict_final_claim or refined_claim,
+            dialogue,
+        ):
+            verdict = Verdict.ACCEPT
+            best_supported_claim = (
+                refined_claim
+                if self._materially_revised_claim(candidate.claim, refined_claim)
+                else verdict_final_claim
+            ) or candidate.claim
+            verdict_final_claim = best_supported_claim
+            confidence = max(
+                confidence,
+                0.62 if self._ends_with_resolved_objection(dialogue) else 0.58,
+            )
+            result["reason"] = (
+                "The objections were resolved through narrowing and qualification, "
+                "and the remaining claim stayed defensible as a structural analogy."
+            )
+
+        if verdict == Verdict.ACCEPT:
+            floor = self._accept_confidence_floor(candidate)
+            if confidence < floor:
+                verdict = Verdict.DEFER
+                result["reason"] = (
+                    f"Confidence {confidence:.2f} below floor {floor:.2f}. Deferring."
+                )
+
+        # ── Thesis survival guard ──
+        # If the accepted claim drifted significantly from the original,
+        # check whether the original's core thesis was preserved or
+        # abandoned. Pure word-overlap can't distinguish legitimate
+        # narrowing from thesis laundering, so we ask the LLM.
+        if verdict == Verdict.ACCEPT and verdict_final_claim:
+            drift = self._claim_drift(candidate.claim, verdict_final_claim)
+            if drift > 0.50:
+                thesis_survived = self._thesis_survived(
+                    candidate.claim, verdict_final_claim
+                )
+                if not thesis_survived:
+                    # Original thesis was abandoned — downgrade
+                    verdict = Verdict.REJECT
+                    confidence = min(confidence, 0.25)
+                    result["reason"] = (
+                        f"Original thesis abandoned (drift={drift:.2f}). "
+                        "The final claim contradicts or replaces the "
+                        "original's central assertion rather than refining it."
+                    )
+                    result["rejection_reason"] = result["reason"]
+            if verdict == Verdict.ACCEPT and self._is_deep_analogy_candidate(candidate):
+                quality = self._accepted_claim_quality(
+                    candidate.claim,
+                    verdict_final_claim,
+                    candidate.context or self._build_context(candidate),
+                )
+                if (
+                    not quality["has_explicit_mapping"] or
+                    not quality["specific_enough"] or
+                    quality["watered_down"] or
+                    self._looks_generic_pattern_language(verdict_final_claim)
+                ):
+                    thesis_survived = self._thesis_survived(
+                        candidate.claim,
+                        verdict_final_claim,
+                    )
+                    if thesis_survived:
+                        verdict = Verdict.REFINE
+                        refined_claim = verdict_final_claim
+                        result["reason"] = (
+                            "The core thesis may be salvageable, but the current claim "
+                            "became too generic or lost explicit mapping detail."
+                        )
+                    else:
+                        verdict = Verdict.REJECT
+                        confidence = min(confidence, 0.25)
+                        result["reason"] = (
+                            "The accepted wording no longer preserved a defensible "
+                            "mechanistic or formal mapping."
+                        )
+                        result["rejection_reason"] = result["reason"]
 
         return {
             "verdict":          verdict,
             "confidence":       confidence,
             "reason":           result.get("reason", ""),
-            "refined_claim":    result.get("refined_claim", ""),
+            "parse_failed":     parse_failed,
+            "final_claim":      verdict_final_claim,
+            "refined_claim":    refined_claim,
             "rejection_reason": result.get("rejection_reason", ""),
         }
 
@@ -488,6 +820,109 @@ class Critic:
             role="critic"
         )
         return "novel" in raw.lower()
+
+    def _check_triviality(self, claim: str, context: str = "") -> bool:
+        """
+        Check whether a claim is trivially obvious — a textbook restatement
+        or tautology that adds no non-obvious insight.
+
+        Returns True if the claim is trivial (should be rejected).
+        """
+        # Build context from graph if not provided
+        if not context and self.index and self.index.size > 0:
+            claim_emb = shared_embed(claim)
+            matches = self.index.query(claim_emb, threshold=0.40, top_k=5)
+            lines = []
+            for nid, score in matches:
+                node = self.brain.get_node(nid)
+                if node:
+                    lines.append(f"[sim={score:.2f}] {node['statement']}")
+            context = "\n".join(lines) if lines else "No related knowledge available."
+
+        raw = llm_call(
+            TRIVIALITY_CHECK_PROMPT.format(
+                claim=claim,
+                context=context or "No related knowledge available."
+            ),
+            temperature=0.1,
+            role="critic"
+        )
+        return "trivial" in raw.lower()
+
+    def _claim_drift(self, original: str, final: str) -> float:
+        """
+        Measure how much a claim drifted during dialogue.
+
+        Returns a float 0.0-1.0 where:
+        - 0.0 = identical claims
+        - 1.0 = completely different claims (no word overlap)
+
+        Uses Jaccard distance on content words (stopwords removed).
+        """
+        import re
+
+        stopwords = {
+            "a", "an", "and", "are", "as", "at", "be", "by", "can", "could",
+            "do", "does", "for", "from", "how", "if", "in", "into", "is",
+            "it", "its", "of", "on", "or", "should", "than", "that", "the",
+            "to", "was", "what", "when", "where", "which", "while", "with",
+            "would",
+        }
+
+        def content_words(text: str) -> set[str]:
+            words = set(re.findall(r"[a-z0-9]+", text.lower()))
+            return words - stopwords
+
+        orig_words = content_words(original)
+        final_words = content_words(final)
+        if not orig_words and not final_words:
+            return 0.0
+        union = orig_words | final_words
+        intersection = orig_words & final_words
+        jaccard_sim = len(intersection) / max(len(union), 1)
+        return 1.0 - jaccard_sim  # drift = 1 - similarity
+
+    def _thesis_survived(self, original: str, final: str) -> bool:
+        """
+        Check whether the original claim's core thesis survived review.
+
+        Uses a focused LLM call to distinguish:
+        - Legitimate narrowing/qualification (thesis preserved)
+        - Thesis laundering (original assertion abandoned/contradicted)
+
+        Returns True if the thesis survived, False if it was abandoned.
+        """
+        raw = llm_call(
+            THESIS_SURVIVAL_PROMPT.format(
+                original=original,
+                final=final,
+            ),
+            temperature=0.1,
+            role="critic"
+        )
+        return "supports" in raw.lower()
+
+    def _accepted_claim_quality(self, original: str, final: str, context: str) -> dict:
+        result = llm_json(
+            ACCEPT_QUALITY_PROMPT.format(
+                original=original,
+                final=final,
+                context=context or "No additional context available.",
+            ),
+            temperature=0.0,
+            default={
+                "has_explicit_mapping": False,
+                "specific_enough": False,
+                "watered_down": True,
+                "reason": "Failed to parse quality judgment.",
+            }
+        )
+        return {
+            "has_explicit_mapping": self._as_bool(result.get("has_explicit_mapping", False)),
+            "specific_enough": self._as_bool(result.get("specific_enough", False)),
+            "watered_down": self._as_bool(result.get("watered_down", True)),
+            "reason": result.get("reason", ""),
+        }
 
     # ── Context builder ───────────────────────────────────────────────────────
 
@@ -524,6 +959,207 @@ class Critic:
 
         return "\n\n".join(lines) if lines else "No additional context available."
 
+    def _dialogue_history_text(self, turns: list[DialogueTurn]) -> str:
+        if not turns:
+            return "No prior review turns."
+        return "\n".join(
+            (
+                f"Turn {t.turn} | {t.role} | claim={t.claim or 'unchanged'} "
+                f"| issue={t.issue_label or 'none'} | addressed={t.addressed} | {t.content}"
+            )
+            for t in turns
+        )
+
+    def _normalize_text(self, text: str) -> str:
+        text = re.sub(r"\s+", " ", text or "").strip().lower()
+        return re.sub(r"[^a-z0-9 ]+", " ", text)
+
+    def _formalize_dialogue_text(self, text: str) -> str:
+        cleaned = re.sub(r"\s+", " ", text or "").strip()
+        for pattern, replacement in self._FORMAL_REPLACEMENTS:
+            cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+        return re.sub(r"\s+", " ", cleaned).strip()
+
+    def _as_bool(self, value) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes"}
+        return bool(value)
+
+    def _is_repeated_objection(self, challenge: str,
+                               prior_challenges: list[str]) -> bool:
+        norm = self._normalize_text(challenge)
+        if not norm or not prior_challenges:
+            return False
+        challenge_words = set(norm.split())
+        if len(challenge_words) < 6:
+            return False
+        for prior in prior_challenges:
+            prior_norm = self._normalize_text(prior)
+            if not prior_norm:
+                continue
+            prior_words = set(prior_norm.split())
+            overlap = len(challenge_words & prior_words)
+            union = len(challenge_words | prior_words) or 1
+            if overlap / union >= 0.65:
+                return True
+        return False
+
+    def _materially_revised_claim(self, original_claim: str,
+                                  revised_claim: str) -> bool:
+        if not revised_claim or not original_claim:
+            return False
+        orig = self._normalize_text(original_claim)
+        rev = self._normalize_text(revised_claim)
+        if not orig or not rev or orig == rev:
+            return False
+        orig_words = set(orig.split())
+        rev_words = set(rev.split())
+        overlap = len(orig_words & rev_words)
+        union = len(orig_words | rev_words) or 1
+        return (overlap / union) < 0.92
+
+    def _is_deep_analogy_candidate(self, candidate: CandidateThought) -> bool:
+        claim_type = (candidate.edge_type or candidate.proposed_type or "").lower()
+        return claim_type in {
+            "structural",
+            "isomorphism",
+            "structural_analogy",
+            "deep_isomorphism",
+        }
+
+    def _accept_confidence_floor(self, candidate: CandidateThought) -> float:
+        floor = CRITIC_CFG.ACCEPT_CONFIDENCE_FLOOR
+        if self._is_deep_analogy_candidate(candidate):
+            return max(floor, 0.65)
+        return floor
+
+    def _has_mapping_markers(self, claim: str) -> bool:
+        text = (claim or "").lower()
+        markers = (
+            "map:",
+            "maps to",
+            "corresponds to",
+            "correspondence",
+            "under renaming",
+            "update rule",
+            "state variable",
+            "objective function",
+            "constraint",
+            "role of",
+            "acts on",
+            "preserves",
+        )
+        return any(marker in text for marker in markers)
+
+    def _looks_generic_pattern_language(self, claim: str) -> bool:
+        text = (claim or "").lower()
+        generic_markers = (
+            "both involve",
+            "both balance",
+            "both optimize",
+            "both have",
+            "both show",
+            "mirrors the adaptive pressure",
+            "principle of localized",
+            "pattern of",
+            "can be understood as",
+            "serves as a molecular analogue",
+            "high-level",
+        )
+        return any(marker in text for marker in generic_markers) and not self._has_mapping_markers(text)
+
+    def _is_qualified_claim(self, claim: str) -> bool:
+        if not claim:
+            return False
+        claim_lower = claim.lower()
+        return any(
+            marker in claim_lower
+            for marker in (
+                "structural analogy",
+                "analogous",
+                "analogy",
+                "limited to",
+                "within the context",
+                "within ",
+                "rather than",
+                "without implying",
+                "does not imply",
+                "can be modeled",
+                "can be understood as",
+                "provided that",
+                "potential for",
+                "suggests",
+                "constraint",
+                "pattern",
+            )
+        )
+
+    def _ends_with_resolved_objection(self, dialogue: list[DialogueTurn]) -> bool:
+        challenges = [t for t in dialogue if t.role == "system2_challenge"]
+        return bool(challenges and challenges[-1].issue_label == "resolved")
+
+    def _dialogue_supports_provisional_accept(self, original_claim: str,
+                                              final_claim: str,
+                                              dialogue: list[DialogueTurn]) -> bool:
+        if not dialogue:
+            return False
+        challenges = [t for t in dialogue if t.role == "system2_challenge"]
+        defenses = [t for t in dialogue if t.role == "system1_defense"]
+        if not challenges or not defenses:
+            return False
+        issue_labels = [
+            t.issue_label for t in challenges
+            if t.issue_label and t.issue_label != "resolved"
+        ]
+        if not issue_labels:
+            return False
+        if any(label not in {"scope", "mechanism"} for label in issue_labels):
+            return False
+        if any(
+            "could not be resolved with additional specificity" in t.content.lower()
+            for t in defenses
+        ):
+            return False
+        if not all(t.addressed for t in defenses):
+            return False
+        if len(defenses) > 2 and not self._ends_with_resolved_objection(dialogue):
+            return False
+        if not (
+            self._materially_revised_claim(original_claim, final_claim) or
+            self._is_qualified_claim(final_claim) or
+            self._ends_with_resolved_objection(dialogue)
+        ):
+            return False
+        if not self._has_mapping_markers(final_claim):
+            return False
+        if self._looks_generic_pattern_language(final_claim):
+            return False
+        return True
+
+    def _should_end_dialogue_early(self, original_claim: str,
+                                   current_claim: str,
+                                   dialogue: list[DialogueTurn]) -> bool:
+        defenses = [t for t in dialogue if t.role == "system1_defense"]
+        if not defenses:
+            return False
+        last_defense = defenses[-1]
+        if not last_defense.addressed:
+            return False
+        if last_defense.issue_label not in {"scope", "mechanism"}:
+            return False
+        if "could not be resolved with additional specificity" in last_defense.content.lower():
+            return False
+        if len(defenses) == 1:
+            return (
+                self._materially_revised_claim(original_claim, current_claim) and
+                self._is_qualified_claim(current_claim)
+            )
+        return self._dialogue_supports_provisional_accept(
+            original_claim, current_claim, dialogue
+        )
+
     # ── Refinement loop ───────────────────────────────────────────────────────
 
     def refine(self, candidate: CandidateThought,
@@ -536,16 +1172,20 @@ class Critic:
         """
         context = candidate.context or self._build_context(candidate)
 
-        refined_claim = llm_call(
+        base_claim = critic_log.final_claim or candidate.claim
+
+        refined_claim = self._formalize_dialogue_text(llm_call(
             REFINEMENT_PROMPT.format(
-                original_claim=candidate.claim,
+                original_claim=base_claim,
                 feedback=critic_log.rejection_reason or critic_log.refinement_note,
                 refined_suggestion=critic_log.refinement_note,
                 context=context
             ),
             temperature=0.3,
             role="creative"
-        )
+        ))
+        if not refined_claim:
+            refined_claim = base_claim
 
         print(f"  ↻ Refined: {refined_claim[:80]}...")
 
@@ -587,7 +1227,6 @@ class Critic:
                       f"{CRITIC_CFG.MAX_REFINE_ITERATIONS}")
                 current_candidate = self.refine(current_candidate, log)
             else:
-                # Max refinements reached — force DEFER
                 log.verdict = Verdict.DEFER
                 log.refinement_note += (" | Max refinement iterations reached. "
                                         "Deferring to insight buffer.")
@@ -600,7 +1239,7 @@ class Critic:
     def route_deferred(self, candidate: CandidateThought):
         """
         Route a DEFER verdict to the InsightBuffer for future re-evaluation.
-        Only applicable for edge-type candidates with node_a and node_b.
+        Applicable for both edges and single novel nodes.
         """
         if not self.insight_buffer:
             return
@@ -610,7 +1249,18 @@ class Critic:
             self.insight_buffer.add(
                 candidate.node_a_id,
                 candidate.node_b_id,
-                similarity
+                similarity,
+                claim=candidate.claim,
+                context=candidate.context,
+                proposed_type=candidate.proposed_type
             )
             print(f"  ◇ Deferred to insight buffer: "
+                  f"{candidate.claim[:60]}...")
+        else:
+            self.insight_buffer.add_node(
+                claim=candidate.claim,
+                context=candidate.context,
+                importance=candidate.importance
+            )
+            print(f"  ◇ Deferred node to insight buffer: "
                   f"{candidate.claim[:60]}...")

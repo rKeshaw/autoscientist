@@ -27,17 +27,45 @@ That means the benchmark strategy must now evaluate not only output quality, but
 also whether the newer cognitive control layers improve precision without
 destroying novelty.
 
+## Benchmark Rules
+
+The revised benchmark should follow these rules across all implemented
+dimensions:
+
+- Every benchmark must state what level it measures:
+  - `prompt-level` — isolated prompt behavior only
+  - `module-level` — a real module method with its internal post-processing
+  - `pipeline-level` — end-to-end behavior across multiple modules
+- A pass criterion must fail on the metric's PRIMARY failure signal.
+  A benchmark must not pass if its own summary shows the target behavior
+  regressed on the main quantity being measured.
+- Each metric should include:
+  - positive cases
+  - hard negatives
+  - boundary / abstention checks
+- LLM-as-judge prompts must inspect the actual generated evidence whenever
+  possible, not just self-reported grades, counts, or metadata.
+- If a benchmark cannot exercise the behavior it claims to test
+  (for example: no deep insights, no deferred verdicts, no reinforced edges),
+  it should report that explicitly and fail or mark the run as skipped /
+  inconclusive. It must not fabricate dummy examples just to keep running.
+- For regression testing, prefer deterministic or frozen fixtures over live
+  network content. Live-search benchmarks are still useful, but they should
+  evaluate the real filtered/persisted outputs of the system, not only raw
+  retrieval.
+- Skipped tests do not count as passes in aggregate reporting.
+
 ## Current Status
 
 Implemented benchmark suites:
 - `benchmark/dim1` - Knowledge Graph Quality
 - `benchmark/dim2` - Dream Cycle Effectiveness
+- `benchmark/dim3` - Thinker / Structured Reasoning Quality
+- `benchmark/dim4` - Critic / System 2 Quality
+- `benchmark/dim5` - Research & Reading Acquisition
+- `benchmark/dim6` - Consolidation & Insight Buffer Quality
 
 Not yet implemented, but now part of the revised roadmap:
-- `dim3` - Thinker / Structured Reasoning Quality
-- `dim4` - Critic / System 2 Quality
-- `dim5` - Research & Reading Acquisition
-- `dim6` - Consolidation & Insight Buffer Quality
 - `dim7` - Observer & Mission Tracking
 - `dim8` - Sandbox Hypothesis Testing
 - `dim9` - Conversation & Groundedness
@@ -142,7 +170,15 @@ Core metrics:
 - resolution rate for agenda questions
 - reading list quality
 - index freshness after ingestion
+- predictive-processing calibration during ingestion
+- deduplication accuracy for near-equivalent claims
 - thinker-question vs observer-question retrieval quality
+
+Interpretation:
+D5 is no longer just "can the system fetch something relevant?" It must also
+measure whether acquisition writes cleanly into the graph, whether surprise is
+being used meaningfully, and whether different question generators retrieve
+materially different quality of evidence.
 
 ## D6 - Consolidation & Insight Buffer Quality
 
@@ -153,9 +189,23 @@ Core metrics:
 - synthesis genuineness
 - abstraction quality
 - gap inference accuracy
+- contradiction maintenance / unresolved-tension prioritization
 - decay calibration
 - delayed insight promotion quality
 - time-to-promotion behavior for the insight buffer
+
+Why the roadmap is extended here:
+Consolidation is not only generative. A good evening pass should also preserve
+and surface unresolved tensions so future cycles spend effort where the graph is
+most conflicted. That maintenance behavior is distinct from D1 contradiction
+detection, which measures whether contradictions are recognized in the first
+place.
+
+Evaluation note:
+Each D6 metric should be tested with multiple positive cases, hard negatives,
+and boundary-condition checks. In practice that means semantic metrics should
+stress both abstention and specificity, while maintenance metrics should verify
+selective behavior rather than only single happy-path examples.
 
 ## D7 - Observer & Mission Tracking
 

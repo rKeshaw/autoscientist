@@ -29,6 +29,7 @@ Pass criterion:
   - Mean intra-cluster similarity >= 0.42
   - Mean inter-cluster similarity <= 0.40
   - Cluster assignment accuracy (LLM judged) >= 75%
+  - the full benchmark corpus must actually yield nodes
 
 Usage:
     python test_d1_cluster_coherence.py \
@@ -92,6 +93,7 @@ def fetch_and_ingest_corpus(brain, ingestor):
     from graph.brain import EdgeSource
 
     all_ids = []
+    article_stats = []
     for article in CORPUS:
         title = article["title"]
         print(f"  Ingesting: {title}...")
@@ -100,6 +102,7 @@ def fetch_and_ingest_corpus(brain, ingestor):
             "action": "query", "titles": title,
             "prop": "extracts", "format": "json",
             "explaintext": 1, "exsectionformat": "plain",
+            "redirects": 1,
         }
         resp = requests.get(api, params=params, timeout=20,
                             headers={"User-Agent": "AutoScientist-Benchmark/1.0"})
@@ -107,13 +110,21 @@ def fetch_and_ingest_corpus(brain, ingestor):
         text = ""
         for page in pages.values():
             text = page.get("extract", "")[:8000]
+        stat = {
+            "title": title,
+            "text_found": bool(text),
+            "nodes_created": 0,
+        }
         if not text:
             print(f"    WARNING: empty text for {title}")
+            article_stats.append(stat)
             continue
         ids = ingestor.ingest(text, source=EdgeSource.READING) or []
         all_ids.extend(ids)
+        stat["nodes_created"] = len(ids)
+        article_stats.append(stat)
         time.sleep(1)
-    return all_ids
+    return all_ids, article_stats
 
 
 def compute_cluster_similarities(brain, emb_index):
@@ -262,11 +273,15 @@ def main():
         print("=" * 60)
         print("PHASE 1: Ingesting benchmark corpus")
         print("=" * 60)
-        fetch_and_ingest_corpus(brain, ingestor)
+        _, article_stats = fetch_and_ingest_corpus(brain, ingestor)
     else:
         print("(Skipping ingest — using existing brain state)")
+        article_stats = [{"title": article["title"], "text_found": None, "nodes_created": None}
+                         for article in CORPUS]
 
     total_nodes = len(brain.all_nodes())
+    articles_with_text = sum(1 for s in article_stats if s["text_found"] is True)
+    articles_with_nodes = sum(1 for s in article_stats if (s["nodes_created"] or 0) > 0)
     print(f"\nTotal nodes in brain: {total_nodes}")
 
     # ── Compute similarities ──
@@ -327,6 +342,13 @@ def main():
     pass_intra = mean_intra >= 0.42
     pass_inter = mean_inter <= 0.40
     pass_assign = assignment_acc >= 0.75
+    pass_coverage = (
+        args.skip_ingest or
+        (
+            articles_with_text == len(CORPUS) and
+            articles_with_nodes == len(CORPUS)
+        )
+    )
 
     report = {
         "test": "D1 — Cluster Coherence",
@@ -336,6 +358,7 @@ def main():
             "total_nodes": total_nodes,
             "clusters_evaluated": len(clusters),
             "sample_per_cluster": args.sample_per_cluster,
+            "corpus_size": len(CORPUS),
         },
         "summary": {
             "global_mean_intra_similarity": round(mean_intra, 4),
@@ -343,10 +366,13 @@ def main():
             "mean_silhouette_score": round(mean_sil, 4),
             "cluster_assignment_accuracy": round(assignment_acc, 3),
             "nodes_judged": total_judged,
+            "articles_with_text": articles_with_text,
+            "articles_with_nodes": articles_with_nodes,
             "PASS_intra": pass_intra,
             "PASS_inter": pass_inter,
             "PASS_assignment": pass_assign,
-            "PASS": pass_intra and pass_inter and pass_assign,
+            "PASS_corpus_coverage": pass_coverage,
+            "PASS": pass_intra and pass_inter and pass_assign and pass_coverage,
             "pass_threshold_intra": 0.42,
             "pass_threshold_inter": 0.40,
             "pass_threshold_assignment": 0.75,
@@ -354,6 +380,7 @@ def main():
         "per_cluster_stats": per_cluster,
         "mislabeled_nodes": mislabeled,
         "all_judgments": judgments,
+        "article_stats": article_stats,
     }
 
     with open(args.out, "w") as f:
@@ -363,6 +390,9 @@ def main():
     print("RESULTS — D1: Cluster Coherence")
     print("=" * 60)
     print(f"Clusters evaluated    : {len(clusters)}")
+    if not args.skip_ingest:
+        print(f"Corpus coverage       : text={articles_with_text}/{len(CORPUS)} "
+              f"nodes={articles_with_nodes}/{len(CORPUS)}")
     print(f"Mean intra-cluster sim: {mean_intra:.4f} "
           f"({'✓' if pass_intra else '✗'} threshold: >=0.42)")
     print(f"Mean inter-cluster sim: {mean_inter:.4f} "

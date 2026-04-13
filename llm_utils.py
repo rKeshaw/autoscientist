@@ -23,6 +23,25 @@ def _get_client() -> Client:
 
 # ── Robust JSON parsing ──────────────────────────────────────────────────────
 
+def _repair_json_candidate(candidate: str) -> str:
+    """
+    Repair common JSON corruption from LLM outputs.
+
+    Most frequently this is caused by LaTeX-ish backslashes such as \\chi or
+    \\lambda appearing inside JSON strings, which are invalid JSON escapes.
+    """
+    if not candidate:
+        return candidate
+
+    # Escape invalid backslash sequences while preserving valid JSON escapes.
+    candidate = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', candidate)
+    # Remove NULs or other control chars that occasionally appear in outputs.
+    candidate = ''.join(
+        ch for ch in candidate
+        if ch == '\n' or ch == '\r' or ch == '\t' or ord(ch) >= 32
+    )
+    return candidate
+
 def parse_llm_json(raw: str):
     """
     Extract JSON from LLM output, handling common failure modes:
@@ -47,7 +66,10 @@ def parse_llm_json(raw: str):
     try:
         return json.loads(text)
     except (json.JSONDecodeError, ValueError):
-        pass
+        try:
+            return json.loads(_repair_json_candidate(text))
+        except (json.JSONDecodeError, ValueError):
+            pass
 
     # Try to find JSON object or array within the text
     for start_char, end_char in [('{', '}'), ('[', ']')]:
@@ -70,9 +92,12 @@ def parse_llm_json(raw: str):
                         # Try fixing single quotes
                         try:
                             fixed = candidate.replace("'", '"')
-                            return json.loads(fixed)
+                            return json.loads(_repair_json_candidate(fixed))
                         except (json.JSONDecodeError, ValueError):
-                            break
+                            try:
+                                return json.loads(_repair_json_candidate(candidate))
+                            except (json.JSONDecodeError, ValueError):
+                                break
 
     return None
 

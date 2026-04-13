@@ -36,6 +36,8 @@ related but the connection wasn't strong enough to confirm.
 
 Idea A: {node_a}
 Idea B: {node_b}
+Original deferred claim: {claim}
+Original deferred context: {context}
 
 Original similarity when first seen: {original_sim:.2f}
 Times re-evaluated so far: {eval_count}
@@ -67,18 +69,55 @@ Respond ONLY with JSON. No preamble.
 """
 
 
+REEVALUATE_NODE_PROMPT = """You are examining a previously deferred scientific hypothesis or synthesis.
+When it was first proposed, there wasn't enough evidence to accept it.
+
+Proposed Claim: "{claim}"
+Original Context: {context}
+
+Times re-evaluated so far: {eval_count}
+
+New evidence in the knowledge graph that might be relevant:
+{new_context}
+
+In light of the new context, is there now sufficient evidence to ACCEPT this claim into the permanent knowledge graph?
+
+Respond with a JSON object:
+{{
+  "accepted": true or false,
+  "narration": "one sentence explaining why it is accepted or still deferred",
+  "confidence": a float 0.0-1.0 (how certain are you this claim is well-supported now?)
+}}
+
+Confidence rubric:
+- 0.50-0.65: Provisionally accepted
+- 0.65-0.80: Solidly accepted
+- 0.80-0.95: Strongly accepted
+
+If not accepted: {{"accepted": false}}
+
+Respond ONLY with JSON. No preamble.
+"""
+
+
 # ── Data structures ───────────────────────────────────────────────────────────
 
 @dataclass
 class PendingInsight:
-    node_a_id:          str
-    node_b_id:          str
-    original_similarity: float
+    node_a_id:          str    = ""
+    node_b_id:          str    = ""
+    original_similarity: float = 0.0
     first_seen:         float  = field(default_factory=time.time)
     times_evaluated:    int    = 0
     last_eval_time:     float  = 0.0
     best_score:         float  = 0.0   # highest combined score seen
     promoted:           bool   = False
+    
+    # New fields for individual nodes
+    is_node:            bool   = False
+    claim:              str    = ""
+    context:            str    = ""
+    proposed_type:      str    = ""
 
     def to_dict(self):
         return asdict(self)
@@ -91,41 +130,51 @@ class PendingInsight:
 # ── Insight Buffer ────────────────────────────────────────────────────────────
 
 class InsightBuffer:
-    def __init__(self, brain: Brain, embedding_index=None):
+    def __init__(self, brain: Brain, embedding_index=None,
+                 buffer_path: str = BUFFER_PATH, autoload: bool = True):
         self.brain   = brain
         self.index   = embedding_index
+        self.buffer_path = buffer_path
         self.pending: list[PendingInsight] = []
-        self._load()
+        if autoload:
+            self._load()
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
     def _load(self):
         try:
-            with open(BUFFER_PATH, "r") as f:
+            with open(self.buffer_path, "r") as f:
                 data = json.load(f)
             self.pending = [PendingInsight.from_dict(d) for d in data]
         except (FileNotFoundError, json.JSONDecodeError):
             self.pending = []
 
     def save(self):
-        os.makedirs(os.path.dirname(BUFFER_PATH) or ".", exist_ok=True)
-        with open(BUFFER_PATH, "w") as f:
+        os.makedirs(os.path.dirname(self.buffer_path) or ".", exist_ok=True)
+        with open(self.buffer_path, "w") as f:
             json.dump([p.to_dict() for p in self.pending], f, indent=2)
 
     # ── Add near-miss pairs ───────────────────────────────────────────────────
 
-    def add(self, node_a_id: str, node_b_id: str, similarity: float):
+    def add(self, node_a_id: str, node_b_id: str, similarity: float,
+            claim: str = "", context: str = "", proposed_type: str = ""):
         """Add a near-miss pair to the buffer."""
         if similarity < BUFFER_LOW:
             return  # too weak even for buffer
 
         # Check for duplicates
         for p in self.pending:
-            if ((p.node_a_id == node_a_id and p.node_b_id == node_b_id) or
+            if not p.is_node and ((p.node_a_id == node_a_id and p.node_b_id == node_b_id) or
                 (p.node_a_id == node_b_id and p.node_b_id == node_a_id)):
                 # Update if this observation is stronger
                 if similarity > p.original_similarity:
                     p.original_similarity = similarity
+                if claim:
+                    p.claim = claim
+                if context:
+                    p.context = context
+                if proposed_type:
+                    p.proposed_type = proposed_type
                 return
 
         # Hard cap
@@ -137,7 +186,32 @@ class InsightBuffer:
         self.pending.append(PendingInsight(
             node_a_id=node_a_id,
             node_b_id=node_b_id,
-            original_similarity=similarity
+            original_similarity=similarity,
+            is_node=False,
+            claim=claim,
+            context=context,
+            proposed_type=proposed_type
+        ))
+
+    def add_node(self, claim: str, context: str, importance: float):
+        """Add a single node insight (e.g. from System 2 review) to the buffer."""
+        # Check for duplicates
+        for p in self.pending:
+            if p.is_node and p.claim == claim:
+                if importance > p.original_similarity:
+                    p.original_similarity = importance
+                return
+
+        # Hard cap
+        if len(self.pending) >= MAX_BUFFER_SIZE:
+            self.pending.sort(key=lambda p: p.best_score or p.original_similarity)
+            self.pending.pop(0)
+            
+        self.pending.append(PendingInsight(
+            is_node=True,
+            claim=claim,
+            context=context,
+            original_similarity=importance
         ))
 
     @property
@@ -162,7 +236,43 @@ class InsightBuffer:
             if pair.promoted:
                 to_remove.append(i)
                 continue
+                
+            if pair.is_node:
+                # ── Single Node Re-evaluation ──
+                pair.times_evaluated += 1
+                pair.last_eval_time = time.time()
+                
+                # Check for relevant context in index
+                new_context = ""
+                if self.index:
+                    claim_emb = shared_embed(pair.claim)
+                    if claim_emb is not None:
+                        matches = self.index.query(claim_emb, threshold=0.45, top_k=5)
+                        lines = []
+                        for nid, score in matches:
+                            node = self.brain.get_node(nid)
+                            if node:
+                                lines.append(f"- [sim={score:.2f}] {node['statement']}")
+                        new_context = "\n".join(lines) if lines else "None yet"
+                
+                if not new_context or new_context == "None yet":
+                    new_context = "No meaningfully new related knowledge added yet."
+                    
+                result = self._llm_evaluate_node(pair, new_context)
+                if result and result.get("accepted"):
+                    self._promote_node(pair, result)
+                    to_remove.append(i)
+                    promoted += 1
+                    print(f"    ★ Promoted deferred node: {pair.claim[:40]}...")
+                    continue
+                    
+                # Prune stale pairs
+                if pair.times_evaluated >= MAX_EVALUATIONS:
+                    to_remove.append(i)
+                    pruned += 1
+                continue
 
+            # ── Edge Pairs Re-evaluation ──
             # Check if both nodes still exist
             node_a = self.brain.get_node(pair.node_a_id)
             node_b = self.brain.get_node(pair.node_b_id)
@@ -178,11 +288,13 @@ class InsightBuffer:
                 continue
 
             # Compute current similarity
-            current_sim = self._current_similarity(pair)
+            current_sim = max(self._current_similarity(pair), pair.original_similarity)
 
             # Count shared neighbors as context boost
             shared = self._shared_neighbor_count(pair)
             context_score = current_sim + (shared * NEIGHBOR_BOOST)
+            if pair.claim and shared:
+                context_score += PROMOTION_BOOST
 
             pair.times_evaluated += 1
             pair.last_eval_time = time.time()
@@ -265,12 +377,24 @@ class InsightBuffer:
         prompt = REEVALUATE_PROMPT.format(
             node_a=node_a['statement'],
             node_b=node_b['statement'],
+            claim=pair.claim or "None recorded.",
+            context=pair.context or "None recorded.",
             original_sim=pair.original_similarity,
             eval_count=pair.times_evaluated,
             a_neighbors=self._get_neighbor_summaries(pair.node_a_id),
             b_neighbors=self._get_neighbor_summaries(pair.node_b_id),
         )
         raw = llm_call(prompt, temperature=0.2, role="precise")
+        return require_json(raw, default={})
+
+    def _llm_evaluate_node(self, pair: PendingInsight, new_context: str) -> dict:
+        prompt = REEVALUATE_NODE_PROMPT.format(
+            claim=pair.claim,
+            context=pair.context,
+            eval_count=pair.times_evaluated,
+            new_context=new_context
+        )
+        raw = llm_call(prompt, temperature=0.2, role="critic")
         return require_json(raw, default={})
 
     def _promote(self, pair: PendingInsight, result: dict):
@@ -301,6 +425,24 @@ class InsightBuffer:
             )
             self.brain.add_edge(pair.node_a_id, pair.node_b_id, edge)
 
+        pair.promoted = True
+
+    def _promote_node(self, pair: PendingInsight, result: dict):
+        from graph.brain import Node, NodeType, NodeStatus
+        node = Node(
+            statement      = pair.claim,
+            node_type      = NodeType.HYPOTHESIS,
+            cluster        = "general",
+            status         = NodeStatus.UNCERTAIN,
+            source_quality = 0.8,
+            last_verified  = time.time(),
+            importance     = 0.7
+        )
+        nid = self.brain.add_node(node)
+        if self.index:
+            emb = shared_embed(pair.claim)
+            self.index.add(nid, emb)
+        
         pair.promoted = True
 
     # ── Stats ─────────────────────────────────────────────────────────────────

@@ -11,9 +11,13 @@ This test implements the revised-roadmap slices:
 - false-negative rate on valuable dream insights
 
 Pass criterion:
-- accepted validity >= raw validity
+- accepted substantive validity >= raw substantive validity
 - accepted validity >= 65%
 - false-negative rate <= 40%
+- benchmark must be materially exercised by at least one non-accept verdict
+  or one material accepted revision
+- materially revised accepted claims must preserve the original thesis and
+  must not collapse into generic English logic
 
 Usage:
     python benchmark/dim2/test_d2_critic_lift.py         --judge-model llama3.1:70b         --out benchmark/dim2/results/d2_critic_lift.json
@@ -24,6 +28,8 @@ import os
 import sys
 import time
 import argparse
+import difflib
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,9 +48,43 @@ Claimed depth: {depth}
 Does this claim represent a genuine structural or isomorphic connection,
 rather than surface-level shared vocabulary?
 
+Also decide whether the claim is SUBSTANTIVE:
+- substantive = true only if it states a specific mechanism, role mapping,
+  constraint mapping, or formal relation.
+- substantive = false if it retreats into vague English logic such as
+  "both involve optimization", "both balance stability and change", or other
+  broad truisms without a concrete mapping.
+
 Respond EXACTLY in JSON:
 {{
   "genuine": true or false,
+  "substantive": true or false,
+  "too_generic": true or false,
+  "reasoning": "one or two sentences"
+}}
+"""
+
+REFINEMENT_CHECK_PROMPT = """
+You are evaluating whether System 2 refinement preserved the real scientific thesis.
+
+Original claim:
+"{original_claim}"
+
+Accepted/refined claim:
+"{refined_claim}"
+
+Did the refined claim preserve the original central structural thesis while
+appropriately narrowing scope, or did it retreat into a much weaker generic
+statement?
+
+Mark watered_down = true if the refined claim is mostly safer wording,
+plain English common sense, or vague high-level logic instead of the original
+mechanistic or structural mapping.
+
+Respond EXACTLY in JSON:
+{{
+  "thesis_preserved": true or false,
+  "watered_down": true or false,
   "reasoning": "one or two sentences"
 }}
 """
@@ -74,10 +114,63 @@ def _judge_insight(insight, model):
         depth=insight['depth'],
     )
     raw = llm_call(prompt, temperature=0.1, model=model, role='precise')
-    result = require_json(raw, default={'genuine': False, 'reasoning': 'Judge parse failed'})
+    result = require_json(raw, default={
+        'genuine': False,
+        'substantive': False,
+        'too_generic': True,
+        'reasoning': 'Judge parse failed',
+    })
     if 'genuine' not in result:
         result['genuine'] = False
+    if 'substantive' not in result:
+        result['substantive'] = False
+    if 'too_generic' not in result:
+        result['too_generic'] = not (result.get('genuine') and result.get('substantive'))
     return result
+
+
+def _judge_refinement(original_claim, refined_claim, model):
+    from llm_utils import llm_call, require_json
+
+    prompt = REFINEMENT_CHECK_PROMPT.format(
+        original_claim=original_claim,
+        refined_claim=refined_claim,
+    )
+    raw = llm_call(prompt, temperature=0.0, model=model, role='precise')
+    result = require_json(raw, default={
+        'thesis_preserved': False,
+        'watered_down': True,
+        'reasoning': 'Judge parse failed',
+    })
+    if 'thesis_preserved' not in result:
+        result['thesis_preserved'] = False
+    if 'watered_down' not in result:
+        result['watered_down'] = not result.get('thesis_preserved', False)
+    return result
+
+
+def _normalize_text(text):
+    return re.sub(r'\s+', ' ', (text or '').strip().lower())
+
+
+def _materially_revised_claim(original, revised):
+    original_norm = _normalize_text(original)
+    revised_norm = _normalize_text(revised)
+    if not original_norm or not revised_norm or original_norm == revised_norm:
+        return False
+    ratio = difflib.SequenceMatcher(None, original_norm, revised_norm).ratio()
+    original_tokens = set(re.findall(r'[a-z0-9]+', original_norm))
+    revised_tokens = set(re.findall(r'[a-z0-9]+', revised_norm))
+    overlap = len(original_tokens & revised_tokens) / max(len(original_tokens | revised_tokens), 1)
+    return ratio < 0.92 or overlap < 0.80
+
+
+def _passes_quality_bar(judgment):
+    return bool(
+        judgment.get('genuine') and
+        judgment.get('substantive') and
+        not judgment.get('too_generic')
+    )
 
 
 def main():
@@ -130,14 +223,16 @@ def main():
     print('PHASE 2: Judging raw deep insights')
     print('=' * 60)
     evaluations = []
-    genuine_raw_count = 0
+    raw_quality_count = 0
     for ins in raw_insights:
         raw_judgment = _judge_insight(ins, args.judge_model)
-        if raw_judgment.get('genuine'):
-            genuine_raw_count += 1
+        raw_passes_quality = _passes_quality_bar(raw_judgment)
+        if raw_passes_quality:
+            raw_quality_count += 1
         evaluations.append({
             'raw_insight': ins,
             'raw_judgment': raw_judgment,
+            'raw_passes_quality': raw_passes_quality,
         })
         time.sleep(0.2)
 
@@ -148,9 +243,12 @@ def main():
     critic = Critic(critic_brain, embedding_index=critic_index)
 
     accepted_count = 0
-    accepted_genuine_count = 0
+    accepted_quality_count = 0
     verdict_counts = {'accept': 0, 'refine': 0, 'reject': 0, 'defer': 0}
     false_negatives = 0
+    material_revision_count = 0
+    thesis_preserved_revision_count = 0
+    watered_down_accepts = 0
 
     for ev in evaluations:
         raw_insight = ev['raw_insight']
@@ -170,31 +268,56 @@ def main():
         verdict = critic_log.verdict.value
         verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
 
-        accepted_claim = critic_log.refinement_note or candidate.claim
+        accepted_claim = critic_log.final_claim or critic_log.refinement_note or candidate.claim
+        material_revision = _materially_revised_claim(candidate.claim, accepted_claim)
+        ev['accepted_claim'] = accepted_claim
+        ev['material_revision'] = material_revision
         if verdict == 'accept':
             accepted_count += 1
             accepted_insight = dict(raw_insight)
             accepted_insight['claim'] = accepted_claim
             accepted_judgment = _judge_insight(accepted_insight, args.judge_model)
-            ev['accepted_claim'] = accepted_claim
             ev['accepted_judgment'] = accepted_judgment
-            if accepted_judgment.get('genuine'):
-                accepted_genuine_count += 1
-        elif ev['raw_judgment'].get('genuine'):
+            accepted_passes_quality = _passes_quality_bar(accepted_judgment)
+            ev['accepted_passes_quality'] = accepted_passes_quality
+            if accepted_passes_quality:
+                accepted_quality_count += 1
+            if material_revision:
+                material_revision_count += 1
+                refinement_judgment = _judge_refinement(
+                    candidate.claim,
+                    accepted_claim,
+                    args.judge_model,
+                )
+                ev['refinement_judgment'] = refinement_judgment
+                if refinement_judgment.get('thesis_preserved') and not refinement_judgment.get('watered_down'):
+                    thesis_preserved_revision_count += 1
+                else:
+                    watered_down_accepts += 1
+        elif ev['raw_passes_quality']:
             false_negatives += 1
         time.sleep(0.2)
 
-    raw_validity = genuine_raw_count / max(len(raw_insights), 1)
-    accepted_validity = accepted_genuine_count / max(accepted_count, 1)
+    raw_validity = raw_quality_count / max(len(raw_insights), 1)
+    accepted_validity = accepted_quality_count / max(accepted_count, 1)
     precision_lift = accepted_validity - raw_validity if accepted_count else -raw_validity
-    false_negative_rate = false_negatives / max(genuine_raw_count, 1)
+    false_negative_rate = false_negatives / max(raw_quality_count, 1)
+    benchmark_exercised = (
+        material_revision_count > 0 or
+        any(v > 0 for k, v in verdict_counts.items() if k != 'accept')
+    )
+    critic_action_count = material_revision_count + sum(
+        v for k, v in verdict_counts.items() if k != 'accept'
+    )
 
     passed = (
         len(raw_insights) >= args.min_insights
         and accepted_count > 0
+        and benchmark_exercised
         and accepted_validity >= raw_validity
         and accepted_validity >= 0.65
         and false_negative_rate <= 0.40
+        and watered_down_accepts == 0
     )
 
     report = {
@@ -208,14 +331,21 @@ def main():
         },
         'summary': {
             'raw_deep_insights': len(raw_insights),
-            'raw_genuine_count': genuine_raw_count,
+            'raw_quality_count': raw_quality_count,
+            'raw_genuine_count': raw_quality_count,
             'raw_validity': round(raw_validity, 3),
             'accepted_count': accepted_count,
-            'accepted_genuine_count': accepted_genuine_count,
+            'accepted_quality_count': accepted_quality_count,
+            'accepted_genuine_count': accepted_quality_count,
             'accepted_validity': round(accepted_validity, 3),
             'precision_lift': round(precision_lift, 3),
             'false_negative_rate': round(false_negative_rate, 3),
             'verdict_breakdown': verdict_counts,
+            'material_revision_count': material_revision_count,
+            'critic_action_count': critic_action_count,
+            'benchmark_exercised': benchmark_exercised,
+            'thesis_preserved_revision_count': thesis_preserved_revision_count,
+            'watered_down_accepts': watered_down_accepts,
             'PASS': passed,
         },
         'evaluations': evaluations,
@@ -233,6 +363,8 @@ def main():
     print(f"Accepted validity       : {accepted_validity:.2%}")
     print(f"Precision lift          : {precision_lift:+.2%}")
     print(f"False-negative rate     : {false_negative_rate:.2%}")
+    print(f"Critic exercised        : {benchmark_exercised} (actions={critic_action_count}, material revisions={material_revision_count})")
+    print(f"Watered-down accepts    : {watered_down_accepts}")
     verdict = 'PASS' if passed else 'FAIL'
     print(f"\nOVERALL VERDICT: {verdict}")
     print(f"Full report saved to: {args.out}")

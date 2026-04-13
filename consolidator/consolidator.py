@@ -366,6 +366,26 @@ class Consolidator:
         if not node_lines:
             return
 
+        # Skip synthesis when recent ideas are semantically incoherent.
+        # This prevents forcing synthetic links across unrelated topics.
+        pair_sims = []
+        for i in range(len(sample_ids)):
+            for j in range(i + 1, len(sample_ids)):
+                emb_i = self._get_node_embedding(sample_ids[i])
+                emb_j = self._get_node_embedding(sample_ids[j])
+                if emb_i is None or emb_j is None:
+                    continue
+                pair_sims.append(self._cosine(emb_i, emb_j))
+
+        if pair_sims:
+            avg_sim = sum(pair_sims) / len(pair_sims)
+            if avg_sim < THRESHOLDS.SYNTHESIS_COHESION:
+                print(
+                    f"    Synthesis skipped (low cohesion avg={avg_sim:.2f} "
+                    f"< {THRESHOLDS.SYNTHESIS_COHESION:.2f})"
+                )
+                return
+
         raw = self._llm(SYNTHESIS_PROMPT.format(
             nodes="\n\n".join(node_lines)
         ), temperature=0.6)
