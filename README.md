@@ -1,8 +1,3 @@
-
-‎README.md‎
-+111
-Lines changed: 111 additions & 0 deletions
-Original file line number	Diff line number	Diff line change
 # AutoScientist
 
 > An autonomous scientific reasoning agent — powered by local LLMs via [Ollama](https://ollama.ai).
