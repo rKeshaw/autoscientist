@@ -16,11 +16,11 @@ The revised D2 suite now includes seven tests:
 | Test | File | What It Measures |
 |------|------|------------------|
 | T1 | `test_d2_question_quality.py` | Scientific usefulness of dream-generated questions |
-| T2 | `test_d2_insight_validity.py` | Raw validity of deep dream insights |
+| T2 | `test_d2_insight_validity.py` | Raw validity of deep dream insights, plus whether both `structural` and `isomorphism` slices were actually exercised |
 | T3 | `test_d2_mission_advance.py` | Calibration of mission-advance detection |
 | T4 | `test_d2_walk_diversity.py` | Coverage and revisit behavior during graph walks |
-| T5 | `test_d2_nrem_effectiveness.py` | Whether NREM reinforcement strengthens important edges |
-| T6 | `test_d2_critic_lift.py` | Raw-vs-critic validity, critic precision lift, and critic false negatives |
+| T5 | `test_d2_nrem_effectiveness.py` | Whether NREM reinforcement aligns with the replayed episodic trajectory |
+| T6 | `test_d2_critic_lift.py` | Raw-vs-critic validity, critic precision lift, critic false negatives, and whether refinements stay substantive |
 | T7 | `test_d2_buffer_promotion_quality.py` | Quality of deferred insights promoted later by the InsightBuffer |
 
 ## What Changed Relative To The Earlier Suite
@@ -64,7 +64,16 @@ python benchmark/dim2/report_d2.py
 
 `test_d2_critic_lift.py` keeps the raw Dreamer generation stage separate from
 the System 2 evaluation stage. That lets the benchmark answer the exact revised
-roadmap question: does the Critic make deep dream insights more trustworthy?
+roadmap question: does the Critic make deep dream insights more trustworthy
+without laundering them into generic, safer prose?
+
+`test_d2_insight_validity.py` now reports the generated depth mix explicitly.
+If the run never really exercises `isomorphism`, the benchmark fails rather
+than silently pretending the full deep-insight space was tested.
+
+`test_d2_nrem_effectiveness.py` now measures replay alignment directly instead
+of asking whether reinforced edges are globally "important." That better matches
+what the runtime actually does during NREM.
 
 `test_d2_buffer_promotion_quality.py` uses controlled deferred dream-like cases
 plus bridge context so the delayed-promotion mechanism can be tested
@@ -75,6 +84,7 @@ promotion at the right moment.
 
 Read the revised D2 results together:
 - If T2 is weak but T6 is strong, the Dreamer is creative but the Critic is doing useful filtering.
-- If T6 shows no lift, System 2 may be adding latency without improving deep insight quality.
+- If T6 shows no lift, or only passes because claims were watered down, System 2 may be adding latency without real scientific value.
 - If T7 is weak, the buffer may be storing plausible near-misses but promoting them unreliably.
+- If T2 shows almost no `isomorphism`, the Dreamer is not exercising the full high-depth insight space yet.
 - If T4 and T5 are strong while T2 and T6 are weak, the Dreamer may be useful for exploration but not yet for deep analogical insight generation.

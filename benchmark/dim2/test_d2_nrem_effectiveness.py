@@ -1,16 +1,26 @@
 """
 Dimension 2 — Test 5: NREM Effectiveness
 ========================================
-Measures whether the Non-Random Eye Movement (NREM) consolidation pass
-correctly identifies and reinforces the most conceptually important/useful
-edges based on usage patterns.
+Measures whether the NREM pass reinforces edges aligned with the replayed
+episodic trajectory, rather than merely selecting globally important edges.
 
-Pass criterion: Edges that receive NREM reinforcement are rated significantly
-more "conceptually important" by an LLM-judge than a random sample of unreinforced edges.
+This benchmark matches the actual runtime:
+- `dreamer.nrem_pass()` replays a recent episodic sequence
+- replay updates node activation
+- `brain.proximal_reinforce()` then boosts prioritized strong edges
+
+Pass criterion:
+- reinforced candidate edges must show higher replay-node overlap than
+  eligible unreinforced controls
+- reinforced candidate edges must contain a higher fraction of replay-path
+  edges than eligible unreinforced controls
+- the benchmark must actually exercise replay-aligned candidate edges
+
+Benchmark level:
+  - module-level
 
 Usage:
     python benchmark/dim2/test_d2_nrem_effectiveness.py \
-        --judge-model <ollama-model-name> \
         --out benchmark/dim2/results/d2_nrem_effectiveness.json
 """
 
@@ -19,58 +29,103 @@ import sys
 import json
 import time
 import argparse
-import random
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 CORPUS = [
-    {"id": "dna",              "title": "DNA"},
-    {"id": "natural_selection","title": "Natural selection"},
-    {"id": "mutation",         "title": "Mutation"},
+    {"id": "dna", "title": "DNA"},
+    {"id": "thermodynamics", "title": "Thermodynamics"},
+    {"id": "natural_selection", "title": "Natural selection"},
+    {"id": "neural_network", "title": "Artificial neural network"},
+    {"id": "game_theory", "title": "Game theory"},
 ]
 
-JUDGE_PROMPT = """
-You are evaluating the conceptual importance of a connection between two ideas in a knowledge graph.
-Rate how foundational, significant, or scientifically important this connection is on a scale of 1-5.
-1 = Trivial co-occurrence or unrelated.
-5 = A core defining relationship in the scientific domain.
-
-Idea A: "{node_a}"
-Idea B: "{node_b}"
-Connection/Relationship: "{edge_type}" (Narration: "{narration}")
-
-Respond EXACTLY in this JSON format:
-{{
-  "importance": <int 1-5>,
-  "reasoning": "<1 sentence explanation>"
-}}
-"""
 
 def fetch_wikipedia(title: str) -> str:
     import requests
+
     api = "https://en.wikipedia.org/w/api.php"
     params = {
-        "action": "query", "titles": title,
-        "prop": "extracts", "format": "json",
+        "action": "query",
+        "titles": title,
+        "prop": "extracts",
+        "format": "json",
+        "redirects": 1,
     }
-    resp = requests.get(api, params=params, timeout=20,
-                        headers={"User-Agent": "AutoScientist-Benchmark/2.0"})
+    resp = requests.get(
+        api,
+        params=params,
+        timeout=20,
+        headers={"User-Agent": "AutoScientist-Benchmark/2.0"},
+    )
     pages = resp.json().get("query", {}).get("pages", {})
     for page in pages.values():
         return page.get("extract", "")[:8000]
     return ""
 
+
+def _edge_key(u, v):
+    return tuple(sorted((u, v)))
+
+
+def _extract_replay_nodes(log, max_nodes: int = 4):
+    replay_nodes = []
+    for step in log.steps:
+        for nid in [step.from_id, step.to_id]:
+            if nid and nid not in replay_nodes:
+                replay_nodes.append(nid)
+            if len(replay_nodes) >= max_nodes:
+                return replay_nodes
+    return replay_nodes
+
+
+def _fallback_replay_nodes(brain, max_nodes: int = 4):
+    ranked = sorted(brain.graph.degree, key=lambda item: item[1], reverse=True)
+    return [nid for nid, _ in ranked[:max_nodes]]
+
+
+def _collect_candidate_edges(brain, weights_before, replay_nodes, replay_path_edges, threshold):
+    replay_set = set(replay_nodes)
+    candidates = []
+    for u, v, data in brain.graph.edges(data=True):
+        weight_before = weights_before.get((u, v), data.get("weight", 0.5))
+        if weight_before < threshold:
+            continue
+        node_u = brain.get_node(u) or {}
+        node_v = brain.get_node(v) or {}
+        replay_overlap = int(u in replay_set) + int(v in replay_set)
+        candidates.append({
+            "edge_u": u,
+            "edge_v": v,
+            "statement_u": node_u.get("statement", "")[:140],
+            "statement_v": node_v.get("statement", "")[:140],
+            "edge_type": data.get("type", "associated"),
+            "weight_before": round(weight_before, 3),
+            "replay_overlap": replay_overlap,
+            "touches_replay": replay_overlap > 0,
+            "is_replay_path_edge": _edge_key(u, v) in replay_path_edges,
+        })
+    return candidates
+
+
+def _mean(items, field):
+    if not items:
+        return 0.0
+    return sum(item[field] for item in items) / len(items)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--judge-model", default="llama3.1:70b")
     parser.add_argument("--out", default="benchmark/dim2/results/d2_nrem_effectiveness.json")
+    parser.add_argument("--candidate-threshold", type=float, default=0.60)
     args = parser.parse_args()
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
-    from graph.brain import Brain
+    from graph.brain import Brain, EdgeSource
     from embedding_index import EmbeddingIndex
     from ingestion.ingestor import Ingestor
     from observer.observer import Observer
@@ -79,21 +134,18 @@ def main():
     brain = Brain()
     emb_index = EmbeddingIndex(dimension=384)
 
-    from graph.brain import EdgeSource
     print("=" * 60)
-    print("PHASE 1: Ingestion")
+    print("PHASE 1: Loading or building shared graph")
     print("=" * 60)
 
-    # Load shared brain and index if available to save time
     brain_path = "benchmark/dim2/shared/brain.json"
     index_path = "benchmark/dim2/shared/embedding_index"
-    
     if os.path.exists(brain_path) and os.path.exists(index_path + ".json"):
         print("  Loading shared brain and index...")
         brain.load(brain_path)
         emb_index = EmbeddingIndex.load(index_path)
     else:
-        print("  Shared brain not found. Ingesting from scratch...")
+        print("  Shared graph not found. Ingesting benchmark corpus...")
         observer = Observer(brain)
         ingestor = Ingestor(brain, research_agenda=observer, embedding_index=emb_index)
         for article in CORPUS:
@@ -107,133 +159,129 @@ def main():
     dreamer = Dreamer(brain, research_agenda=observer)
 
     print("\n" + "=" * 60)
-    print("PHASE 2: Activating Graph via Dreams")
+    print("PHASE 2: Running REM cycles to create a recent trajectory")
     print("=" * 60)
-    # Run a couple of cycles so we have some activations
+    last_log = None
     for i in range(3):
-        print(f"  Walking dream cycle {i+1}...")
-        dreamer.dream(steps=20, run_nrem=False)
+        print(f"  Dream cycle {i + 1}/3...")
+        last_log = dreamer.dream(steps=20, run_nrem=False)
+
+    replay_nodes = _extract_replay_nodes(last_log or dreamer.dream(steps=8, run_nrem=False))
+    if len(replay_nodes) < 3:
+        replay_nodes = _fallback_replay_nodes(brain)
+
+    replay_path_edges = {
+        _edge_key(replay_nodes[i], replay_nodes[i + 1])
+        for i in range(len(replay_nodes) - 1)
+    }
 
     print("\n" + "=" * 60)
-    print("PHASE 3: Running NREM Pass")
+    print("PHASE 3: Seeding replay event and collecting candidate edges")
     print("=" * 60)
-    
-    # Take a snapshot of edge weights before
-    weights_before = {}
-    for u, v, d in brain.graph.edges(data=True):
-        weights_before[(u, v)] = d.get('weight', 0.5)
-        
-    print("  Seeding Hippocampal Replay buffer...")
-    # Find some random highly connected nodes to pretend they were involved in a critical event
-    if hasattr(brain, 'episodic') and len(brain.graph.nodes) > 2:
-        top_nodes = sorted(brain.graph.degree, key=lambda x: x[1], reverse=True)
-        replay_nodes = [n for n, _ in top_nodes[:3]]
-        brain.episodic.record("breakthrough", "Important insight discovered", replay_nodes)
+    print(f"  Replay nodes: {len(replay_nodes)}")
+    brain.episodic.record(
+        "benchmark_replay",
+        "Recent dream trajectory for NREM replay benchmark",
+        replay_nodes,
+    )
 
-    print("  Triggering NREM (Hippocampal Replay + proximal reinforcement)...")
+    weights_before = {
+        (u, v): data.get("weight", 0.5)
+        for u, v, data in brain.graph.edges(data=True)
+    }
+    candidates = _collect_candidate_edges(
+        brain,
+        weights_before,
+        replay_nodes,
+        replay_path_edges,
+        args.candidate_threshold,
+    )
+    candidate_replay_path_edges = sum(1 for item in candidates if item["is_replay_path_edge"])
+    print(f"  Candidate edges: {len(candidates)}")
+    print(f"  Candidate replay-path edges: {candidate_replay_path_edges}")
+
+    print("\n" + "=" * 60)
+    print("PHASE 4: Running NREM pass")
+    print("=" * 60)
     dreamer.nrem_pass()
 
-    # Track which edges got reinforced
-    reinforced_edges = []
-    unreinforced_edges = []
-    for u, v, d in brain.graph.edges(data=True):
-        w_before = weights_before.get((u, v), 0.5)
-        w_after = d.get('weight', 0.5)
-        # NREM usually boosts strongly active edges
-        if w_after > w_before and w_after > 0.60:
-            reinforced_edges.append((u, v, d))
+    reinforced = []
+    controls = []
+    for item in candidates:
+        edge = brain.get_edge(item["edge_u"], item["edge_v"]) or {}
+        weight_after = edge.get("weight", item["weight_before"])
+        enriched = dict(item)
+        enriched["weight_after"] = round(weight_after, 3)
+        enriched["reinforced"] = weight_after > item["weight_before"]
+        if enriched["reinforced"]:
+            reinforced.append(enriched)
         else:
-            unreinforced_edges.append((u, v, d))
+            controls.append(enriched)
 
-    print(f"  Edges reinforced: {len(reinforced_edges)}")
-    print(f"  Edges unreinforced: {len(unreinforced_edges)}")
+    mean_replay_overlap_reinforced = _mean(reinforced, "replay_overlap")
+    mean_replay_overlap_controls = _mean(controls, "replay_overlap")
+    replay_touch_fraction_reinforced = _mean(reinforced, "touches_replay")
+    replay_touch_fraction_controls = _mean(controls, "touches_replay")
+    replay_path_fraction_reinforced = _mean(reinforced, "is_replay_path_edge")
+    replay_path_fraction_controls = _mean(controls, "is_replay_path_edge")
 
-    if not reinforced_edges:
-         print("Warning: NREM did not significantly reinforce any edges above 0.60 threshold. Exiting.")
-         # fallback dummy data to allow script to generate report structure
-         reinforced_edges.append((list(brain.graph.nodes)[0], list(brain.graph.nodes)[1], {'weight': 0.7, 'type': 'associated'}))
+    benchmark_exercised = (
+        len(reinforced) > 0 and
+        len(controls) > 0 and
+        candidate_replay_path_edges > 0
+    )
 
-    # Evaluate a sample of both
-    test_reinf = random.sample(reinforced_edges, min(10, len(reinforced_edges)))
-    test_unreinf = random.sample(unreinforced_edges, min(10, len(unreinforced_edges)))
-
-    print("\n" + "=" * 60)
-    print("PHASE 4: Scoring Edges (LLM as Judge)")
-    print("=" * 60)
-
-    from llm_utils import llm_call, require_json
-
-    def eval_edges(edge_list, is_reinforced):
-        results = []
-        scores = []
-        for (u, v, d) in edge_list:
-             node_a = brain.get_node(u)
-             node_b = brain.get_node(v)
-             if not node_a or not node_b: continue
-             prompt = JUDGE_PROMPT.format(
-                 node_a=node_a['statement'],
-                 node_b=node_b['statement'],
-                 edge_type=d.get('type', 'associated'),
-                 narration=d.get('narration', '')
-             )
-             raw = llm_call(prompt, temperature=0.1, model=args.judge_model, role="precise")
-             try:
-                  res = require_json(raw, default={"importance": 0})
-                  score = int(res.get("importance", 0))
-             except:
-                  score = 0
-             scores.append(score)
-             results.append({
-                 "edge_u": u, "edge_v": v,
-                 "statement_u": node_a['statement'][:100],
-                 "statement_v": node_b['statement'][:100],
-                 "weight": d.get('weight', 0.5),
-                 "is_reinforced": is_reinforced,
-                 "importance": score
-             })
-             time.sleep(0.3)
-        return results, scores
-
-    print("  Evaluating Reinforced Edges...")
-    re_res, re_scores = eval_edges(test_reinf, True)
-    
-    print("  Evaluating Unreinforced Edges...")
-    unre_res, unre_scores = eval_edges(test_unreinf, False)
-
-    mean_reinf = sum(re_scores) / max(len(re_scores), 1)
-    mean_unreinf = sum(unre_scores) / max(len(unre_scores), 1)
-
-    # NREM should be selecting for more important edges
-    passed = mean_reinf > mean_unreinf
+    passed = (
+        benchmark_exercised and
+        mean_replay_overlap_reinforced > mean_replay_overlap_controls and
+        replay_touch_fraction_reinforced > replay_touch_fraction_controls and
+        replay_path_fraction_reinforced > replay_path_fraction_controls
+    )
 
     report = {
         "test": "D2 — NREM Effectiveness",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "config": {
-            "judge_model": args.judge_model
+            "judge_model": args.judge_model,
+            "candidate_threshold": args.candidate_threshold,
         },
         "summary": {
-            "reinforced_edges_evaluated": len(re_scores),
-            "unreinforced_edges_evaluated": len(unre_scores),
-            "mean_importance_reinforced": round(mean_reinf, 3),
-            "mean_importance_unreinforced": round(mean_unreinf, 3),
-            "PASS": passed
+            "candidate_edges": len(candidates),
+            "candidate_replay_path_edges": candidate_replay_path_edges,
+            "reinforced_edges_evaluated": len(reinforced),
+            "unreinforced_edges_evaluated": len(controls),
+            "mean_replay_overlap_reinforced": round(mean_replay_overlap_reinforced, 3),
+            "mean_replay_overlap_unreinforced": round(mean_replay_overlap_controls, 3),
+            "replay_touch_fraction_reinforced": round(replay_touch_fraction_reinforced, 3),
+            "replay_touch_fraction_unreinforced": round(replay_touch_fraction_controls, 3),
+            "replay_path_fraction_reinforced": round(replay_path_fraction_reinforced, 3),
+            "replay_path_fraction_unreinforced": round(replay_path_fraction_controls, 3),
+            "benchmark_exercised": benchmark_exercised,
+            "PASS": passed,
         },
-        "reinforced_evaluations": re_res,
-        "unreinforced_evaluations": unre_res
+        "replay_nodes": replay_nodes,
+        "replay_path_edges": sorted(replay_path_edges),
+        "reinforced_edges": reinforced,
+        "unreinforced_edges": controls,
     }
 
-    with open(args.out, "w") as f:
+    with open(args.out, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
     print("\n" + "=" * 60)
     print("RESULTS — D2: NREM Effectiveness")
     print("=" * 60)
-    print(f"Mean Importance (Reinforced)  : {mean_reinf:.2f} (pass if > Unreinforced)")
-    print(f"Mean Importance (Unreinforced): {mean_unreinf:.2f}")
+    print(f"Candidate edges                : {len(candidates)}")
+    print(f"Reinforced candidate edges     : {len(reinforced)}")
+    print(f"Unreinforced candidate edges   : {len(controls)}")
+    print(f"Replay overlap (reinforced)    : {mean_replay_overlap_reinforced:.3f}")
+    print(f"Replay overlap (controls)      : {mean_replay_overlap_controls:.3f}")
+    print(f"Replay-path frac (reinforced)  : {replay_path_fraction_reinforced:.2%}")
+    print(f"Replay-path frac (controls)    : {replay_path_fraction_controls:.2%}")
     verdict = "PASS ✓" if passed else "FAIL ✗"
     print(f"\nOVERALL VERDICT: {verdict}")
     print(f"Full report saved to: {args.out}")
+
 
 if __name__ == "__main__":
     main()

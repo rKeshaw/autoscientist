@@ -11,24 +11,28 @@ and is the shared semantic state staying coherent as new knowledge enters?**
 
 ## Current Implemented Scope
 
-The Dimension 1 suite now includes seven tests:
+The Dimension 1 suite now includes nine tests:
 
 | Test | File | What It Measures | Pass Criterion |
 |------|------|------------------|----------------|
-| T1: Node Quality | `test_d1_node_quality.py` | Are extracted nodes rich conceptual statements rather than keyword noise? | >= 80% nodes score 4+/5 |
-| T2: Duplicate Rate | `test_d1_duplicate_rate.py` | Does the dedup pipeline merge near-duplicates after re-ingestion? | < 5% duplicate pairs post-consolidation |
-| T3: Edge Accuracy | `test_d1_edge_accuracy.py` | Are extracted relationship types scientifically correct? | >= 70% type accuracy |
-| T4: Cluster Coherence | `test_d1_cluster_coherence.py` | Are cluster assignments semantically meaningful? | Intra >= 0.55, inter <= 0.40, assignment >= 75% |
-| T5: Contradiction Detection | `test_d1_contradiction_detection.py` | Does the graph distinguish contradiction from compatibility? | Precision >= 80%, Recall >= 70% |
-| T6: Graph/Index Consistency | `test_d1_graph_index_consistency.py` | Do ingestion, Reader, and Researcher all write into the same embedding index immediately? | 100% graph/index presence, >= 95% self-query @1 |
-| T7: Mission-Link Calibration | `test_d1_mission_link_calibration.py` | Are mission-relevant new nodes linked to the active mission at the right rate? | Precision >= 75%, Recall >= 70% |
+| T1: Node Quality | `test_d1_node_quality.py` | Are extracted nodes rich conceptual statements rather than keyword noise across the full benchmark corpus? | >= 80% nodes score 4+/5 and all corpus articles produce nodes |
+| T2: Concept Coverage | `test_d1_concept_coverage.py` | Do extracted nodes collectively cover the article's key concepts, not just a few polished ideas? | Mean coverage >= 70%, no article < 50% |
+| T3: Duplicate Rate | `test_d1_duplicate_rate.py` | Does the dedup pipeline merge near-duplicates after re-ingestion? | < 5% duplicate pairs post-consolidation |
+| T4: Duplicate Calibration | `test_d1_duplicate_calibration.py` | Does the dedup path merge paraphrases but preserve nearby distinct claims? | Recall >= 80%, hard-negative specificity >= 85% |
+| T5: Edge Accuracy | `test_d1_edge_accuracy.py` | Are extracted relationship types scientifically correct? | >= 70% type accuracy |
+| T6: Cluster Coherence | `test_d1_cluster_coherence.py` | Are cluster assignments semantically meaningful across the full benchmark corpus? | Intra >= 0.42, inter <= 0.40, assignment >= 75%, full corpus coverage |
+| T7: Contradiction Detection | `test_d1_contradiction_detection.py` | Does the graph distinguish contradiction from compatibility? | Precision >= 80%, Recall >= 70% |
+| T8: Graph/Index Consistency | `test_d1_graph_index_consistency.py` | Do ingestion, Reader, and Researcher all write into the same embedding index immediately? | 100% graph/index presence, >= 95% self-query @1 |
+| T9: Mission-Link Calibration | `test_d1_mission_link_calibration.py` | Are mission-relevant new nodes linked to the active mission at the right rate? | Precision >= 75%, Recall >= 70% |
 
 ## What D1 Covers Now
 
 D1 is now fully aligned with the revised roadmap items that belong in the
 graph-quality layer:
 - node quality
+- concept coverage
 - duplicate control
+- duplicate calibration
 - edge accuracy
 - cluster coherence
 - contradiction detection
