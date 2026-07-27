@@ -495,6 +495,14 @@ class Observer:
         print(f"── Observer done ──\n")
 
     def observe(self, log: DreamLog):
+        # Figure 1 places the Observer between the Dreamer and System 2, suggesting it
+        # gates which analogies reach the Critic. Here the Dreamer classifies insight
+        # depth itself during dream() and routes structural/isomorphism candidates to
+        # the Critic directly (see the post-dream review block); this method runs
+        # afterward on the completed log and only flags cross-cluster coherence for the
+        # agenda (_check_cross_cluster_insights) -- it does not accept, reject, or
+        # create edges. Splitting it this way means a candidate is scored by the Critic
+        # once, not gated twice before it gets there.
         self._observe_internal(
             log, increment_cycle=True, increment_incubation=True
         )
