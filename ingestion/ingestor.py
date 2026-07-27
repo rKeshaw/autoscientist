@@ -436,7 +436,7 @@ class Ingestor:
                 hyp = {'statement': hyp}
             elif not isinstance(hyp, dict):
                 continue
-                
+
             stmt = hyp.get('statement', '')
             if not isinstance(stmt, str) or not stmt.strip():
                 continue
@@ -477,6 +477,15 @@ class Ingestor:
                             self.brain.update_node(nid, importance=min(1.0, node.get('importance', 0.5) + 0.3))
 
         # extract edges
+        #
+        # Section 4.1 lists structural_analogy among the edge types the graph supports but
+        # does not say when they are assigned. They can be assigned here, at ingestion:
+        # EDGE_EXTRACTION_PROMPT offers the analogy types alongside supports/causes/
+        # associated. The loop runs over new_node_ids only, so it compares propositions
+        # drawn from the text currently being read and cannot pair two propositions that
+        # originate in different documents. The exception is the enrichment path in
+        # _process_statement (see the note there), which can place an existing node from an
+        # earlier document into this list.
         for i in range(len(new_node_ids)):
             for j in range(i + 1, len(new_node_ids)):
                 id_a, id_b = new_node_ids[i], new_node_ids[j]
@@ -609,6 +618,14 @@ class Ingestor:
                 print(f"  Upgraded to HYPOTHESIS")
             else:
                 print(f"  Enriched existing (sim={best_similarity:.2f})")
+            # Returning the existing id rather than a new one means the caller appends an
+            # id created while reading an earlier text to the current text's new_node_ids.
+            # A single node can therefore carry content from two documents, and the edge
+            # loop above will compare it against the current text's propositions. Section
+            # 4.1 describes deduplication as preventing graph bloat and mapping logical
+            # tensions; this second effect on cluster membership is not described there,
+            # and it is why the two clusters in Section 5.2 are not always as cleanly
+            # separated as the text implies.
             return best_match_id
 
         cluster = self._llm(
