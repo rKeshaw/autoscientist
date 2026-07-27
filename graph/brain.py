@@ -112,6 +112,12 @@ class Brain:
     MAX_WORKING_MEMORY = 10   # top items under active investigation
 
     def __init__(self, decay_rate: float = 0.01, scientificness: float = 0.7):
+        # Section 3.1 describes G as a multigraph, with multiple typed edges allowed
+        # between the same node pair. This is a simple DiGraph: at most one edge per
+        # ordered pair. A relationship discovered between an already-connected pair
+        # updates that edge's type and weight in place instead of adding a second one
+        # (see Dreamer's post-review handling), and _score_edge scores a single edge
+        # per pair rather than aggregating over several.
         self.graph           = nx.DiGraph()
         self.decay_rate      = decay_rate
         self.scientificness  = scientificness
@@ -119,7 +125,7 @@ class Brain:
         self._mode: BrainMode = BrainMode.WANDERING
         self._suspended_mission: Optional[dict] = None
         self.working_memory: list[str] = []  # ordered list of node IDs
-        
+
         # Neuromodulators
         self.dopamine: float    = 0.5
         self.frustration: float = 0.0
@@ -331,6 +337,13 @@ class Brain:
 
     def restructure_around_insight(self, node_a_id: str, node_b_id: str,
                                    narration: str, edge_type: str = "") -> dict:
+        # The paper defines three ways omega changes: the Hebbian increment during NREM
+        # (Appendix A.3), the temporal decay of Eq. 1, and promotion out of the Delayed
+        # Insight Buffer once kappa crosses threshold. This fourth path is not among them.
+        # It fires when an insight survives System 2 and reinforces every edge incident to
+        # either endpoint, scaled by the insight's own classified depth. Appendix C.1 uses
+        # the Critic's verdict as a reward for the Thinker's bandit; here the same verdict
+        # also feeds back into the graph weights, which the paper does not state.
         strength_map = {
             "deep_isomorphism":   1.0,
             "structural_analogy": 0.6,
@@ -404,7 +417,7 @@ class Brain:
             self.dopamine = max(0.5, self.dopamine - (0.3 * elapsed_days))
         elif self.dopamine < 0.5:
             self.dopamine = min(0.5, self.dopamine + (0.3 * elapsed_days))
-            
+
         # Frustration decays slowly to 0.0
         if self.frustration > 0.0:
             self.frustration = max(0.0, self.frustration - (0.2 * elapsed_days))
@@ -412,6 +425,10 @@ class Brain:
     # ── Decay ────────────────────────────────────────────────────────────────
 
     def apply_decay(self, elapsed_days: float = 1.0):
+        # Eq. 1 defines lambda_q as source-quality-dependent per edge (literature-sourced
+        # edges decay slower than dream-sourced ones). This applies one rate to every
+        # non-exempt edge. Source-quality-dependent decay is implemented at the node
+        # level (Node.source_quality, see Consolidator._apply_decay), not the edge level.
         self.apply_neuromodulator_decay(elapsed_days)
         half_life_days = 1.0 / max(self.decay_rate, 1e-9)
         decay_factor = 0.5 ** (elapsed_days / half_life_days)
@@ -427,8 +444,24 @@ class Brain:
     def save(self, path: str = "data/brain.json"):
         import os
         os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
+        # networkx writes edge endpoints under "source"/"target". The Edge dataclass has
+        # its own `source` (EdgeSource provenance), so the endpoint overwrites it and the
+        # provenance is lost on every round trip — which is why edge phase attribution had
+        # to be reconstructed from created_at timestamps. Re-attach it under a key that
+        # does not collide. Read back by load() below; older files simply lack the key.
+        gdata = nx.node_link_data(self.graph)
+        _links = gdata.get("links") or gdata.get("edges") or []
+        _prov = {}
+        for u, v, attrs in self.graph.edges(data=True):
+            s = attrs.get("source")
+            _prov[(u, v)] = s.value if isinstance(s, EdgeSource) else s
+        for rec in _links:
+            p = _prov.get((rec.get("source"), rec.get("target")))
+            if p is not None:
+                rec["edge_source"] = p
+
         data = {
-            "graph":   nx.node_link_data(self.graph),
+            "graph":   gdata,
             "mission": self.mission,
             "suspended_mission": self._suspended_mission,
             "mode":    self._mode.value,
@@ -452,6 +485,13 @@ class Brain:
 
         if "graph" in raw and "nodes" not in raw:
             self.graph              = nx.node_link_graph(raw["graph"])
+            # Restore provenance saved under the non-colliding key (see save()). After
+            # node_link_graph, each edge's "source" attribute holds the endpoint id, not
+            # the EdgeSource it was created with.
+            for rec in (raw["graph"].get("links") or raw["graph"].get("edges") or []):
+                p = rec.get("edge_source")
+                if p is not None and self.graph.has_edge(rec["source"], rec["target"]):
+                    self.graph[rec["source"]][rec["target"]]["source"] = p
             self.mission            = raw.get("mission")
             self._suspended_mission = raw.get("suspended_mission")
             cfg                     = raw.get("config", {})
