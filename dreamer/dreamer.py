@@ -12,11 +12,23 @@ from embedding import embed as shared_embed
 from llm_utils import llm_call, require_json
 
 # ── Config ────────────────────────────────────────────────────────────────────
+#
+# Appendix A.2 / Table 1 call the mode parameter "sampling temperature" and give
+# sigma_m = 0.10 (focused), 0.35 (wandering), 0.50 (transitional) with c_sigma = 1.00.
+# DEFAULT_TEMP and the 0.3 multiplier in _score_edge's noise term produce an effective
+# noise scale of ~0.21 (focused) to ~0.24 (wandering) instead, so the implemented
+# contrast between the two modes is roughly 1.14x where the paper specifies 3.5x.
+#
+# The term is a noise scale on unnormalised scores, not a softmax temperature on logits.
+# One consequence follows directly from Eq. 3: the perturbation is added to the visited
+# branch (gamma_visit * w - beta_visit) before the Eq. 4 clip at s_min, so raising it
+# increases the chance that an already-visited node clears the floor and re-enters
+# contention. Revisiting therefore rises with the parameter.
 
 DEFAULT_STEPS       = 20
 DEFAULT_TEMP        = 0.7
 DEPTH_STEPS         = 3
-VISITED_PENALTY     = 0.45
+VISITED_PENALTY     = 0.45   # Table 1 gives beta_visit = 0.50
 
 # mode modifiers
 MODE_TEMP_BOOST = {
@@ -103,6 +115,10 @@ Classify any insight strictly:
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
 GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+
+REQUIRED: end your reply with exactly one line, flush left, no bullet, no bold, nothing else on it:
+INSIGHT: none
+(or surface, or structural, or isomorphism). Omitting this line makes the reply unusable.
 """
 
 NARRATION_WANDERING = """
@@ -125,6 +141,10 @@ Classify any insight strictly:
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
 GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+
+REQUIRED: end your reply with exactly one line, flush left, no bullet, no bold, nothing else on it:
+INSIGHT: none
+(or surface, or structural, or isomorphism). Omitting this line makes the reply unusable.
 """
 
 NARRATION_TRANSITIONAL = """
@@ -152,6 +172,10 @@ Classify any insight strictly:
 WARNING: Avoid superficial analogies.
 BAD structural insight: "Both mitochondria and server farms produce energy." (This is merely a surface analogy).
 GOOD structural insight: "The process of synaptic pruning during REM sleep structurally maps to simulated annealing escaping local minima via stochastic noise."
+
+REQUIRED: end your reply with exactly one line, flush left, no bullet, no bold, nothing else on it:
+INSIGHT: none
+(or surface, or structural, or isomorphism). Omitting this line makes the reply unusable.
 """
 
 MISSION_ADVANCE_PROMPT = """
@@ -225,7 +249,7 @@ It connects to: "{question}"
 Connection: {explanation}
 
 Explore this in 2-3 sentences. Be technically precise. DO NOT write qualitative fluff.
-End with ONE highly specific, empirically testable research question starting with "Q:". 
+End with ONE highly specific, empirically testable research question starting with "Q:".
 The question MUST propose a specific measurement, variable, or intervention. Avoid generic inquiries.
 """
 
@@ -460,13 +484,20 @@ class Dreamer:
             weight = (weight * 0.1) - VISITED_PENALTY
 
         noise = random.gauss(0, temperature * 0.3)
-        return max(0.001, weight + noise)
+        return max(0.001, weight + noise)   # Appendix A.2 lists s_min = 0.01
 
     # ── Single hop ────────────────────────────────────────────────────────────
 
     def _hop(self, current_id, temperature, scientificness, visited):
         neighbors = self.brain.neighbors(current_id)
         if not neighbors:
+            # Dead-end re-entry. The paper describes traversal only through Eq. 2, which
+            # samples from the outgoing neighbourhood of the current node. This branch is
+            # outside that formulation and is not documented in the paper, but it is what
+            # allows the walk to reach a different connected component: Eq. 2 alone defines
+            # a reducible chain, so on a graph with two components no setting of the noise
+            # scale can cross between them. Where ingestion leaves the clusters genuinely
+            # unbridged, this is the only crossing mechanism available.
             all_ids   = [nid for nid, _ in self.brain.all_nodes()]
             unvisited = [n for n in all_ids if n not in visited]
             return random.choice(unvisited if unvisited else all_ids), None
@@ -529,7 +560,8 @@ class Dreamer:
             narration=narration), temperature=0.1)
         try:
             result = require_json(raw, default={})
-            strength = float(result.get('strength', 0.0))
+            # `or 0.0` guards an explicit JSON null, which .get's default does not
+            strength = float(result.get('strength') or 0.0)
             is_adv = result.get('advances', False) and strength > 0.5
             return is_adv, result.get('explanation', ''), strength
         except (json.JSONDecodeError, ValueError):
@@ -539,18 +571,26 @@ class Dreamer:
     # ── Parse narration ───────────────────────────────────────────────────────
 
     def _parse_narration(self, raw):
+        # Models do not reliably emit these markers flush-left and unadorned: observed
+        # variants include leading whitespace, "- INSIGHT:", and "**INSIGHT: structural**".
+        # Matching on the raw line silently discarded those, which cost the classification
+        # entirely (no insight, no edge, no trace). Normalise the line before matching, and
+        # strip markdown/punctuation off the depth token.
         question = ""
         is_insight = False
         insight_depth = ""
         clean = []
         for line in raw.strip().split('\n'):
-            if line.startswith("Q:"):
-                question = line[2:].strip()
-            elif line.upper().startswith("INSIGHT:"):
-                rest = line.split(":", 1)[1].strip().lower()
-                if rest != "none":
-                    is_insight = True
-                    insight_depth = rest.split()[0] if rest.split() else ""
+            marker = line.strip().lstrip("-*#> ").replace("**", "").strip()
+            if marker.startswith("Q:"):
+                question = marker[2:].strip()
+            elif marker.upper().startswith("INSIGHT:"):
+                rest = marker.split(":", 1)[1].strip().lower()
+                if not rest.startswith("none"):
+                    token = rest.split()[0].strip("*_.,:;()[]") if rest.split() else ""
+                    if token:
+                        is_insight = True
+                        insight_depth = token
             else:
                 clean.append(line)
         return " ".join(clean).strip(), question, is_insight, insight_depth
@@ -587,7 +627,7 @@ class Dreamer:
                 current_data['statement'], edge_type,
                 edge_narration, next_data['statement']), temperature=0.5)
             narration, _, is_insight, depth = self._parse_narration(raw)
-            
+
             mission_advance = False
             mission_strength = 0.0
             if mission:
@@ -597,7 +637,7 @@ class Dreamer:
                 step=step_offset+d, from_id=current_id, to_id=next_id,
                 edge_type=edge_type, edge_narration=edge_narration,
                 narration=narration, is_insight=is_insight,
-                insight_depth=depth, mission_advance=mission_advance, 
+                insight_depth=depth, mission_advance=mission_advance,
                 mission_strength=mission_strength)
             log.steps.append(ds)
             visited.add(next_id)
@@ -610,8 +650,10 @@ class Dreamer:
 
     def nrem_pass(self):
         print("\n── NREM pass ──")
-        
+
         # Hippocampal Replay
+        # EpisodicStrip.get_sequence defaults to k_replay=5, matching Appendix A.3/C.5;
+        # this call overrides it to 3.
         if hasattr(self.brain, 'episodic'):
             sequence = self.brain.episodic.get_sequence(sequence_length=3)
             if sequence:
@@ -621,7 +663,7 @@ class Dreamer:
                     for nid in getattr(event, 'nodes_involved', []):
                         if self.brain.get_node(nid):
                             self.brain.update_node(nid, activated_at=time.time())
-                            
+
         self.brain.proximal_reinforce()
         print("── NREM complete ──\n")
 
@@ -691,7 +733,7 @@ class Dreamer:
             mission_advance = False
             mission_explanation = ""
             mission_strength = 0.0
-            
+
             if mission:
                 mission_advance, mission_explanation, mission_strength = \
                     self._check_mission_advance(next_node, narration)
@@ -722,17 +764,27 @@ class Dreamer:
 
             # new edge on insight
             new_edge = False
-            if is_insight and insight_depth:
-                type_map = {
-                    "surface":     EdgeType.SURFACE_ANALOGY,
-                    "structural":  EdgeType.STRUCTURAL_ANALOGY,
-                    "isomorphism": EdgeType.DEEP_ISOMORPHISM,
-                }
-                etype = type_map.get(insight_depth, EdgeType.STRUCTURAL_ANALOGY)
-                
+            type_map = {
+                "surface":     EdgeType.SURFACE_ANALOGY,
+                "structural":  EdgeType.STRUCTURAL_ANALOGY,
+                "isomorphism": EdgeType.DEEP_ISOMORPHISM,
+            }
+            etype = type_map.get(insight_depth) if (is_insight and insight_depth) else None
+            if is_insight and insight_depth and etype is None:
+                # An unrecognised depth label previously defaulted to STRUCTURAL_ANALOGY.
+                # That both granted the 0.55 analogy weight floor and — because the review
+                # gate below tested the raw label string rather than the mapped type —
+                # skipped System 2 entirely. Observed labels reaching here include
+                # "structural," (trailing comma) and "none". Discard instead of promoting.
+                print(f"            [narration] unrecognised insight depth "
+                      f"{insight_depth!r} — ignoring")
+            if etype is not None:
                 # ── System 2 gating for high-stakes analogies ──
-                requires_review = self.critic is not None and insight_depth in ["structural", "isomorphism"]
-                
+                # Gate on the mapped type, not the raw string, so a label that maps to a
+                # high-stakes type cannot bypass review on a formatting difference.
+                requires_review = self.critic is not None and etype in (
+                    EdgeType.STRUCTURAL_ANALOGY, EdgeType.DEEP_ISOMORPHISM)
+
                 if not requires_review:
                     if not (self.brain.graph.has_edge(current_id, next_id) or
                             self.brain.graph.has_edge(next_id, current_id)):
@@ -835,6 +887,12 @@ class Dreamer:
                 from critic.critic import CandidateThought, Verdict
                 for ins in pending:
                     depth = ins["depth"]
+                    if ins["from_node_id"] == ins["to_node_id"]:
+                        # A node is not isomorphic to itself; without this the walk's
+                        # self-transitions become accepted deep_isomorphism self-loops.
+                        print(f"            [System 2] skipped self-pair "
+                              f"{ins['from_node_id'][:8]}")
+                        continue
                     candidate = CandidateThought(
                         claim=ins["narration"],
                         source_module="dreamer",
@@ -848,16 +906,36 @@ class Dreamer:
                     if critic_log.verdict == Verdict.ACCEPT:
                         etype = EdgeType.DEEP_ISOMORPHISM if depth == "isomorphism" else EdgeType.STRUCTURAL_ANALOGY
                         final_claim = critic_log.refinement_note or candidate.claim
-                        if not (self.brain.graph.has_edge(candidate.node_a_id, candidate.node_b_id) or
-                                self.brain.graph.has_edge(candidate.node_b_id, candidate.node_a_id)):
+                        a_id, b_id = candidate.node_a_id, candidate.node_b_id
+                        existing_dir = (a_id, b_id) if self.brain.graph.has_edge(a_id, b_id) else (
+                            (b_id, a_id) if self.brain.graph.has_edge(b_id, a_id) else None)
+                        if existing_dir is None:
                             dream_edge = Edge(
                                 type=etype, narration=final_claim,
                                 weight=ANALOGY_WEIGHTS.get(etype, 0.4),
                                 confidence=critic_log.confidence, source=EdgeSource.DREAM,
                                 analogy_depth=depth)
-                            self.brain.add_edge(candidate.node_a_id, candidate.node_b_id, dream_edge)
+                            self.brain.add_edge(a_id, b_id, dream_edge)
+                        else:
+                            # Brain.graph is a simple DiGraph, so a confirmed deeper analogy
+                            # cannot be added alongside an existing edge. Upgrade in place
+                            # instead of dropping it, which is what previously made accepted
+                            # deep_isomorphism results invisible on dense (clique-like) graphs.
+                            u, v = existing_dir
+                            cur = self.brain.get_edge(u, v) or {}
+                            cur_w = ANALOGY_WEIGHTS.get(EdgeType(cur['type']), 0.0) \
+                                if cur.get('type') in {e.value for e in EdgeType} else 0.0
+                            if ANALOGY_WEIGHTS.get(etype, 0.4) > cur_w:
+                                self.brain.update_edge(
+                                    u, v, type=etype.value, narration=final_claim,
+                                    weight=max(cur.get('weight', 0.0),
+                                               ANALOGY_WEIGHTS.get(etype, 0.4)),
+                                    confidence=critic_log.confidence,
+                                    analogy_depth=depth)
+                                print(f"            [System 2] upgraded {u[:8]}->{v[:8]} "
+                                      f"to {etype.value}")
                         self.brain.restructure_around_insight(
-                            candidate.node_a_id, candidate.node_b_id, 
+                            candidate.node_a_id, candidate.node_b_id,
                             final_claim, edge_type=etype.value
                         )
                     elif critic_log.verdict == Verdict.DEFER:
