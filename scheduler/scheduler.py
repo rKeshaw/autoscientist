@@ -419,6 +419,11 @@ class SalienceScheduler:
 
     def _salience_monitor(self):
         """Monitors neuromodulators to dynamically alter task priority."""
+        # Appendix C.6 describes continuous scoring over semantic proximity to the
+        # mission, neuromodulator state, and time-in-queue. This checks two thresholds
+        # against scalar dopamine/frustration values -- no embedding call per queued
+        # task on every tick -- with _background_scheduler's round-robin covering
+        # phases while neither threshold is crossed, so none of them starve.
         while self._running:
             # If Dopamine is very high, forcefully push a FOCUSED_THINKING event
             if getattr(self.brain, 'dopamine', 0.5) > 0.8:
@@ -426,7 +431,7 @@ class SalienceScheduler:
                 self.submit_task("thinking", TaskPriority.HIGH)
                 # Slightly deplete dopamine so we don't spam
                 self.brain.dopamine *= 0.8
-                
+
             # If Frustration is very high, maybe push a reading or wandering dream
             if getattr(self.brain, 'frustration', 0.0) > 0.8:
                 print(f"  [Salience Network] HIGH FRUSTRATION DETECTED! Pushing wandering dream to reset.")
@@ -444,7 +449,7 @@ class SalienceScheduler:
                 phase = phases_cycle[idx % len(phases_cycle)]
                 self.submit_task(phase, TaskPriority.BACKGROUND)
                 idx += 1
-            # Sleep seconds between background tasks 
+            # Sleep seconds between background tasks
             for _ in range(60):
                 if not self._running:
                     break
