@@ -153,11 +153,14 @@ Respond in 2-4 sentences. Be honest — a narrower true claim is better than a b
 VERDICT_PROMPT = """You are System 2 delivering a final verdict on a candidate thought.
 
 ORIGINAL CLAIM: "{claim}"
-
+{depth_block}
+{nodes_block}
 ADVERSARIAL DIALOGUE:
 {dialogue_text}
 
-Based on this dialogue, deliver your verdict.
+Based on this dialogue AND the source/target statements above (not just the dialogue's
+paraphrase of them), deliver your verdict. If node statements are given, check the claim
+against them directly — a dialogue can drift from what the two nodes actually say.
 
 Verdict definitions:
 - ACCEPT: The claim survived scrutiny. The defense addressed challenges adequately.
@@ -169,6 +172,8 @@ Verdict definitions:
   the core challenge. Log the reason for rejection.
 - DEFER: Not enough evidence to decide. The claim might be right but we
   cannot verify it now. Save for later re-evaluation as more knowledge arrives.
+
+{depth_rubric}
 
 Confidence rubric (if ACCEPT):
 - 0.50-0.65: Provisionally accepted — plausible but needs further evidence.
@@ -186,6 +191,31 @@ Respond with a JSON object:
 
 Respond ONLY with JSON. No preamble.
 """
+
+# Per-depth verdict bars. deep_isomorphism claims an exact formal/mathematical
+# equivalence, not a family resemblance — the verdict step needs to hold it to
+# that, since the depth label is otherwise decided upstream (Dreamer classification)
+# and never checked again downstream.
+DEPTH_VERDICT_RUBRIC = {
+    "deep_isomorphism": (
+        "This claim was proposed as deep_isomorphism: an EXACT formal/mathematical "
+        "equivalence between the two mechanisms, not a loose family resemblance. "
+        "REJECT or REFINE (down to structural_analogy) unless the dialogue names the "
+        "specific corresponding variables/operations on both sides and they actually "
+        "match term-for-term. Shared vocabulary (\"risk\", \"stability\", \"cascade\", "
+        "\"robust\") is not evidence of equivalence — most claims at this depth should "
+        "NOT survive as deep_isomorphism."
+    ),
+    "structural_analogy": (
+        "This claim was proposed as structural_analogy: a 1-to-1 mechanistic mapping. "
+        "REJECT or REFINE unless the dialogue states the mechanism map explicitly "
+        "(which entity maps to which, which relation maps to which)."
+    ),
+}
+
+
+def _depth_rubric_for(edge_type: str) -> str:
+    return DEPTH_VERDICT_RUBRIC.get(edge_type, "")
 
 NOVELTY_CHECK_PROMPT = """You are checking whether a new claim is genuinely novel relative to existing knowledge.
 
@@ -345,7 +375,7 @@ class Critic:
 
         if log.verdict in (Verdict.REJECT, Verdict.REFINE):
             self.brain.increase_frustration(0.2)
-            
+
         return log
 
     # ── Adversarial dialogue ──────────────────────────────────────────────────
@@ -417,10 +447,34 @@ class Critic:
             for t in dialogue
         )
 
+        # edge_type (e.g. deep_isomorphism) is decided at classification time and,
+        # before this, was never re-checked at the verdict step — the Critic applied
+        # the same generic bar to every depth. Surface it here so the depth-specific
+        # rubric actually gets enforced.
+        claim_depth = candidate.edge_type or candidate.proposed_type
+        depth_block = f'PROPOSED DEPTH: "{claim_depth}"\n' if claim_depth else ""
+
+        # The dialogue transcript is a paraphrase that can drift from the source; give
+        # the verdict step direct access to what the two nodes actually say, the same
+        # statements _build_context already assembles for the challenge/defense turns.
+        node_lines = []
+        if candidate.node_a_id:
+            node_a = self.brain.get_node(candidate.node_a_id)
+            if node_a:
+                node_lines.append(f"[SOURCE NODE] {node_a['statement']}")
+        if candidate.node_b_id:
+            node_b = self.brain.get_node(candidate.node_b_id)
+            if node_b:
+                node_lines.append(f"[TARGET NODE] {node_b['statement']}")
+        nodes_block = ("\n".join(node_lines) + "\n") if node_lines else ""
+
         raw = llm_call(
             VERDICT_PROMPT.format(
                 claim=candidate.claim,
-                dialogue_text=dialogue_text
+                dialogue_text=dialogue_text,
+                depth_block=depth_block,
+                nodes_block=nodes_block,
+                depth_rubric=_depth_rubric_for(claim_depth)
             ),
             temperature=0.15,
             role="critic"
@@ -442,8 +496,14 @@ class Critic:
         }
         verdict = verdict_map.get(verdict_str, Verdict.DEFER)
 
-        # Enforce confidence floor for ACCEPT
-        confidence = float(result.get("confidence", 0.0))
+        # Enforce confidence floor for ACCEPT.
+        # .get(k, default) does not protect against an explicit JSON null: models
+        # (llama3.1:70b notably) emit "confidence": null, which returned None and
+        # raised TypeError in float().
+        try:
+            confidence = float(result.get("confidence") or 0.0)
+        except (TypeError, ValueError):
+            confidence = 0.0
         if verdict == Verdict.ACCEPT and confidence < CRITIC_CFG.ACCEPT_CONFIDENCE_FLOOR:
             verdict = Verdict.DEFER
             result["reason"] = (f"Confidence {confidence:.2f} below floor "
