@@ -152,7 +152,7 @@ class InsightBuffer:
         Called once per consolidation cycle.
         """
         if not self.pending:
-            return {"evaluated": 0, "promoted": 0, "pruned": 0}
+            return {"evaluated": 0, "promoted": 0, "pruned": 0, "remaining": 0}
 
         promoted = 0
         pruned   = 0
