@@ -68,10 +68,13 @@ Is there a unifying principle, generalization, or abstraction that sits ABOVE
 all of these — something that explains why they all belong together?
 
 A real abstraction captures a META-PATTERN, not just a category.
-Bad: "These are all about neuroscience" ← that's just a label.
-Good: "All of these describe cases where noisy, imprecise signals paradoxically
-       produce more robust system-level behavior — suggesting a general principle
-       that biological systems exploit noise rather than merely tolerating it."
+Bad: "These are all about neuroscience" ← that's just a label, not a pattern.
+Also bad: a generic-sounding claim about noise, robustness, stability, or "risk"
+that could equally be pasted onto a different, unrelated cluster without
+edit — if the statement doesn't name the SPECIFIC entities or mechanisms from
+the nodes above, it isn't grounded in this cluster and should not be produced.
+A real abstraction should fail to make sense if you swap in a different
+cluster's node list.
 
 If yes, respond with a JSON object:
 {{
@@ -526,7 +529,7 @@ class Consolidator:
             node_v = self.brain.get_node(v)
             if not node_u or not node_v:
                 continue
-            
+
             # once cluster diversity is high, prioritize cross-cluster gaps
             if (cluster_count > 3 and
                     node_u.get('cluster') == node_v.get('cluster')):
@@ -748,6 +751,13 @@ class Consolidator:
         """
         Run the full evening consolidation.
         new_node_ids: nodes added today by the Researcher (optional).
+
+        Appendix C.7 describes six steps (Weight Decay, Pruning, Buffer Promotion,
+        Meta-Pattern Abstraction, Gap Inference, Agenda Generation). This runs eight:
+        merge_duplicates, synthesis_pass, abstraction_pass, gap_detection,
+        contradiction_update, apply_decay, evaluate_insight_buffer,
+        recompute_mission_relevance -- contradiction_update and
+        recompute_mission_relevance have no named counterpart in Appendix C.7.
         """
         report = ConsolidationReport()
         new_node_ids = new_node_ids or []
