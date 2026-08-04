@@ -64,6 +64,10 @@ class DreamStep:
     depth_triggered: bool = False
     mission_advance: bool = False
     mission_strength: float = 0.0
+    # True if this transition came from _hop's dead-end/no-scored-edge fallback rather
+    # than a genuine Eq. 2 weighted-neighbor hop -- lets a dream log answer, per step,
+    # whether a cross-cluster co-activation was graph-structural or a fallback jump.
+    via_teleport:    bool = False
 
 @dataclass
 class DreamLog:
@@ -249,7 +253,7 @@ It connects to: "{question}"
 Connection: {explanation}
 
 Explore this in 2-3 sentences. Be technically precise. DO NOT write qualitative fluff.
-End with ONE highly specific, empirically testable research question starting with "Q:".
+End with ONE highly specific, empirically testable research question starting with "Q:". 
 The question MUST propose a specific measurement, variable, or intervention. Avoid generic inquiries.
 """
 
@@ -459,7 +463,8 @@ class Dreamer:
 
     # ── Edge scoring ──────────────────────────────────────────────────────────
 
-    def _score_edge(self, edge_data, temperature, scientificness, visited, target_id):
+    def _score_edge(self, edge_data, temperature, scientificness, visited, target_id,
+                     mission_bonus_enabled=None):
         weight = edge_data.get('weight', 0.5)
         etype  = edge_data.get('type', '')
 
@@ -476,8 +481,16 @@ class Dreamer:
         if etype == EdgeType.ASSOCIATED.value:
             weight += (1 - scientificness) * 0.3
 
-        # mission edges only matter in focused/transitional
-        if etype == EdgeType.TOWARD_MISSION.value and not self.brain.is_wandering():
+        # mission edges only matter in focused/transitional. Reviewer bgJN (W4) pointed
+        # out that the mode switch confounds this mission bonus with the temperature
+        # boost below -- both previously derived from the same single Brain._mode value,
+        # so there was no way to vary one without the other. `mission_bonus_enabled`
+        # defaults to None, which preserves that exact coupled behavior; callers running
+        # the deconfounding 2x2 (mission bonus on/off x temperature low/high) pass it
+        # explicitly instead.
+        if mission_bonus_enabled is None:
+            mission_bonus_enabled = not self.brain.is_wandering()
+        if etype == EdgeType.TOWARD_MISSION.value and mission_bonus_enabled:
             weight += 0.3
 
         if target_id in visited:
@@ -488,7 +501,12 @@ class Dreamer:
 
     # ── Single hop ────────────────────────────────────────────────────────────
 
-    def _hop(self, current_id, temperature, scientificness, visited):
+    def _hop(self, current_id, temperature, scientificness, visited,
+             mission_bonus_enabled=None):
+        """Returns (next_id, edge, via_teleport). `via_teleport` distinguishes a real
+        Eq. 2 weighted-neighbor hop from the dead-end re-entry branch below — needed to
+        answer, per dream log, whether a given cross-cluster transition came from graph
+        structure or from this fallback (reviewer bgJN Q3/Q4 asked for exactly this)."""
         neighbors = self.brain.neighbors(current_id)
         if not neighbors:
             # Dead-end re-entry. The paper describes traversal only through Eq. 2, which
@@ -500,18 +518,22 @@ class Dreamer:
             # unbridged, this is the only crossing mechanism available.
             all_ids   = [nid for nid, _ in self.brain.all_nodes()]
             unvisited = [n for n in all_ids if n not in visited]
-            return random.choice(unvisited if unvisited else all_ids), None
+            return random.choice(unvisited if unvisited else all_ids), None, True
 
         scored = []
         for nid in neighbors:
             edge = self.brain.get_edge(current_id, nid)
             if edge:
                 score = self._score_edge(
-                    edge, temperature, scientificness, visited, nid)
+                    edge, temperature, scientificness, visited, nid,
+                    mission_bonus_enabled)
                 scored.append((nid, edge, score))
 
         if not scored:
-            return random.choice(neighbors), None
+            # Neighbors exist in the adjacency list but none resolved to a stored edge
+            # (get_edge returned None for all of them) -- a distinct degenerate case from
+            # the dead-end above; also not a genuine weighted Eq. 2 hop, so tagged the same.
+            return random.choice(neighbors), None, True
 
         total = sum(s for _, _, s in scored)
         roll  = random.uniform(0, total)
@@ -519,8 +541,8 @@ class Dreamer:
         for nid, edge, score in scored:
             cumulative += score
             if cumulative >= roll:
-                return nid, edge
-        return scored[-1][0], scored[-1][1]
+                return nid, edge, False
+        return scored[-1][0], scored[-1][1], False
 
     # ── Answer detection ──────────────────────────────────────────────────────
 
@@ -599,7 +621,8 @@ class Dreamer:
 
     def _depth_explore(self, node_id, node_data, question, explanation,
                        temperature, scientificness, visited, log,
-                       questions, q_embeddings, step_offset):
+                       questions, q_embeddings, step_offset,
+                       mission_bonus_enabled=None):
         print(f"      ↳ Depth [{DEPTH_STEPS} steps]")
         mission = self._mission_text()
         mission_line = f"Central question: \"{mission}\"" if mission else ""
@@ -616,8 +639,9 @@ class Dreamer:
 
         current_id, current_data = node_id, node_data
         for d in range(DEPTH_STEPS):
-            next_id, edge = self._hop(
-                current_id, temperature * 0.5, scientificness, visited)
+            next_id, edge, via_teleport = self._hop(
+                current_id, temperature * 0.5, scientificness, visited,
+                mission_bonus_enabled)
             next_data = self.brain.get_node(next_id)
             if not next_data:
                 continue
@@ -627,7 +651,7 @@ class Dreamer:
                 current_data['statement'], edge_type,
                 edge_narration, next_data['statement']), temperature=0.5)
             narration, _, is_insight, depth = self._parse_narration(raw)
-
+            
             mission_advance = False
             mission_strength = 0.0
             if mission:
@@ -638,7 +662,7 @@ class Dreamer:
                 edge_type=edge_type, edge_narration=edge_narration,
                 narration=narration, is_insight=is_insight,
                 insight_depth=depth, mission_advance=mission_advance,
-                mission_strength=mission_strength)
+                mission_strength=mission_strength, via_teleport=via_teleport)
             log.steps.append(ds)
             visited.add(next_id)
             self.brain.update_node(next_id, activated_at=time.time())
@@ -663,7 +687,7 @@ class Dreamer:
                     for nid in getattr(event, 'nodes_involved', []):
                         if self.brain.get_node(nid):
                             self.brain.update_node(nid, activated_at=time.time())
-
+                            
         self.brain.proximal_reinforce()
         print("── NREM complete ──\n")
 
@@ -672,7 +696,10 @@ class Dreamer:
     def dream(self, mode=DreamMode.WANDERING, steps=DEFAULT_STEPS,
               temperature=DEFAULT_TEMP, seed_id=None,
               run_nrem=True, log_path="logs/dream_latest.json",
-              visited_set=None):
+              visited_set=None, mission_bonus_enabled=None):
+        """`mission_bonus_enabled` (None by default) lets a caller decouple the mission
+        bonus from the temperature boost below for the 2x2 factorial reviewer bgJN's W4
+        asked for; None preserves the normal behavior where both are tied to brain_mode."""
 
         brain_mode    = self.brain.get_mode()
         scientificness= self.brain.scientificness
@@ -704,8 +731,9 @@ class Dreamer:
 
         step = 0
         while step < steps:
-            next_id, edge = self._hop(current_id, temperature,
-                                      scientificness, visited)
+            next_id, edge, via_teleport = self._hop(current_id, temperature,
+                                                     scientificness, visited,
+                                                     mission_bonus_enabled)
             next_node = self.brain.get_node(next_id)
             if not next_node:
                 step += 1
@@ -733,7 +761,7 @@ class Dreamer:
             mission_advance = False
             mission_explanation = ""
             mission_strength = 0.0
-
+            
             if mission:
                 mission_advance, mission_explanation, mission_strength = \
                     self._check_mission_advance(next_node, narration)
@@ -745,7 +773,8 @@ class Dreamer:
                 current_id = self._depth_explore(
                     next_id, next_node, matched_q, match_explanation,
                     temperature, scientificness, visited, log,
-                    questions, q_embeddings, step + 1000)
+                    questions, q_embeddings, step + 1000,
+                    mission_bonus_enabled)
                 current = self.brain.get_node(current_id)
                 visited.add(current_id)
             elif (is_insight or
@@ -758,7 +787,8 @@ class Dreamer:
                     "An interesting connection worth exploring.",
                     mission_explanation or "Insight or tension detected.",
                     temperature, scientificness, visited, log,
-                    questions, q_embeddings, step + 1000)
+                    questions, q_embeddings, step + 1000,
+                    mission_bonus_enabled)
                 current = self.brain.get_node(current_id)
                 visited.add(current_id)
 
@@ -843,7 +873,8 @@ class Dreamer:
                 answer_detail=match_explanation,
                 depth_triggered=depth_triggered,
                 mission_advance=mission_advance,
-                mission_strength=mission_strength)
+                mission_strength=mission_strength,
+                via_teleport=via_teleport)
             log.steps.append(ds)
             self.brain.update_node(next_id, activated_at=time.time())
             visited.add(next_id)
@@ -893,12 +924,17 @@ class Dreamer:
                         print(f"            [System 2] skipped self-pair "
                               f"{ins['from_node_id'][:8]}")
                         continue
+                    proposed_type = "structural_analogy" if depth == "structural" else "deep_isomorphism"
                     candidate = CandidateThought(
                         claim=ins["narration"],
                         source_module="dreamer",
-                        proposed_type="structural_analogy" if depth == "structural" else "deep_isomorphism",
+                        proposed_type=proposed_type,
                         importance=0.75 if depth == "structural" else 0.85,
-                        edge_type=depth,
+                        # Must match DEPTH_VERDICT_RUBRIC's keys (critic.py) for the
+                        # depth-specific verdict bar to actually apply -- passing the
+                        # raw narration label ("structural"/"isomorphism") here silently
+                        # dropped the rubric from VERDICT_PROMPT every time.
+                        edge_type=proposed_type,
                         node_a_id=ins["from_node_id"],
                         node_b_id=ins["to_node_id"]
                     )

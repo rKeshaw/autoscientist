@@ -16,14 +16,19 @@ class CognitivePolicy:
     
     POLICY_PATH = "data/policy.json"
     
+    # Previously included "emergence", "first_principles", "lateral", "empirical"
+    # -- none of these have a distinct prompt in thinker.py; all four silently
+    # fell back to DIALECTICAL_PROMPT, so the bandit was learning over an action
+    # space where 4/7 arms were secretly identical to a 5th. "experimental" and
+    # "integrative" DO have distinct prompts but were missing from this list, so
+    # the bandit could never select them. Aligned to match what's actually
+    # implemented.
     DEFAULT_ACTIONS = [
         "analogical",
         "dialectical",
         "reductive",
-        "emergence",
-        "first_principles",
-        "lateral",
-        "empirical"
+        "experimental",
+        "integrative",
     ]
 
     def __init__(self, epsilon: float = 0.2, learning_rate: float = 0.1):

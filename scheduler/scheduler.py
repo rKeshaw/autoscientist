@@ -107,6 +107,12 @@ class SalienceScheduler:
         from critic.critic import Critic
         self.critic = Critic(self.brain, embedding_index=self.emb_index,
                              insight_buffer=self.insight_buffer)
+        # InsightBuffer is constructed before Critic exists, so wire the
+        # back-reference in after the fact (see insight_buffer.py's __init__
+        # comment) -- needed for analogy-type deferred candidates to get a
+        # real second chance via the Critic's own pipeline instead of being
+        # gated on embedding similarity, which is structurally too strict for them.
+        self.insight_buffer.critic = self.critic
 
         self.ingestor    = Ingestor(self.brain, research_agenda=self.observer,
                                     embedding_index=self.emb_index,
@@ -431,7 +437,7 @@ class SalienceScheduler:
                 self.submit_task("thinking", TaskPriority.HIGH)
                 # Slightly deplete dopamine so we don't spam
                 self.brain.dopamine *= 0.8
-
+                
             # If Frustration is very high, maybe push a reading or wandering dream
             if getattr(self.brain, 'frustration', 0.0) > 0.8:
                 print(f"  [Salience Network] HIGH FRUSTRATION DETECTED! Pushing wandering dream to reset.")
@@ -449,7 +455,7 @@ class SalienceScheduler:
                 phase = phases_cycle[idx % len(phases_cycle)]
                 self.submit_task(phase, TaskPriority.BACKGROUND)
                 idx += 1
-            # Sleep seconds between background tasks
+            # Sleep seconds between background tasks 
             for _ in range(60):
                 if not self._running:
                     break

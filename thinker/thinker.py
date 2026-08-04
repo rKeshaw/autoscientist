@@ -246,7 +246,7 @@ class Thinker:
         """Let the RL policy choose the best reasoning pattern."""
         node_type = "question"
         cluster = "unclustered"
-
+        
         q_emb = shared_embed(question)
         if self.index and self.index.size > 0:
             matches = self.index.query(q_emb, threshold=0.8, top_k=1)
@@ -256,7 +256,7 @@ class Thinker:
                 if node:
                     node_type = node.get('node_type', 'question')
                     cluster = node.get('cluster', 'unclustered')
-
+                    
         pattern = self.policy.choose_pattern(node_type, cluster)
         return node_type, cluster, pattern
 
@@ -287,7 +287,7 @@ class Thinker:
             log.node_type, log.cluster, pattern = self._pick_pattern(question)
         else:
             log.node_type, log.cluster = "question", "unclustered"
-
+            
         log.pattern = pattern
         print(f"  Pattern: {pattern}")
 
@@ -295,12 +295,11 @@ class Thinker:
         context = self._build_context(question)
 
         # Run the appropriate reasoning pattern.
-        # Appendix C.1 describes five patterns. CognitivePolicy's action space
-        # (thinker/policy.py) has seven: three of those (analogical, dialectical,
-        # reductive) have a prompt here, the other four (emergence, first_principles,
-        # lateral, empirical) don't and fall back to dialectical below. experimental
-        # and integrative are implemented but are not in the policy's action space, so
-        # the bandit never selects them.
+        # Appendix C.1 describes five patterns, all five implemented as distinct
+        # prompts below. CognitivePolicy's action space (thinker/policy.py) was
+        # previously misaligned with this (7 actions, 4 of which silently fell
+        # back to dialectical, while experimental/integrative weren't reachable
+        # at all) -- fixed to match these five exactly.
         prompts = {
             "dialectical":  DIALECTICAL_PROMPT,
             "analogical":   ANALOGICAL_PROMPT,

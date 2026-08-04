@@ -529,7 +529,7 @@ class Consolidator:
             node_v = self.brain.get_node(v)
             if not node_u or not node_v:
                 continue
-
+            
             # once cluster diversity is high, prioritize cross-cluster gaps
             if (cluster_count > 3 and
                     node_u.get('cluster') == node_v.get('cluster')):

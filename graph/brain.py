@@ -125,7 +125,7 @@ class Brain:
         self._mode: BrainMode = BrainMode.WANDERING
         self._suspended_mission: Optional[dict] = None
         self.working_memory: list[str] = []  # ordered list of node IDs
-
+        
         # Neuromodulators
         self.dopamine: float    = 0.5
         self.frustration: float = 0.0
@@ -417,7 +417,7 @@ class Brain:
             self.dopamine = max(0.5, self.dopamine - (0.3 * elapsed_days))
         elif self.dopamine < 0.5:
             self.dopamine = min(0.5, self.dopamine + (0.3 * elapsed_days))
-
+            
         # Frustration decays slowly to 0.0
         if self.frustration > 0.0:
             self.frustration = max(0.0, self.frustration - (0.2 * elapsed_days))

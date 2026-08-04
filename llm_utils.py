@@ -111,8 +111,16 @@ def llm_call(prompt: str, temperature: float = 0.7,
     response = client.chat(
         model=model,
         messages=messages,
-        options={"temperature": temperature}
+        # num_predict=-1 makes the length cap explicit (generate until a natural stop)
+        # instead of relying on ollama's server-side default, which is not documented
+        # per-model and was never actually verified as the cause of a parse-failure spike
+        # this session -- rather than guess, surface done_reason so a future truncation
+        # is diagnosable from the run log instead of showing up only as "Failed to parse".
+        options={"temperature": temperature, "num_predict": -1}
     )
+    if response.get('done_reason') not in (None, 'stop'):
+        print(f"  [llm_call] non-stop done_reason={response.get('done_reason')!r} "
+              f"role={role} model={model} -- response may be truncated")
     return response['message']['content'].strip()
 
 
@@ -157,6 +165,9 @@ def llm_chat(messages: list[dict], temperature: float = 0.7,
     response = client.chat(
         model=model,
         messages=messages,
-        options={"temperature": temperature}
+        options={"temperature": temperature, "num_predict": -1}
     )
+    if response.get('done_reason') not in (None, 'stop'):
+        print(f"  [llm_chat] non-stop done_reason={response.get('done_reason')!r} "
+              f"role={role} model={model} -- response may be truncated")
     return response['message']['content'].strip()

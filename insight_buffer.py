@@ -79,6 +79,13 @@ class PendingInsight:
     last_eval_time:     float  = 0.0
     best_score:         float  = 0.0   # highest combined score seen
     promoted:           bool   = False
+    # The original candidate that got DEFERred -- previously thrown away by
+    # route_deferred(), so re-evaluation had no way to pick up where DEFER left
+    # off. Populated only when routed from Critic.route_deferred(); empty for
+    # near-misses added some other way (e.g. ingestion weak-edge candidates).
+    claim:              str    = ""
+    proposed_type:       str    = ""
+    edge_type:           str    = ""
 
     def to_dict(self):
         return asdict(self)
@@ -91,9 +98,20 @@ class PendingInsight:
 # ── Insight Buffer ────────────────────────────────────────────────────────────
 
 class InsightBuffer:
-    def __init__(self, brain: Brain, embedding_index=None):
+    def __init__(self, brain: Brain, embedding_index=None, critic=None):
         self.brain   = brain
         self.index   = embedding_index
+        # Optional back-reference to the Critic, used only for the
+        # analogy-type direct-reevaluation path in evaluate_all() below --
+        # embedding-similarity re-scoring is structurally the wrong gate for
+        # candidates whose whole point is LOW surface similarity with high
+        # structural correspondence (measured directly: 0.34-0.49 similarity
+        # for real accepted cross-domain pairs, vs. this buffer's own 0.58
+        # promotion gate -- see dreamer-unverified-mechanisms memory point 10).
+        # Set post-construction via `buffer.critic = critic` where the real
+        # Critic instance isn't available yet at InsightBuffer construction
+        # time (both gui/app.py and scheduler.py build InsightBuffer first).
+        self.critic  = critic
         self.pending: list[PendingInsight] = []
         self._load()
 
@@ -114,7 +132,8 @@ class InsightBuffer:
 
     # ── Add near-miss pairs ───────────────────────────────────────────────────
 
-    def add(self, node_a_id: str, node_b_id: str, similarity: float):
+    def add(self, node_a_id: str, node_b_id: str, similarity: float,
+            claim: str = "", proposed_type: str = "", edge_type: str = ""):
         """Add a near-miss pair to the buffer."""
         if similarity < BUFFER_LOW:
             return  # too weak even for buffer
@@ -126,6 +145,8 @@ class InsightBuffer:
                 # Update if this observation is stronger
                 if similarity > p.original_similarity:
                     p.original_similarity = similarity
+                if claim and not p.claim:
+                    p.claim, p.proposed_type, p.edge_type = claim, proposed_type, edge_type
                 return
 
         # Hard cap
@@ -137,7 +158,10 @@ class InsightBuffer:
         self.pending.append(PendingInsight(
             node_a_id=node_a_id,
             node_b_id=node_b_id,
-            original_similarity=similarity
+            original_similarity=similarity,
+            claim=claim,
+            proposed_type=proposed_type,
+            edge_type=edge_type,
         ))
 
     @property
@@ -188,7 +212,24 @@ class InsightBuffer:
             pair.last_eval_time = time.time()
             pair.best_score = max(pair.best_score, context_score)
 
-            # If context score now exceeds threshold → LLM evaluation
+            # Analogy-type deferrals (structural_analogy/deep_isomorphism): embedding
+            # similarity is structurally the WRONG gate here -- these claims are
+            # interesting precisely because surface similarity is low despite real
+            # structural correspondence (measured directly: 0.34-0.49 for real
+            # accepted cross-domain pairs, vs. this buffer's 0.58 promotion gate).
+            # Re-run the ORIGINAL claim through the Critic's own dialogue+verdict
+            # pipeline directly instead, independent of context_score, whenever a
+            # Critic reference is available (set post-construction; see __init__).
+            if (self.critic and pair.claim and
+                    pair.proposed_type in ("structural_analogy", "deep_isomorphism")):
+                if self._critic_reevaluate(pair, node_a, node_b):
+                    to_remove.append(i)
+                    promoted += 1
+                    continue
+
+            # If context score now exceeds threshold → LLM evaluation (the
+            # original path, for plain associative near-misses without a
+            # stored analogy claim, or when no Critic reference is wired up)
             if context_score >= THRESHOLDS.WEAK_EDGE:
                 result = self._llm_evaluate(pair, node_a, node_b)
                 if result and result.get("connected"):
@@ -272,6 +313,41 @@ class InsightBuffer:
         )
         raw = llm_call(prompt, temperature=0.2, role="precise")
         return require_json(raw, default={})
+
+    def _critic_reevaluate(self, pair: PendingInsight, node_a: dict, node_b: dict) -> bool:
+        """
+        Re-run a deferred analogy-type claim through the Critic's own
+        dialogue+verdict pipeline directly, bypassing the embedding-similarity
+        gate entirely. Returns True if it was promoted (edge added).
+        """
+        from critic.critic import CandidateThought, Verdict as CriticVerdict
+        candidate = CandidateThought(
+            claim=pair.claim,
+            source_module="insight_buffer",
+            proposed_type=pair.proposed_type,
+            importance=0.85 if pair.proposed_type == "deep_isomorphism" else 0.75,
+            edge_type=pair.edge_type or pair.proposed_type,
+            node_a_id=pair.node_a_id,
+            node_b_id=pair.node_b_id,
+        )
+        critic_log = self.critic.evaluate_with_refinement(candidate)
+        if critic_log.verdict != CriticVerdict.ACCEPT:
+            return False
+
+        # proposed_type is "structural_analogy"/"deep_isomorphism"; add_analogy_edge
+        # expects the raw depth label ("structural"/"isomorphism") -- same
+        # vocabulary mismatch as the dreamer.py bug fixed earlier this session,
+        # mapped correctly here.
+        depth = "isomorphism" if pair.proposed_type == "deep_isomorphism" else "structural"
+        final_claim = critic_log.refinement_note or pair.claim
+        self.brain.add_analogy_edge(
+            pair.node_a_id, pair.node_b_id, depth, final_claim,
+            EdgeSource.CONSOLIDATION
+        )
+        pair.promoted = True
+        print(f"    ★ Promoted delayed analogy (Critic re-review): "
+              f"{node_a['statement'][:40]}... ↔ {node_b['statement'][:40]}...")
+        return True
 
     def _promote(self, pair: PendingInsight, result: dict):
         """Create a real edge from a promoted insight."""

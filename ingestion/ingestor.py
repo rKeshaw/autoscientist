@@ -436,7 +436,7 @@ class Ingestor:
                 hyp = {'statement': hyp}
             elif not isinstance(hyp, dict):
                 continue
-
+                
             stmt = hyp.get('statement', '')
             if not isinstance(stmt, str) or not stmt.strip():
                 continue

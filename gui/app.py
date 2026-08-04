@@ -100,6 +100,11 @@ except (FileNotFoundError, Exception):
 notebook     = Notebook(brain, observer=observer)
 insight_buffer = InsightBuffer(brain, embedding_index=emb_index)
 critic = Critic(brain, embedding_index=emb_index, insight_buffer=insight_buffer)
+# InsightBuffer is constructed before Critic exists, so wire the back-reference
+# in after the fact -- needed for analogy-type deferred candidates to get a
+# real second chance via the Critic's own pipeline instead of being gated on
+# embedding similarity, which is structurally too strict for them.
+insight_buffer.critic = critic
 ingestor     = Ingestor(
     brain,
     research_agenda=observer,
