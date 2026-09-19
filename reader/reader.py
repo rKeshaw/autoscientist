@@ -133,10 +133,12 @@ class AbsorptionResult:
 
 class Reader:
     def __init__(self, brain: Brain, observer=None, notebook=None,
-                 ingestor=None, embedding_index=None, insight_buffer=None):
+                 ingestor=None, embedding_index=None, insight_buffer=None,
+                 reading_list_path: str = READING_LIST_PATH):
         self.brain    = brain
         self.observer = observer
         self.notebook = notebook
+        self.reading_list_path = reading_list_path
         self.ingestor = ingestor or Ingestor(
             brain,
             research_agenda=observer,
@@ -153,7 +155,7 @@ class Reader:
 
     def _load_list(self):
         try:
-            with open(READING_LIST_PATH, 'r') as f:
+            with open(self.reading_list_path, 'r') as f:
                 data = json.load(f)
             for entry in data:
                 if entry.get("source_type") == "text" and not entry.get("raw_text"):
@@ -166,7 +168,7 @@ class Reader:
 
     def _save_list(self):
         atomic_write_json(
-            READING_LIST_PATH,
+            self.reading_list_path,
             [e.to_dict() for e in self.reading_list]
         )
 
@@ -226,9 +228,10 @@ class Reader:
                 "format":  "json",
                 "explaintext": 1,   # plain text, no HTML
                 "exsectionformat": "plain",
+                "redirects": 1,
             }
             resp = requests.get(api, params=params, timeout=20,
-                                headers={'User-Agent': 'DREAMER/1.0'})
+                                headers={'User-Agent': 'AutoScientistResearch/1.0 (academic research; contact@lab.edu)'})
             pages = resp.json().get('query', {}).get('pages', {})
             for page in pages.values():
                 page_title = page.get('title', title)

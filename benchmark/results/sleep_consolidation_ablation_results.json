@@ -1,0 +1,884 @@
+{
+  "tasks": [
+    {
+      "task_id": "T01_analogy_quantum_surface_dna",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "surface code",
+            "quantum",
+            "entropy",
+            "dna",
+            "repair",
+            "lattice"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": false,
+          "matched_keywords": [
+            "quantum",
+            "entropy"
+          ],
+          "keyword_recall": 0.333,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T02_analogy_hartley_shannon_spiking",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "hartley",
+            "shannon",
+            "channel",
+            "spiking",
+            "energy"
+          ],
+          "keyword_recall": 0.833,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "hartley",
+            "shannon",
+            "channel",
+            "spiking",
+            "energy"
+          ],
+          "keyword_recall": 0.833,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T03_analogy_kinetic_proofreading_spiking",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "kinetic proofreading",
+            "proofreading",
+            "spiking",
+            "neuromorphic",
+            "error correction"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "kinetic proofreading",
+            "proofreading",
+            "spiking",
+            "neuromorphic",
+            "error correction"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T04_analogy_brownian_ratchet_erasure",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "thermodynamics"
+          ],
+          "keyword_recall": 0.4,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "thermodynamics"
+          ],
+          "keyword_recall": 0.4,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T05_analogy_annealing_synaptic_pruning",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "synaptic",
+            "rem",
+            "sleep"
+          ],
+          "keyword_recall": 0.5,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "synaptic",
+            "rem",
+            "sleep"
+          ],
+          "keyword_recall": 0.5,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T06_analogy_ferritin_quantum_storage",
+      "category": "multi_hop_analogy",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "electron",
+            "quantum",
+            "storage",
+            "transport"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "electron",
+            "quantum",
+            "storage",
+            "transport"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T07_contradiction_rate_vs_temporal_coding",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "rate coding",
+            "temporal",
+            "spike",
+            "frequency"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "rate coding",
+            "temporal",
+            "spike",
+            "frequency"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T08_contradiction_soc_criticality_necessity",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "criticality",
+            "soc",
+            "fundamental",
+            "property"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "criticality",
+            "soc",
+            "fundamental",
+            "property"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T09_contradiction_landauer_angular_momentum",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "landauer",
+            "angular momentum",
+            "erasure",
+            "entropy"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "landauer",
+            "angular momentum",
+            "erasure",
+            "entropy"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T10_contradiction_neuromodulatory_vs_structural",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": false,
+          "matched_keywords": [
+            "neuromodulatory",
+            "adaptive",
+            "synaptic"
+          ],
+          "keyword_recall": 0.75,
+          "mrr": 1.0,
+          "opposing_retained": false,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": false,
+          "matched_keywords": [
+            "neuromodulatory",
+            "adaptive",
+            "synaptic"
+          ],
+          "keyword_recall": 0.75,
+          "mrr": 1.0,
+          "opposing_retained": false,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T11_contradiction_classical_prob_vs_quantum_cognition",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "classical",
+            "probability",
+            "quantum",
+            "conjunction",
+            "fallacy"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "classical",
+            "probability",
+            "quantum",
+            "conjunction",
+            "fallacy"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T12_contradiction_deterministic_vs_stochastic_biology",
+      "category": "contradiction_preservation",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "deterministic",
+            "stochastic",
+            "gene",
+            "regulatory",
+            "ode"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "deterministic",
+            "stochastic",
+            "gene",
+            "regulatory",
+            "ode"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T13_empirical_bit_erasure_energy_sweep",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "threshold",
+            "energy",
+            "simulation",
+            "storage"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "threshold",
+            "energy",
+            "simulation",
+            "storage"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T14_empirical_ferritin_quantum_dots",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "quantum dot",
+            "electron",
+            "transport",
+            "tunneling"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "quantum dot",
+            "electron",
+            "transport",
+            "tunneling"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T15_empirical_quantum_cognition_conjunction",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "conjunction",
+            "quantum",
+            "probability",
+            "fallacy",
+            "simulation"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "conjunction",
+            "quantum",
+            "probability",
+            "fallacy",
+            "simulation"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T16_empirical_membrane_computing_model",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "membrane computing",
+            "cellular",
+            "model",
+            "test"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "membrane computing",
+            "cellular",
+            "model",
+            "test"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T17_empirical_sure_thing_principle",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "sure-thing",
+            "decision",
+            "principle",
+            "simulation"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "sure-thing",
+            "decision",
+            "principle",
+            "simulation"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T18_empirical_classical_probability_psychology",
+      "category": "empirical_grounding",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "classical probability",
+            "inference",
+            "psychology",
+            "computational test"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "classical probability",
+            "inference",
+            "psychology",
+            "computational test"
+          ],
+          "keyword_recall": 1.0,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T19_negative_inhomogeneous_array_shape_error",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "inhomogeneous",
+            "shape",
+            "valueerror",
+            "neuron"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 0.5,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "inhomogeneous",
+            "shape",
+            "valueerror",
+            "neuron"
+          ],
+          "keyword_recall": 0.8,
+          "mrr": 0.5,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T20_negative_brian2_numpy2_incompatibility",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "brian2",
+            "numpy",
+            "ptp"
+          ],
+          "keyword_recall": 0.75,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 2
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "brian2",
+            "numpy",
+            "ptp"
+          ],
+          "keyword_recall": 0.75,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 2
+        }
+      }
+    },
+    {
+      "task_id": "T21_negative_syntax_error_docstring_repair",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": false,
+          "matched_keywords": [
+            "ferritin"
+          ],
+          "keyword_recall": 0.2,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": false,
+          "matched_keywords": [
+            "ferritin"
+          ],
+          "keyword_recall": 0.2,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T22_negative_system2_redundant_synthesis_rejection",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": true,
+          "matched_keywords": [
+            "critic",
+            "bit erasure",
+            "threshold"
+          ],
+          "keyword_recall": 0.6,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": true,
+          "matched_keywords": [
+            "critic",
+            "bit erasure",
+            "threshold"
+          ],
+          "keyword_recall": 0.6,
+          "mrr": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T23_negative_procedural_policy_penalty",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": false,
+          "matched_keywords": [
+            "val"
+          ],
+          "keyword_recall": 0.2,
+          "mrr": 0.5,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": false,
+          "matched_keywords": [
+            "val"
+          ],
+          "keyword_recall": 0.2,
+          "mrr": 0.5,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T24_negative_stale_insight_pruning",
+      "category": "negative_knowledge",
+      "conditions": {
+        "Full (With Sleep)": {
+          "success": false,
+          "matched_keywords": [],
+          "keyword_recall": 0.0,
+          "mrr": 0.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "Sleep-Deprived (Ablated)": {
+          "success": false,
+          "matched_keywords": [],
+          "keyword_recall": 0.0,
+          "mrr": 0.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    }
+  ],
+  "by_category": {
+    "multi_hop_analogy": {
+      "Full (With Sleep)": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6,
+        "mean_recall": 0.789,
+        "mean_mrr": 1.0
+      },
+      "Sleep-Deprived (Ablated)": {
+        "pass_rate": 0.833,
+        "passed": 5,
+        "total": 6,
+        "mean_recall": 0.678,
+        "mean_mrr": 1.0
+      }
+    },
+    "contradiction_preservation": {
+      "Full (With Sleep)": {
+        "pass_rate": 0.833,
+        "passed": 5,
+        "total": 6,
+        "mean_recall": 0.892,
+        "mean_mrr": 1.0
+      },
+      "Sleep-Deprived (Ablated)": {
+        "pass_rate": 0.833,
+        "passed": 5,
+        "total": 6,
+        "mean_recall": 0.892,
+        "mean_mrr": 1.0
+      }
+    },
+    "empirical_grounding": {
+      "Full (With Sleep)": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6,
+        "mean_recall": 1.0,
+        "mean_mrr": 1.0
+      },
+      "Sleep-Deprived (Ablated)": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "total": 6,
+        "mean_recall": 1.0,
+        "mean_mrr": 1.0
+      }
+    },
+    "negative_knowledge": {
+      "Full (With Sleep)": {
+        "pass_rate": 0.5,
+        "passed": 3,
+        "total": 6,
+        "mean_recall": 0.425,
+        "mean_mrr": 0.667
+      },
+      "Sleep-Deprived (Ablated)": {
+        "pass_rate": 0.5,
+        "passed": 3,
+        "total": 6,
+        "mean_recall": 0.425,
+        "mean_mrr": 0.667
+      }
+    }
+  },
+  "aggregate": {
+    "Full (With Sleep)": {
+      "pass_rate": 0.833,
+      "passed": 20,
+      "total": 24,
+      "mean_recall": 0.776,
+      "mean_mrr": 0.917
+    },
+    "Sleep-Deprived (Ablated)": {
+      "pass_rate": 0.792,
+      "passed": 19,
+      "total": 24,
+      "mean_recall": 0.749,
+      "mean_mrr": 0.917
+    }
+  }
+}

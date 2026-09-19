@@ -1,0 +1,1323 @@
+{
+  "trajectory": [
+    {
+      "cycle": 1,
+      "timestamp": 1789560496.8480191,
+      "nodes": 305,
+      "edges": 1979,
+      "density": 0.02134,
+      "avg_degree": 12.98,
+      "node_types": {
+        "concept": 249,
+        "hypothesis": 35,
+        "question": 3,
+        "synthesis": 2,
+        "gap": 15,
+        "empirical": 1
+      },
+      "edge_types": {
+        "supports": 670,
+        "associated": 1120,
+        "contradicts": 30,
+        "structural_analogy": 146,
+        "causes": 6,
+        "empirically_tested": 1,
+        "surface_analogy": 6
+      },
+      "small_world": {
+        "C_actual": 0.8592,
+        "L_actual": 5.0992,
+        "C_rand": 0.12,
+        "L_rand": 2.0404,
+        "gamma_clust": 7.1616,
+        "lambda_path": 2.4992,
+        "small_world_S": 2.8656,
+        "lcc_nodes": 126,
+        "lcc_edges": 922
+      },
+      "modularity": {
+        "num_communities": 16,
+        "modularity_Q": 0.897
+      },
+      "power_law": {
+        "gamma": -0.113,
+        "r_squared": 0.007
+      },
+      "top_hubs": [
+        {
+          "id": "97d2027e",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "Stimuli for signal transduction vary widely, from extracellular cues like growth..."
+        },
+        {
+          "id": "8aaeb368",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "Receptors are complex proteins that detect signals either through chemical bindi..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 27,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "timestamp": 1789563721.0813603,
+      "nodes": 348,
+      "edges": 2253,
+      "density": 0.01866,
+      "avg_degree": 12.95,
+      "node_types": {
+        "concept": 277,
+        "hypothesis": 37,
+        "question": 4,
+        "synthesis": 3,
+        "gap": 25,
+        "empirical": 2
+      },
+      "edge_types": {
+        "supports": 801,
+        "associated": 1250,
+        "contradicts": 32,
+        "structural_analogy": 156,
+        "causes": 6,
+        "empirically_tested": 2,
+        "surface_analogy": 6
+      },
+      "small_world": {
+        "C_actual": 0.7861,
+        "L_actual": 6.37,
+        "C_rand": 0.045,
+        "L_rand": 2.4839,
+        "gamma_clust": 17.4709,
+        "lambda_path": 2.5645,
+        "small_world_S": 6.8127,
+        "lcc_nodes": 284,
+        "lcc_edges": 1846
+      },
+      "modularity": {
+        "num_communities": 19,
+        "modularity_Q": 0.8914
+      },
+      "power_law": {
+        "gamma": 0.135,
+        "r_squared": 0.016
+      },
+      "top_hubs": [
+        {
+          "id": "97d2027e",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "Stimuli for signal transduction vary widely, from extracellular cues like growth..."
+        },
+        {
+          "id": "8aaeb368",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "Receptors are complex proteins that detect signals either through chemical bindi..."
+        },
+        {
+          "id": "f9ab838b",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "In SNNs, neurons do not continuously propagate signals but instead integrate inp..."
+        }
+      ]
+    },
+    {
+      "cycle": 3,
+      "timestamp": 1789568194.0391634,
+      "nodes": 388,
+      "edges": 2442,
+      "density": 0.01626,
+      "avg_degree": 12.59,
+      "node_types": {
+        "concept": 301,
+        "hypothesis": 39,
+        "question": 7,
+        "synthesis": 4,
+        "gap": 35,
+        "empirical": 2
+      },
+      "edge_types": {
+        "supports": 912,
+        "associated": 1307,
+        "contradicts": 35,
+        "structural_analogy": 174,
+        "causes": 6,
+        "empirically_tested": 2,
+        "surface_analogy": 6
+      },
+      "small_world": {
+        "C_actual": 0.7665,
+        "L_actual": 6.3128,
+        "C_rand": 0.0392,
+        "L_rand": 2.5581,
+        "gamma_clust": 19.5421,
+        "lambda_path": 2.4677,
+        "small_world_S": 7.9192,
+        "lcc_nodes": 323,
+        "lcc_edges": 2035
+      },
+      "modularity": {
+        "num_communities": 20,
+        "modularity_Q": 0.8881
+      },
+      "power_law": {
+        "gamma": 0.522,
+        "r_squared": 0.165
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 44,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 31,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "f2002567",
+          "degree": 28,
+          "node_type": "concept",
+          "statement": "The source coding theorem establishes that efficient encoding of information dep..."
+        }
+      ]
+    },
+    {
+      "cycle": 4,
+      "timestamp": 1789570625.553548,
+      "nodes": 424,
+      "edges": 2640,
+      "density": 0.01472,
+      "avg_degree": 12.45,
+      "node_types": {
+        "concept": 323,
+        "hypothesis": 40,
+        "question": 9,
+        "synthesis": 5,
+        "gap": 45,
+        "empirical": 2
+      },
+      "edge_types": {
+        "supports": 1030,
+        "associated": 1385,
+        "contradicts": 35,
+        "structural_analogy": 176,
+        "causes": 6,
+        "empirically_tested": 2,
+        "surface_analogy": 6
+      },
+      "small_world": {
+        "C_actual": 0.747,
+        "L_actual": 6.2874,
+        "C_rand": 0.035,
+        "L_rand": 2.6015,
+        "gamma_clust": 21.3463,
+        "lambda_path": 2.4168,
+        "small_world_S": 8.8324,
+        "lcc_nodes": 356,
+        "lcc_edges": 2228
+      },
+      "modularity": {
+        "num_communities": 19,
+        "modularity_Q": 0.8822
+      },
+      "power_law": {
+        "gamma": 0.777,
+        "r_squared": 0.338
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 44,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "f2002567",
+          "degree": 35,
+          "node_type": "concept",
+          "statement": "The source coding theorem establishes that efficient encoding of information dep..."
+        }
+      ]
+    },
+    {
+      "cycle": 5,
+      "timestamp": 1789575565.4721434,
+      "nodes": 463,
+      "edges": 2804,
+      "density": 0.01311,
+      "avg_degree": 12.11,
+      "node_types": {
+        "concept": 343,
+        "hypothesis": 47,
+        "question": 10,
+        "synthesis": 6,
+        "gap": 55,
+        "empirical": 2
+      },
+      "edge_types": {
+        "supports": 1120,
+        "associated": 1430,
+        "contradicts": 48,
+        "structural_analogy": 188,
+        "surface_analogy": 10,
+        "causes": 6,
+        "empirically_tested": 2
+      },
+      "small_world": {
+        "C_actual": 0.7377,
+        "L_actual": 6.6631,
+        "C_rand": 0.0283,
+        "L_rand": 2.6878,
+        "gamma_clust": 26.0275,
+        "lambda_path": 2.479,
+        "small_world_S": 10.4991,
+        "lcc_nodes": 427,
+        "lcc_edges": 2602
+      },
+      "modularity": {
+        "num_communities": 20,
+        "modularity_Q": 0.8829
+      },
+      "power_law": {
+        "gamma": 0.801,
+        "r_squared": 0.341
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 44,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "f2002567",
+          "degree": 36,
+          "node_type": "concept",
+          "statement": "The source coding theorem establishes that efficient encoding of information dep..."
+        }
+      ]
+    },
+    {
+      "cycle": 6,
+      "timestamp": 1789616367.1067436,
+      "nodes": 494,
+      "edges": 2957,
+      "density": 0.01214,
+      "avg_degree": 11.97,
+      "node_types": {
+        "concept": 362,
+        "hypothesis": 51,
+        "question": 10,
+        "synthesis": 7,
+        "gap": 61,
+        "empirical": 2,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1213,
+        "associated": 1454,
+        "contradicts": 50,
+        "structural_analogy": 195,
+        "toward_mission": 25,
+        "surface_analogy": 11,
+        "causes": 7,
+        "empirically_tested": 2
+      },
+      "small_world": {
+        "C_actual": 0.7263,
+        "L_actual": 5.0713,
+        "C_rand": 0.027,
+        "L_rand": 2.7089,
+        "gamma_clust": 26.9139,
+        "lambda_path": 1.8721,
+        "small_world_S": 14.3765,
+        "lcc_nodes": 449,
+        "lcc_edges": 2729
+      },
+      "modularity": {
+        "num_communities": 21,
+        "modularity_Q": 0.8719
+      },
+      "power_law": {
+        "gamma": 0.868,
+        "r_squared": 0.37
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 45,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "f2002567",
+          "degree": 36,
+          "node_type": "concept",
+          "statement": "The source coding theorem establishes that efficient encoding of information dep..."
+        }
+      ]
+    },
+    {
+      "cycle": 7,
+      "timestamp": 1789619510.009297,
+      "nodes": 520,
+      "edges": 3104,
+      "density": 0.0115,
+      "avg_degree": 11.94,
+      "node_types": {
+        "concept": 383,
+        "hypothesis": 51,
+        "question": 10,
+        "synthesis": 8,
+        "gap": 64,
+        "empirical": 3,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1273,
+        "associated": 1509,
+        "contradicts": 51,
+        "structural_analogy": 206,
+        "toward_mission": 37,
+        "surface_analogy": 18,
+        "causes": 7,
+        "empirically_tested": 3
+      },
+      "small_world": {
+        "C_actual": 0.7115,
+        "L_actual": 4.3473,
+        "C_rand": 0.0259,
+        "L_rand": 2.7291,
+        "gamma_clust": 27.4888,
+        "lambda_path": 1.5929,
+        "small_world_S": 17.2568,
+        "lcc_nodes": 484,
+        "lcc_edges": 2972
+      },
+      "modularity": {
+        "num_communities": 20,
+        "modularity_Q": 0.8582
+      },
+      "power_law": {
+        "gamma": 0.913,
+        "r_squared": 0.425
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 45,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "568f368d",
+          "degree": 37,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        }
+      ]
+    },
+    {
+      "cycle": 8,
+      "timestamp": 1789621434.7617912,
+      "nodes": 547,
+      "edges": 3223,
+      "density": 0.01079,
+      "avg_degree": 11.78,
+      "node_types": {
+        "concept": 395,
+        "hypothesis": 54,
+        "question": 13,
+        "synthesis": 9,
+        "gap": 71,
+        "empirical": 4,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1329,
+        "associated": 1545,
+        "contradicts": 51,
+        "structural_analogy": 217,
+        "toward_mission": 40,
+        "empirically_tested": 4,
+        "surface_analogy": 29,
+        "causes": 8
+      },
+      "small_world": {
+        "C_actual": 0.7074,
+        "L_actual": 4.3365,
+        "C_rand": 0.0219,
+        "L_rand": 2.7698,
+        "gamma_clust": 32.354,
+        "lambda_path": 1.5656,
+        "small_world_S": 20.665,
+        "lcc_nodes": 526,
+        "lcc_edges": 3191
+      },
+      "modularity": {
+        "num_communities": 26,
+        "modularity_Q": 0.8572
+      },
+      "power_law": {
+        "gamma": 0.938,
+        "r_squared": 0.439
+      },
+      "top_hubs": [
+        {
+          "id": "531bf336",
+          "degree": 45,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        },
+        {
+          "id": "568f368d",
+          "degree": 40,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        }
+      ]
+    },
+    {
+      "cycle": 9,
+      "timestamp": 1789625454.4604437,
+      "nodes": 579,
+      "edges": 3371,
+      "density": 0.01007,
+      "avg_degree": 11.64,
+      "node_types": {
+        "concept": 408,
+        "hypothesis": 66,
+        "question": 13,
+        "synthesis": 10,
+        "gap": 76,
+        "empirical": 5,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1373,
+        "associated": 1616,
+        "contradicts": 54,
+        "structural_analogy": 230,
+        "toward_mission": 49,
+        "empirically_tested": 5,
+        "surface_analogy": 36,
+        "causes": 8
+      },
+      "small_world": {
+        "C_actual": 0.7022,
+        "L_actual": 4.2831,
+        "C_rand": 0.0211,
+        "L_rand": 2.8117,
+        "gamma_clust": 33.2555,
+        "lambda_path": 1.5233,
+        "small_world_S": 21.8315,
+        "lcc_nodes": 563,
+        "lcc_edges": 3354
+      },
+      "modularity": {
+        "num_communities": 28,
+        "modularity_Q": 0.8531
+      },
+      "power_law": {
+        "gamma": 1.034,
+        "r_squared": 0.495
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 50,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 46,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        }
+      ]
+    },
+    {
+      "cycle": 10,
+      "timestamp": 1789628056.8205397,
+      "nodes": 597,
+      "edges": 3478,
+      "density": 0.00977,
+      "avg_degree": 11.65,
+      "node_types": {
+        "concept": 417,
+        "hypothesis": 68,
+        "question": 13,
+        "synthesis": 11,
+        "gap": 81,
+        "empirical": 6,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1433,
+        "associated": 1646,
+        "contradicts": 54,
+        "structural_analogy": 232,
+        "toward_mission": 55,
+        "empirically_tested": 6,
+        "surface_analogy": 44,
+        "causes": 8
+      },
+      "small_world": {
+        "C_actual": 0.6941,
+        "L_actual": 4.1208,
+        "C_rand": 0.0207,
+        "L_rand": 2.8239,
+        "gamma_clust": 33.4804,
+        "lambda_path": 1.4593,
+        "small_world_S": 22.9432,
+        "lcc_nodes": 581,
+        "lcc_edges": 3461
+      },
+      "modularity": {
+        "num_communities": 29,
+        "modularity_Q": 0.8471
+      },
+      "power_law": {
+        "gamma": 0.968,
+        "r_squared": 0.509
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 57,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 46,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "e4f8259a",
+          "degree": 40,
+          "node_type": "concept",
+          "statement": "Claude Shannon formalized information theory in the 1940s, building on earlier w..."
+        }
+      ]
+    },
+    {
+      "cycle": 11,
+      "timestamp": 1789629294.9592514,
+      "nodes": 614,
+      "edges": 3552,
+      "density": 0.00944,
+      "avg_degree": 11.57,
+      "node_types": {
+        "concept": 424,
+        "hypothesis": 69,
+        "question": 16,
+        "synthesis": 12,
+        "gap": 84,
+        "empirical": 8,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1468,
+        "associated": 1677,
+        "contradicts": 55,
+        "structural_analogy": 233,
+        "toward_mission": 57,
+        "empirically_tested": 8,
+        "surface_analogy": 46,
+        "causes": 8
+      },
+      "small_world": {
+        "C_actual": 0.6843,
+        "L_actual": 4.09,
+        "C_rand": 0.0205,
+        "L_rand": 2.8355,
+        "gamma_clust": 33.3972,
+        "lambda_path": 1.4424,
+        "small_world_S": 23.1531,
+        "lcc_nodes": 595,
+        "lcc_edges": 3534
+      },
+      "modularity": {
+        "num_communities": 32,
+        "modularity_Q": 0.844
+      },
+      "power_law": {
+        "gamma": 0.996,
+        "r_squared": 0.524
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 59,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 40,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 12,
+      "timestamp": 1789635360.3066545,
+      "nodes": 645,
+      "edges": 3688,
+      "density": 0.00888,
+      "avg_degree": 11.44,
+      "node_types": {
+        "concept": 439,
+        "hypothesis": 75,
+        "question": 19,
+        "synthesis": 13,
+        "gap": 88,
+        "empirical": 10,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1532,
+        "associated": 1727,
+        "contradicts": 55,
+        "structural_analogy": 238,
+        "toward_mission": 64,
+        "empirically_tested": 10,
+        "surface_analogy": 53,
+        "causes": 8,
+        "deep_isomorphism": 1
+      },
+      "small_world": {
+        "C_actual": 0.6786,
+        "L_actual": 4.1291,
+        "C_rand": 0.0181,
+        "L_rand": 2.8754,
+        "gamma_clust": 37.4893,
+        "lambda_path": 1.436,
+        "small_world_S": 26.1063,
+        "lcc_nodes": 629,
+        "lcc_edges": 3671
+      },
+      "modularity": {
+        "num_communities": 27,
+        "modularity_Q": 0.8409
+      },
+      "power_law": {
+        "gamma": 1.092,
+        "r_squared": 0.582
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 67,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 41,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 13,
+      "timestamp": 1789637608.972203,
+      "nodes": 662,
+      "edges": 3768,
+      "density": 0.00861,
+      "avg_degree": 11.38,
+      "node_types": {
+        "concept": 445,
+        "hypothesis": 75,
+        "question": 24,
+        "synthesis": 14,
+        "gap": 91,
+        "empirical": 12,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1568,
+        "associated": 1753,
+        "contradicts": 55,
+        "structural_analogy": 238,
+        "toward_mission": 71,
+        "empirically_tested": 12,
+        "surface_analogy": 62,
+        "causes": 8,
+        "deep_isomorphism": 1
+      },
+      "small_world": {
+        "C_actual": 0.6684,
+        "L_actual": 4.1226,
+        "C_rand": 0.019,
+        "L_rand": 2.8901,
+        "gamma_clust": 35.1499,
+        "lambda_path": 1.4265,
+        "small_world_S": 24.6413,
+        "lcc_nodes": 646,
+        "lcc_edges": 3751
+      },
+      "modularity": {
+        "num_communities": 28,
+        "modularity_Q": 0.836
+      },
+      "power_law": {
+        "gamma": 1.236,
+        "r_squared": 0.601
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 75,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 42,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 14,
+      "timestamp": 1789640796.399693,
+      "nodes": 682,
+      "edges": 3851,
+      "density": 0.00829,
+      "avg_degree": 11.29,
+      "node_types": {
+        "concept": 453,
+        "hypothesis": 77,
+        "question": 26,
+        "synthesis": 14,
+        "gap": 96,
+        "empirical": 15,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1618,
+        "associated": 1770,
+        "contradicts": 56,
+        "structural_analogy": 241,
+        "toward_mission": 78,
+        "empirically_tested": 14,
+        "surface_analogy": 64,
+        "causes": 8,
+        "deep_isomorphism": 2
+      },
+      "small_world": {
+        "C_actual": 0.6619,
+        "L_actual": 4.1102,
+        "C_rand": 0.0174,
+        "L_rand": 2.9125,
+        "gamma_clust": 38.1522,
+        "lambda_path": 1.4112,
+        "small_world_S": 27.0347,
+        "lcc_nodes": 667,
+        "lcc_edges": 3839
+      },
+      "modularity": {
+        "num_communities": 30,
+        "modularity_Q": 0.8314
+      },
+      "power_law": {
+        "gamma": 1.145,
+        "r_squared": 0.612
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 82,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 43,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 15,
+      "timestamp": 1789642575.3589823,
+      "nodes": 713,
+      "edges": 3976,
+      "density": 0.00783,
+      "avg_degree": 11.15,
+      "node_types": {
+        "concept": 470,
+        "hypothesis": 81,
+        "question": 27,
+        "synthesis": 14,
+        "gap": 103,
+        "empirical": 17,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1690,
+        "associated": 1810,
+        "contradicts": 56,
+        "structural_analogy": 241,
+        "toward_mission": 84,
+        "empirically_tested": 15,
+        "surface_analogy": 68,
+        "causes": 10,
+        "deep_isomorphism": 2
+      },
+      "small_world": {
+        "C_actual": 0.6636,
+        "L_actual": 4.1372,
+        "C_rand": 0.0163,
+        "L_rand": 2.9405,
+        "gamma_clust": 40.7644,
+        "lambda_path": 1.4069,
+        "small_world_S": 28.9737,
+        "lcc_nodes": 696,
+        "lcc_edges": 3964
+      },
+      "modularity": {
+        "num_communities": 32,
+        "modularity_Q": 0.8325
+      },
+      "power_law": {
+        "gamma": 1.155,
+        "r_squared": 0.617
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 88,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 44,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 16,
+      "timestamp": 1789643998.3164291,
+      "nodes": 726,
+      "edges": 4039,
+      "density": 0.00767,
+      "avg_degree": 11.13,
+      "node_types": {
+        "concept": 476,
+        "hypothesis": 81,
+        "question": 27,
+        "synthesis": 15,
+        "gap": 106,
+        "empirical": 20,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1732,
+        "associated": 1814,
+        "contradicts": 56,
+        "structural_analogy": 241,
+        "toward_mission": 95,
+        "empirically_tested": 17,
+        "surface_analogy": 72,
+        "causes": 10,
+        "deep_isomorphism": 2
+      },
+      "small_world": {
+        "C_actual": 0.6614,
+        "L_actual": 4.0838,
+        "C_rand": 0.0159,
+        "L_rand": 2.9499,
+        "gamma_clust": 41.7127,
+        "lambda_path": 1.3844,
+        "small_world_S": 30.1304,
+        "lcc_nodes": 708,
+        "lcc_edges": 4027
+      },
+      "modularity": {
+        "num_communities": 35,
+        "modularity_Q": 0.8313
+      },
+      "power_law": {
+        "gamma": 1.199,
+        "r_squared": 0.638
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 99,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 44,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 17,
+      "timestamp": 1789652215.8941271,
+      "nodes": 753,
+      "edges": 4117,
+      "density": 0.00727,
+      "avg_degree": 10.93,
+      "node_types": {
+        "concept": 483,
+        "hypothesis": 85,
+        "question": 29,
+        "synthesis": 16,
+        "gap": 116,
+        "empirical": 23,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1778,
+        "associated": 1830,
+        "contradicts": 56,
+        "structural_analogy": 248,
+        "toward_mission": 97,
+        "empirically_tested": 19,
+        "surface_analogy": 77,
+        "causes": 10,
+        "deep_isomorphism": 2
+      },
+      "small_world": {
+        "C_actual": 0.6609,
+        "L_actual": 4.1313,
+        "C_rand": 0.0155,
+        "L_rand": 2.979,
+        "gamma_clust": 42.6834,
+        "lambda_path": 1.3868,
+        "small_world_S": 30.7777,
+        "lcc_nodes": 731,
+        "lcc_edges": 4103
+      },
+      "modularity": {
+        "num_communities": 38,
+        "modularity_Q": 0.8305
+      },
+      "power_law": {
+        "gamma": 1.19,
+        "r_squared": 0.617
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 101,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 47,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 44,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 18,
+      "timestamp": 1789653778.311689,
+      "nodes": 778,
+      "edges": 4267,
+      "density": 0.00706,
+      "avg_degree": 10.97,
+      "node_types": {
+        "concept": 497,
+        "hypothesis": 88,
+        "question": 30,
+        "synthesis": 17,
+        "gap": 120,
+        "empirical": 25,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1830,
+        "associated": 1909,
+        "contradicts": 62,
+        "structural_analogy": 254,
+        "toward_mission": 97,
+        "empirically_tested": 21,
+        "surface_analogy": 82,
+        "causes": 10,
+        "deep_isomorphism": 2
+      },
+      "small_world": {
+        "C_actual": 0.6564,
+        "L_actual": 4.1241,
+        "C_rand": 0.0143,
+        "L_rand": 2.9859,
+        "gamma_clust": 46.0281,
+        "lambda_path": 1.3812,
+        "small_world_S": 33.3244,
+        "lcc_nodes": 754,
+        "lcc_edges": 4252
+      },
+      "modularity": {
+        "num_communities": 40,
+        "modularity_Q": 0.8289
+      },
+      "power_law": {
+        "gamma": 1.175,
+        "r_squared": 0.64
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 102,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 48,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "093a3762",
+          "degree": 45,
+          "node_type": "hypothesis",
+          "statement": "The proposal suggesting information erasure can occur without energy cost by usi..."
+        }
+      ]
+    },
+    {
+      "cycle": 19,
+      "timestamp": 1789655644.2287962,
+      "nodes": 796,
+      "edges": 4392,
+      "density": 0.00694,
+      "avg_degree": 11.04,
+      "node_types": {
+        "concept": 502,
+        "hypothesis": 90,
+        "question": 36,
+        "synthesis": 17,
+        "gap": 123,
+        "empirical": 27,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1865,
+        "associated": 1984,
+        "contradicts": 62,
+        "structural_analogy": 263,
+        "toward_mission": 101,
+        "empirically_tested": 22,
+        "surface_analogy": 82,
+        "causes": 10,
+        "deep_isomorphism": 3
+      },
+      "small_world": {
+        "C_actual": 0.6488,
+        "L_actual": 4.0418,
+        "C_rand": 0.0143,
+        "L_rand": 3.0036,
+        "gamma_clust": 45.4764,
+        "lambda_path": 1.3457,
+        "small_world_S": 33.795,
+        "lcc_nodes": 779,
+        "lcc_edges": 4377
+      },
+      "modularity": {
+        "num_communities": 33,
+        "modularity_Q": 0.8266
+      },
+      "power_law": {
+        "gamma": 1.274,
+        "r_squared": 0.666
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 106,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 48,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "8da352e3",
+          "degree": 46,
+          "node_type": "question",
+          "statement": "What mechanisms do biological and neuromorphic systems employ for non-equilibriu..."
+        }
+      ]
+    },
+    {
+      "cycle": 20,
+      "timestamp": 1789656989.5660956,
+      "nodes": 821,
+      "edges": 4513,
+      "density": 0.0067,
+      "avg_degree": 10.99,
+      "node_types": {
+        "concept": 509,
+        "hypothesis": 93,
+        "question": 41,
+        "synthesis": 18,
+        "gap": 128,
+        "empirical": 31,
+        "mission": 1
+      },
+      "edge_types": {
+        "supports": 1911,
+        "associated": 2041,
+        "contradicts": 63,
+        "structural_analogy": 272,
+        "toward_mission": 104,
+        "empirically_tested": 26,
+        "surface_analogy": 82,
+        "deep_isomorphism": 4,
+        "causes": 10
+      },
+      "small_world": {
+        "C_actual": 0.6422,
+        "L_actual": 4.0793,
+        "C_rand": 0.0136,
+        "L_rand": 3.0211,
+        "gamma_clust": 47.1191,
+        "lambda_path": 1.3502,
+        "small_world_S": 34.8968,
+        "lcc_nodes": 803,
+        "lcc_edges": 4496
+      },
+      "modularity": {
+        "num_communities": 35,
+        "modularity_Q": 0.8266
+      },
+      "power_law": {
+        "gamma": 1.326,
+        "r_squared": 0.659
+      },
+      "top_hubs": [
+        {
+          "id": "568f368d",
+          "degree": 110,
+          "node_type": "mission",
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticalit..."
+        },
+        {
+          "id": "531bf336",
+          "degree": 48,
+          "node_type": "concept",
+          "statement": "Entropy in information theory represents the uncertainty or lack of predictabili..."
+        },
+        {
+          "id": "8da352e3",
+          "degree": 47,
+          "node_type": "question",
+          "statement": "What mechanisms do biological and neuromorphic systems employ for non-equilibriu..."
+        }
+      ]
+    }
+  ]
+}

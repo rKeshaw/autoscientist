@@ -1,0 +1,164 @@
+{
+  "pass_1_merges": {
+    "historical_merges_logged": 31,
+    "mean_similarity": 0.953,
+    "min_similarity": 0.88,
+    "max_similarity": 1.0,
+    "unmerged_counterfactual_nodes": 852,
+    "graph_bloat_prevented_pct": 3.78,
+    "samples": [
+      {
+        "source": "bb94e1bc",
+        "target": "78375f8e",
+        "similarity": 0.96
+      },
+      {
+        "source": "23f690ed",
+        "target": "093a3762",
+        "similarity": 0.94
+      },
+      {
+        "source": "dee290b7",
+        "target": "093a3762",
+        "similarity": 0.92
+      },
+      {
+        "source": "2c1acce2",
+        "target": "b87bb265",
+        "similarity": 0.88
+      },
+      {
+        "source": "869647af",
+        "target": "b87bb265",
+        "similarity": 0.95
+      }
+    ]
+  },
+  "pass_2_synthesis": {
+    "synthesis_node_count": 18,
+    "incident_edges": 189,
+    "mean_synthesis_betweenness": 0.0037,
+    "mean_network_betweenness": 0.00287,
+    "betweenness_centrality_lift": 1.29,
+    "mean_synthesis_pagerank": 0.00143,
+    "mean_network_pagerank": 0.00122,
+    "sample_syntheses": [
+      "The interplay between endocannabinoids and cholinergic signaling in inhibitory STDP suggests a complex regulatory networ",
+      "The convergence of these concepts suggests that biological and quantum information processing systems can operate more e",
+      "Biological systems, through mechanisms like kinetic proofreading, achieve high precision in molecular recognition and op"
+    ]
+  },
+  "pass_3_abstraction": {
+    "total_distinct_clusters": 200,
+    "top_disciplinary_clusters": {
+      "molecular_biology": 99,
+      "neuroscience": 82,
+      "thermodynamics": 75,
+      "information_theory": 59,
+      "thinking": 40,
+      "statistical_mechanics": 34,
+      "empirical": 31,
+      "deep_learning": 24
+    }
+  },
+  "pass_4_gap_discovery": {
+    "total_gaps_inferred": 128,
+    "gaps_converted_to_hypotheses": 71,
+    "conversion_to_hypothesis_rate": 0.555,
+    "total_full_discovery_chains": 46,
+    "distinct_gaps_reaching_empirical": 38,
+    "representative_chains": [
+      {
+        "gap": "There must exist theoretical frameworks or models that bridge classical thermodynamics and...",
+        "hypothesis": "The proposal suggesting information erasure can occur without energy cost by using angular...",
+        "empirical": "Computational test of: The proposal suggesting information erasure can occur without energ..."
+      },
+      {
+        "gap": "An intermediary concept is required that explains how angular momentum can be utilized in ...",
+        "hypothesis": "The proposal suggesting information erasure can occur without energy cost by using angular...",
+        "empirical": "Computational test of: The proposal suggesting information erasure can occur without energ..."
+      },
+      {
+        "gap": "The concept of using alternative conserved quantities like angular momentum to offset entr...",
+        "hypothesis": "The proposal suggesting information erasure can occur without energy cost by using angular...",
+        "empirical": "Computational test of: The proposal suggesting information erasure can occur without energ..."
+      },
+      {
+        "gap": "There must be an underlying principle or mechanism by which biological systems can process...",
+        "hypothesis": "The proposal suggesting information erasure can occur without energy cost by using angular...",
+        "empirical": "Computational test of: The proposal suggesting information erasure can occur without energ..."
+      }
+    ]
+  },
+  "pass_5_contradictions": {
+    "total_contradiction_edges": 63,
+    "distinct_nodes_involved": 77,
+    "nodes_with_elevated_importance": 75,
+    "importance_elevation_rate": 0.974
+  },
+  "pass_6_synaptic_spectrum": {
+    "associated": {
+      "count": 2041,
+      "mean_weight": 0.464,
+      "std_weight": 0.208,
+      "min_weight": 0.196,
+      "max_weight": 0.98
+    },
+    "supports": {
+      "count": 1911,
+      "mean_weight": 0.841,
+      "std_weight": 0.23,
+      "min_weight": 0.343,
+      "max_weight": 0.98
+    },
+    "structural_analogy": {
+      "count": 272,
+      "mean_weight": 0.562,
+      "std_weight": 0.074,
+      "min_weight": 0.538,
+      "max_weight": 0.98
+    },
+    "toward_mission": {
+      "count": 104,
+      "mean_weight": 0.96,
+      "std_weight": 0.065,
+      "min_weight": 0.55,
+      "max_weight": 0.98
+    },
+    "surface_analogy": {
+      "count": 82,
+      "mean_weight": 0.292,
+      "std_weight": 0.037,
+      "min_weight": 0.245,
+      "max_weight": 0.401
+    },
+    "contradicts": {
+      "count": 63,
+      "mean_weight": 0.953,
+      "std_weight": 0.082,
+      "min_weight": 0.5,
+      "max_weight": 0.98
+    },
+    "empirically_tested": {
+      "count": 26,
+      "mean_weight": 0.436,
+      "std_weight": 0.271,
+      "min_weight": 0.099,
+      "max_weight": 0.98
+    },
+    "causes": {
+      "count": 10,
+      "mean_weight": 0.98,
+      "std_weight": 0.0,
+      "min_weight": 0.98,
+      "max_weight": 0.98
+    },
+    "deep_isomorphism": {
+      "count": 4,
+      "mean_weight": 0.967,
+      "std_weight": 0.022,
+      "min_weight": 0.93,
+      "max_weight": 0.98
+    }
+  }
+}

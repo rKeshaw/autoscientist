@@ -132,18 +132,16 @@ Respond ONLY "yes" or "no".
 MISSION_SUMMARY_PROMPT = """
 Central research question: "{mission}"
 
-These are the most significant advances toward this question made so far:
+Most significant advances achieved toward this question:
 {advances}
 
-These are the strongest insights found:
+Strongest structural/isomorphic insights discovered:
 {insights}
 
-These are the main open tensions still unresolved:
+Active tensions and theoretical contradictions:
 {contradictions}
 
-In 3-4 sentences, summarize how close the mind is to answering the central question.
-What is the current best partial answer? What is the key remaining gap?
-Write like a scientist assessing their own progress.
+In 3-4 dense, rigorous sentences, assess progress toward resolving the central question. State the strongest mechanistic answer established so far, evaluate whether foundational physical laws or empirical data have clarified the problem, and define the precise theoretical or experimental gap that must still be bridged.
 """
 
 # ── Observer ──────────────────────────────────────────────────────────────────
@@ -191,12 +189,26 @@ class Observer:
                       cycle: int = 0, step: int = 0,
                       node_id: str = "") -> AgendaItem:
         new_emb = self._embed(text)
-        for i, existing in enumerate(self.agenda):
-            if self._items_similar(
-                text, new_emb,
-                existing.text, self.agenda_embeddings[i]
-            ):
-                existing.count   += 1
+        if self.agenda and self.agenda_embeddings and len(self.agenda) == len(self.agenda_embeddings):
+            # Vectorized similarity against all existing items (O(1) matrix dot product)
+            embs = np.array(self.agenda_embeddings)
+            sims = np.dot(embs, new_emb)
+            best_idx = int(np.argmax(sims))
+            best_sim = float(sims[best_idx])
+
+            matched_idx = -1
+            if best_sim > SIMILARITY_HIGH:
+                matched_idx = best_idx
+            elif best_sim >= SIMILARITY_MID:
+                # Top candidate is in ambiguous band; query LLM only for top candidate
+                existing_text = self.agenda[best_idx].text
+                raw = self._llm(QUESTION_SIMILAR_PROMPT.format(q1=text, q2=existing_text), temperature=0.1)
+                if raw.lower().startswith('yes'):
+                    matched_idx = best_idx
+
+            if matched_idx >= 0:
+                existing = self.agenda[matched_idx]
+                existing.count += 1
                 existing.priority = min(1.0, existing.priority + 0.15)
                 if existing.count >= QUESTION_REPEAT_THRESHOLD:
                     self._flag_emergence(
@@ -432,9 +444,6 @@ class Observer:
 
     def _flag_emergence(self, type: str, detail: str,
                         cycle: int, node_ids: list = None):
-        last_fired = self._emergence_last_fired.get(type, 0)
-        if time.time() - last_fired < EMERGENCE_COOLDOWN_HOURS * 3600:
-            return
         count = self._cycle_emergence_counts.get(type, 0)
         if count >= MAX_EMERGENCES_PER_TYPE:
             return

@@ -1,35 +1,29 @@
-"""
-LLM Utilities — Robust JSON parsing, multi-model support, and shared LLM interface.
-
-All modules should use these utilities instead of raw ollama.Client calls
-and bare json.loads() to ensure consistent behavior and error handling.
-"""
-
 import re
 import json
-import time
-from ollama import Client
-
-# ── Singleton client ──────────────────────────────────────────────────────────
+from typing import Optional
 
 _client = None
 
-def _get_client() -> Client:
+
+def _get_client():
     global _client
     if _client is None:
-        _client = Client()
+        import ollama
+        _client = ollama.Client()
     return _client
 
 
-# ── Robust JSON parsing ──────────────────────────────────────────────────────
+# ── JSON parsing helpers ─────────────────────────────────────────────────────
 
 def parse_llm_json(raw: str):
     """
     Extract JSON from LLM output, handling common failure modes:
-    - Markdown code fences (```json ... ```)
-    - Preamble text before JSON
-    - Trailing text after JSON
-    - Single-quoted strings (common with smaller models)
+    - Markdown code fences (```json ... ```) with preamble or trailing text
+    - Braces or brackets inside string literals
+    - Trailing commas before closing braces/brackets
+    - Unquoted booleans/nulls (yes, no, true, false, null, None)
+    - Single-quoted strings
+    - Multiple candidate blocks in text
 
     Returns parsed object or None if truly unparseable.
     """
@@ -38,41 +32,99 @@ def parse_llm_json(raw: str):
 
     text = raw.strip()
 
-    # Strip markdown code fences
-    text = re.sub(r'^```(?:json)?\s*\n?', '', text, flags=re.MULTILINE)
-    text = re.sub(r'\n?```\s*$', '', text, flags=re.MULTILINE)
-    text = text.strip()
+    # 1. Try markdown code block extraction
+    code_block = re.search(r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```", text, re.DOTALL)
+    if code_block:
+        candidate = code_block.group(1).strip()
+        try:
+            return json.loads(candidate)
+        except (json.JSONDecodeError, ValueError):
+            pass
 
-    # Try direct parse first
+    # 2. Try direct parse
     try:
         return json.loads(text)
     except (json.JSONDecodeError, ValueError):
         pass
 
-    # Try to find JSON object or array within the text
-    for start_char, end_char in [('{', '}'), ('[', ']')]:
-        start = text.find(start_char)
-        if start < 0:
-            continue
-
-        # Find matching closing bracket, handling nesting
-        depth = 0
-        for i in range(start, len(text)):
-            if text[i] == start_char:
-                depth += 1
-            elif text[i] == end_char:
-                depth -= 1
-                if depth == 0:
-                    candidate = text[start:i+1]
-                    try:
-                        return json.loads(candidate)
-                    except (json.JSONDecodeError, ValueError):
-                        # Try fixing single quotes
-                        try:
-                            fixed = candidate.replace("'", '"')
-                            return json.loads(fixed)
-                        except (json.JSONDecodeError, ValueError):
+    # 3. Find bracket-delimited candidates respecting string literals
+    def extract_balanced(source: str, start_char: str, end_char: str) -> list[str]:
+        candidates = []
+        pos = 0
+        while True:
+            start = source.find(start_char, pos)
+            if start < 0:
+                break
+            depth = 0
+            in_str = False
+            escape = False
+            end = -1
+            for i in range(start, len(source)):
+                c = source[i]
+                if escape:
+                    escape = False
+                    continue
+                if c == "\\":
+                    escape = True
+                    continue
+                if c == '"':
+                    in_str = not in_str
+                    continue
+                if not in_str:
+                    if c == start_char:
+                        depth += 1
+                    elif c == end_char:
+                        depth -= 1
+                        if depth == 0:
+                            end = i
                             break
+            if end != -1:
+                candidates.append(source[start:end+1])
+                pos = end + 1
+            else:
+                pos = start + 1
+        return candidates
+
+    def repair_json(s: str) -> str:
+        # Remove trailing commas before } or ]
+        s = re.sub(r",\s*([\}\]])", r"\1", s)
+        # Unquoted boolean/null values
+        s = re.sub(r":\s*yes\b", ": true", s, flags=re.IGNORECASE)
+        s = re.sub(r":\s*no\b", ": false", s, flags=re.IGNORECASE)
+        s = re.sub(r":\s*none\b", ": null", s, flags=re.IGNORECASE)
+        s = re.sub(r":\s*true\b", ": true", s, flags=re.IGNORECASE)
+        s = re.sub(r":\s*false\b", ": false", s, flags=re.IGNORECASE)
+        return s
+
+    parsed_candidates = []
+    for start_c, end_c in [("{", "}"), ("[", "]")]:
+        candidates = extract_balanced(text, start_c, end_c)
+        for cand in candidates:
+            obj = None
+            try:
+                obj = json.loads(cand)
+            except (json.JSONDecodeError, ValueError):
+                repaired = repair_json(cand)
+                try:
+                    obj = json.loads(repaired)
+                except (json.JSONDecodeError, ValueError):
+                    try:
+                        obj = json.loads(repaired.replace("'", '"'))
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+            if obj is not None:
+                parsed_candidates.append((len(cand), obj))
+
+    if parsed_candidates:
+        target_keys = {"nodes", "hypotheses", "concepts", "statement", "verdict", "checklist",
+                       "questions", "domains", "queries", "synthesis", "abstraction", "gap", "match", "relevant"}
+        for _, obj in parsed_candidates:
+            if isinstance(obj, dict) and any(k in obj for k in target_keys):
+                return obj
+            if isinstance(obj, list) and len(obj) > 0 and isinstance(obj[0], (str, dict)):
+                return obj
+        parsed_candidates.sort(key=lambda x: x[0], reverse=True)
+        return parsed_candidates[0][1]
 
     return None
 
@@ -87,7 +139,7 @@ def require_json(raw: str, default=None):
 
 def llm_call(prompt: str, temperature: float = 0.7,
              model: str = None, system: str = None,
-             role: str = "creative") -> str:
+             role: str = "creative", format: str = None) -> str:
     """
     Unified LLM call with model selection based on task role.
 
@@ -108,16 +160,16 @@ def llm_call(prompt: str, temperature: float = 0.7,
     messages.append({"role": "user", "content": prompt})
 
     client = _get_client()
-    response = client.chat(
-        model=model,
-        messages=messages,
-        # num_predict=-1 makes the length cap explicit (generate until a natural stop)
-        # instead of relying on ollama's server-side default, which is not documented
-        # per-model and was never actually verified as the cause of a parse-failure spike
-        # this session -- rather than guess, surface done_reason so a future truncation
-        # is diagnosable from the run log instead of showing up only as "Failed to parse".
-        options={"temperature": temperature, "num_predict": -1}
-    )
+    kwargs = {"temperature": temperature, "num_predict": -1}
+    chat_args = {
+        "model": model,
+        "messages": messages,
+        "options": kwargs
+    }
+    if format:
+        chat_args["format"] = format
+
+    response = client.chat(**chat_args)
     if response.get('done_reason') not in (None, 'stop'):
         print(f"  [llm_call] non-stop done_reason={response.get('done_reason')!r} "
               f"role={role} model={model} -- response may be truncated")
@@ -126,7 +178,7 @@ def llm_call(prompt: str, temperature: float = 0.7,
 
 def llm_json(prompt: str, temperature: float = 0.1,
              model: str = None, default=None,
-             system: str = None) -> any:
+             system: str = None, role: str = "precise") -> any:
     """
     LLM call that expects JSON output. Uses precise model by default.
 
@@ -146,7 +198,8 @@ def llm_json(prompt: str, temperature: float = 0.1,
         temperature=temperature,
         model=model,
         system=json_system,
-        role="precise"
+        role=role,
+        format="json"
     )
     return require_json(raw, default=default)
 
@@ -171,3 +224,44 @@ def llm_chat(messages: list[dict], temperature: float = 0.7,
         print(f"  [llm_chat] non-stop done_reason={response.get('done_reason')!r} "
               f"role={role} model={model} -- response may be truncated")
     return response['message']['content'].strip()
+
+
+def stop_model(model_name: str):
+    """Stop a specific Ollama model to free GPU VRAM immediately via API keep_alive=0."""
+    import urllib.request
+    import json
+    try:
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=json.dumps({"model": model_name, "keep_alive": 0}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            pass
+    except Exception as e:
+        import subprocess
+        try:
+            subprocess.run(["ollama", "stop", model_name], capture_output=True, timeout=10)
+        except Exception:
+            pass
+
+
+def unload_all_models():
+    """
+    Unload all active Ollama models from GPU VRAM to ensure shared resources
+    are freed immediately when tasks complete.
+    """
+    import subprocess
+    try:
+        res = subprocess.run(["ollama", "ps"], capture_output=True, text=True, timeout=10)
+        lines = res.stdout.strip().splitlines()
+        if len(lines) > 1:
+            for line in lines[1:]:
+                parts = line.split()
+                if parts:
+                    m = parts[0]
+                    stop_model(m)
+            print("  [unload_all_models] Released all models from GPU VRAM.")
+    except Exception as e:
+        print(f"  [unload_all_models] Warning: {e}")

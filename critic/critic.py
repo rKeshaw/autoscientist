@@ -166,21 +166,14 @@ YOUR PREVIOUS CHALLENGE WAS: "{prev_challenge}"
 SYSTEM 1'S MOST RECENT RESPONSE: "{prev_defense}"
 
 First, explicitly state whether System 1's response addressed your previous challenge.
-- If it did NOT, say specifically what piece is still missing — do not just repeat your
-  previous challenge verbatim.
-- If it DID address it, you must raise a genuinely NEW and distinct concern (different
-  from your previous challenge). If no substantive concern remains, respond with
-  EXACTLY: NO FURTHER CHALLENGE
+- If it did NOT, say specifically what theoretical, empirical, or mechanistic piece is still missing.
+- If it DID address it, assess whether a genuinely distinct concern remains regarding physical validity, mathematical consistency, or boundary conditions.
+- If no substantive scientific objection remains and the claim is sound, respond with EXACTLY:
+  NO FURTHER CHALLENGE
 
-WATCH FOR FABRICATION, don't just ask for more detail. If System 1's response names a specific
-external fact -- a named study, institution, researcher, or equation -- that is NOT verifiable
-from the CONTEXT above, your new concern must be to question THAT fact directly: ask why THIS
-specific fact is the correct one, or point out it isn't grounded in anything actually stated.
-Simply asking for "more specifics" invites System 1 to invent a bigger, more convincing-sounding
-fact next round instead of justifying the one it already gave -- don't reward that. A real named
-equation or institution being confidently asserted is not evidence it actually applies here.
+Scrutinize the substantive logic: Evaluate whether the proposed mechanism, mathematical relationships, or physical variables genuinely hold across both domains, rather than merely sharing metaphorical language.
 
-Respond with 2-4 sentences (or exactly "NO FURTHER CHALLENGE" if none remain).
+Respond with 2-4 focused sentences (or exactly "NO FURTHER CHALLENGE" if satisfied).
 """
 
 DEFENSE_PROMPT = """You are System 1 — the fast, creative, intuitive part of a scientific mind.
@@ -191,20 +184,16 @@ YOUR ORIGINAL CLAIM: "{claim}"
 
 SYSTEM 2'S CHALLENGE: "{challenge}"
 
-AVAILABLE KNOWLEDGE:
+AVAILABLE KNOWLEDGE & CONTEXT:
 {context}
 
-Defend your claim against this specific challenge. Your response MUST open with one
-explicit correspondence line in this exact form, naming REAL entities/variables from
-the claim (not placeholders) — this applies whether or not System 2 asked for it directly:
-  "[Entity/variable in A] corresponds to [entity/variable in B] because [reason]."
-Then:
-1. If you can address the challenge with further specific evidence or reasoning, do so.
-2. If you need to NARROW or QUALIFY your claim to make it defensible, do so honestly.
-3. If you realize the challenge is valid and your claim is weak even with the mapping
-   stated, admit it — but still state the mapping first, so the record is precise either way.
+Defend your claim against this specific challenge with scientific precision:
+1. Clearly identify the specific corresponding variables, mechanisms, or invariants between the domains:
+   "[Mechanism/variable in Domain A] corresponds to [mechanism/variable in Domain B] because [governing physical/mathematical reason]."
+2. Support your defense using rigorous physical, mathematical, or biological principles. You may draw upon established scientific laws and mechanisms to ground the correspondence.
+3. If the challenge exposed a genuine limitation or boundary condition, narrow and qualify your claim honestly.
 
-Respond in 3-5 sentences total. Be honest — a narrower true claim is better than a broad false one.
+Respond in 3-5 substantive sentences. A precise, well-bounded claim is far more scientifically valuable than an unfalsifiable broad one.
 """
 
 # Section 4.2 specifies System 2's final step only as "delivers accept / refine / reject /
@@ -222,52 +211,19 @@ ORIGINAL CLAIM: "{claim}"
 ADVERSARIAL DIALOGUE:
 {dialogue_text}
 
-Before deciding, work through this checklist using ONLY what is actually stated in the
-dialogue above (quote the specific line for each item you mark yes):
+Before deciding, work through this checklist using the dialogue and context above (quote the specific line for each item you mark yes):
 
-1. MAPPING: Did System 1 name at least one specific entity/variable on each side and state
-   which corresponds to which? (yes/no + quote if yes)
+1. MAPPING: Did System 1 articulate a clear correspondence naming specific mechanisms, variables, or structures on each side? (yes/no + quote if yes)
 
-2. UNANSWERED OBJECTION: Did System 2 raise a distinct objection that System 1 never
-   adequately answered by the end of the dialogue — not merely an objection that was raised
-   and then addressed? (yes/no + quote the unanswered objection if yes)
+2. UNANSWERED OBJECTION: Did System 2 raise a critical, substantive objection that System 1 failed to address by the end of the dialogue? (yes/no + quote the unanswered objection if yes)
 
-3. SPECIFIC: Does the correspondence quoted for item 1 name an actual mechanism, equation,
-   quantity, or threshold that maps term-for-term — not just something stated confidently?
-   Every named entity in the correspondence (a citation, a variable, a quantity, a physical
-   concept like "energy states" or "spin configurations") must trace to the source/target
-   statements above or to the claim itself — introducing ANY new specific-sounding noun that
-   isn't there, even a plausible technical one, is fabrication, not specificity. Mark NO if:
-   (a) generic language in technical dress ("both exhibit emergent patterns") that fits
-       almost any pair;
-   (b) it introduces a specific-sounding entity, citation, or quantity (a named
-       theory/researcher/institution/study, OR a technical-sounding variable/mechanism like
-       "energy states"/"spin configurations") that is absent from the source/target
-       statements above — if none are given, treat anything specific-sounding as ungrounded
-       by default, no exceptions;
-   (c) a real fact/equation asserted to apply here with no justification for why;
-   (d) an IDENTITY not a mapping — strip both sides' names; if the remaining words are the
-       same phrase, it's a restatement, not a correspondence.
-   Mark YES only if the named quantities/mechanism are actually established by the claim or
-   context, not asserted from outside knowledge or confident delivery alone. (yes/no)
+3. SPECIFIC & GROUNDED: Does the correspondence identify a concrete physical, mathematical, or biological mechanism that maps between the concepts?
+   - Mark YES if the entities, variables, or equations represent a coherent, scientifically valid relationship or functional parallel. Valid domain knowledge (established physical laws, biological pathways, or mathematical models) used to explain the mapping is welcomed and encouraged.
+   - Mark NO if the claim relies on empty metaphors, surface buzzwords ("both are complex adaptive systems"), circular restatements, or completely unsupported leaps of logic. (yes/no)
 
-   SPECIFIC example: "Q_alpha decays via dQ/dt=-k*Q, crosses threshold theta_alpha; Q_beta
-   follows the identical equation, crosses theta_beta" (exact quantities/equation named, both
-   drawn from the claim itself). NOT specific, one line each: "both generate emergent patterns
-   from simple rules" (a); "researchers at XYZ University found..." with no such study in
-   context (b, fabricated citation); "Epsilon's energy states correspond to Zeta's spin
-   configurations" when neither term appears anywhere in the source/target statements (b,
-   fabricated technical quantity — sounding like physics is not the same as being grounded);
-   "this is the logistic map x_(n+1)=rx(1-x_n)" asserted with no justification (c); "X in A
-   corresponds to X in B because both X" (d).
+4. NOVEL: Does the claim offer non-trivial insight beyond trivially restating known definitions? (yes/no)
 
-4. NOVEL: Is the claim's novelty relative to existing knowledge established (not just
-   restating known vocabulary)? (yes/no)
-
-Then, based on this dialogue AND the source/target statements above (not just the
-dialogue's paraphrase of them — a dialogue can drift from what the two nodes actually say),
-work out your verdict using the MECHANICAL RULE below. Apply it literally, in order — do
-not add, weaken, or substitute any condition, even if another consideration feels reasonable.
+Then, based on this dialogue AND the source/target statements above, work out your verdict using the MECHANICAL RULE below. Apply it literally, in order:
 
 MECHANICAL RULE (apply in order, stop at the first step that fires):
   a. IF item 2 (unanswered objection) is YES: verdict = "reject" or "defer". STOP.

@@ -9,7 +9,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from enum import IntEnum
 
-from graph.brain import Brain, BrainMode
+from graph.brain import Brain, BrainMode, Node, NodeType, NodeStatus
 from ingestion.ingestor import Ingestor, EdgeSource
 from dreamer.dreamer import Dreamer, DreamMode
 from observer.observer import Observer
@@ -126,8 +126,10 @@ class SalienceScheduler:
         self.notebook    = Notebook(self.brain, observer=self.observer)
         self.reader      = Reader(self.brain, observer=self.observer, notebook=self.notebook, ingestor=self.ingestor)
         self.sandbox     = Sandbox(self.brain, observer=self.observer)
-        self.thinker     = Thinker(self.brain, observer=self.observer, embedding_index=self.emb_index, critic=self.critic)
+        self.thinker     = Thinker(self.brain, observer=self.observer, embedding_index=self.emb_index, critic=self.critic, sandbox=self.sandbox)
         self.conversation = Conversationalist(self.brain, observer=self.observer, embedding_index=self.emb_index, ingestor=self.ingestor, notebook=self.notebook)
+
+        self._phase_lock = threading.RLock()
 
         signal.signal(signal.SIGINT,  self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -140,6 +142,7 @@ class SalienceScheduler:
             "reading": self.run_reading_phase,
             "writing": self.run_writing_phase,
             "consolidation": self.run_consolidation_phase,
+            "sandbox": self.run_sandbox_phase,
         }
 
     def _load_state(self):
@@ -155,7 +158,13 @@ class SalienceScheduler:
     def _save_state(self):
         self.brain.save(BRAIN_PATH)
         self.observer.save(OBSERVER_PATH)
-        self.emb_index.save(INDEX_PATH)
+        if hasattr(self, 'emb_index') and self.emb_index:
+            self.emb_index.sync_with_brain(self.brain, shared_embed)
+            self.emb_index.save(INDEX_PATH)
+        if hasattr(self, 'insight_buffer') and self.insight_buffer:
+            self.insight_buffer.save()
+        if hasattr(self, 'notebook') and self.notebook:
+            self.notebook.save()
 
     def _shutdown(self, signum, frame):
         print("\n── Shutdown signal — saving state ──")
@@ -192,6 +201,7 @@ class SalienceScheduler:
             json.dump(merged, f)
 
     def run_dream_phase(self):
+        self.brain.apply_neuromodulator_decay()
         cycle      = self.cycle_log.current_cycle() + 1
         brain_mode = self.brain.get_mode()
         entry      = CycleEntry(cycle=cycle, phase="dream", brain_mode=brain_mode)
@@ -252,7 +262,16 @@ class SalienceScheduler:
                 if hasattr(self.brain, 'episodic'):
                     self.brain.episodic.record("research", entry.summary, all_new)
             else:
-                print("Wandering mode — skipping targeted research")
+                print("Wandering mode — performing exploratory research to find novel directions")
+                log = self.researcher.research_day(
+                    max_questions=max(1, RESEARCH_QUESTIONS // 2),
+                    log_path=f"logs/research_cycle{cycle}.json")
+                self.notebook.write_field_notes(log, cycle)
+                all_new = [nid for r in log.entries for nid in r.node_ids]
+                self._append_daily_nodes(all_new)
+                entry.summary = f"Exploratory research: {len(log.entries)} links. Found {len(all_new)} ideas."
+                if hasattr(self.brain, 'episodic'):
+                    self.brain.episodic.record("research", entry.summary, all_new)
         except Exception as e:
             print(f"Research error: {e}")
             entry.interrupted = True
@@ -350,6 +369,27 @@ class SalienceScheduler:
             self.cycle_log.add(entry)
             self._save_state()
 
+    def run_sandbox_phase(self, max_tests: int = 2):
+        cycle      = self.cycle_log.current_cycle()
+        brain_mode = self.brain.get_mode()
+        entry      = CycleEntry(cycle=cycle, phase="sandbox", brain_mode=brain_mode)
+        print(f"\n{'='*60}")
+        print(f"SANDBOX — Empirical Simulation Phase {cycle} [{brain_mode.upper()}]")
+        print(f"{'='*60}")
+        try:
+            results = self.sandbox.scan_and_test(max_tests=max_tests)
+            entry.summary = f"Tested {len(results)} hypotheses in sandbox"
+            if hasattr(self.brain, 'episodic'):
+                self.brain.episodic.record("sandbox", entry.summary)
+            print(f"  Sandbox phase complete: {len(results)} hypotheses tested")
+        except Exception as e:
+            print(f"Sandbox phase error: {e}")
+            entry.interrupted = True
+        finally:
+            entry.ended_at = time.time()
+            self.cycle_log.add(entry)
+            self._save_state()
+
     def run_writing_phase(self):
         cycle      = self.cycle_log.current_cycle()
         brain_mode = self.brain.get_mode()
@@ -364,9 +404,22 @@ class SalienceScheduler:
                     self.ingestor.ingest(insight, source=EdgeSource.CONSOLIDATION)
             for question in result.get('questions', []):
                 if isinstance(question, str) and len(question) > 10:
+                    q_node = Node(
+                        statement      = question,
+                        node_type      = NodeType.QUESTION,
+                        cluster        = "synthesis",
+                        status         = NodeStatus.UNCERTAIN,
+                        importance     = 0.7,
+                        source_quality = 0.8
+                    )
+                    q_id = self.brain.add_node(q_node)
+                    if hasattr(self, 'emb_index') and self.emb_index:
+                        self.emb_index.add(q_id, shared_embed(question))
                     self.observer.add_to_agenda(
-                        text=question, item_type="question",
-                        cycle=cycle
+                        text      = question,
+                        item_type = "question",
+                        cycle     = cycle,
+                        node_id   = q_id
                     )
             entry.summary = f"Essay written, {len(result.get('insights',[]))} insights"
             if hasattr(self.brain, 'episodic'):
@@ -419,7 +472,8 @@ class SalienceScheduler:
     def run_now(self, phase):
         # Allow running directly and bypass queue
         if phase in self.task_registry:
-            self.task_registry[phase]()
+            with self._phase_lock:
+                self.task_registry[phase]()
         else:
             print(f"Unknown phase: {phase}")
 
@@ -479,18 +533,25 @@ class SalienceScheduler:
         threading.Thread(target=self._salience_monitor, daemon=True).start()
         threading.Thread(target=self._background_scheduler, daemon=True).start()
 
-        # Main Event Loop
-        while self._running:
-            try:
-                priority, _, task_name = self._task_queue.get(timeout=2)
-                print(f"\n  [Queue] Executing {task_name} (Priority {priority.name})")
-                if task_name in self.task_registry:
-                    self.task_registry[task_name]()
-                self._task_queue.task_done()
-            except queue.Empty:
-                pass
-            except Exception as e:
-                print(f"Event loop error: {e}")
+        def _execute_task(name):
+            with self._phase_lock:
+                if name in self.task_registry:
+                    self.task_registry[name]()
+
+        import concurrent.futures
+        # Main Event Loop (Asynchronous Scheduler)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            while self._running:
+                try:
+                    priority, _, task_name = self._task_queue.get(timeout=2)
+                    print(f"\n  [Queue] Submitting {task_name} to executor (Priority {priority.name})")
+                    if task_name in self.task_registry:
+                        executor.submit(_execute_task, task_name)
+                    self._task_queue.task_done()
+                except queue.Empty:
+                    pass
+                except Exception as e:
+                    print(f"Event loop error: {e}")
 
     def stop(self):
         self._running = False
@@ -521,6 +582,8 @@ if __name__ == "__main__":
                         choices=["shallow","standard","deep"])
     parser.add_argument("--suspend-mission", action="store_true")
     parser.add_argument("--resume-mission",  action="store_true")
+    parser.add_argument("--loops", type=int, default=1,
+                        help="Number of cycles to run when in 'cycle' mode")
     args = parser.parse_args()
 
     RESEARCH_DEPTH = args.depth
@@ -532,17 +595,23 @@ if __name__ == "__main__":
     if args.suspend_mission: ds.suspend_mission()
     if args.resume_mission:  ds.resume_mission()
 
-    if args.mode == "auto":
-        try:
-            ds.start()
-        except (KeyboardInterrupt, SystemExit):
-            ds.stop()
-    elif args.mode == "status":
-        import json
-        print(json.dumps(ds.status(), indent=2))
-    elif args.mode == "cycle":
-        phases = ["dream", "research", "thinking", "reading", "writing", "consolidation"]
-        for p in phases:
-            ds.run_now(p)
-    else:
-        ds.run_now(args.mode)
+    try:
+        if args.mode == "auto":
+            try:
+                ds.start()
+            except (KeyboardInterrupt, SystemExit):
+                ds.stop()
+        elif args.mode == "status":
+            import json
+            print(json.dumps(ds.status(), indent=2))
+        elif args.mode == "cycle":
+            phases = ["dream", "research", "thinking", "reading", "writing", "consolidation"]
+            for _ in range(args.loops):
+                for p in phases:
+                    ds.run_now(p)
+        else:
+            ds.run_now(args.mode)
+    finally:
+        from llm_utils import unload_all_models
+        unload_all_models()
+

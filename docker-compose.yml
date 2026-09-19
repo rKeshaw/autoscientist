@@ -1,0 +1,1 @@
+"version: '3.8'\nservices:\n  neo4j:\n    image: neo4j:5\n    ports:\n      - \"7474:7474\"\n      - \"7687:7687\"\n    environment:\n      - NEO4J_AUTH=neo4j/autoscientist\n      - NEO4J_PLUGINS=[\"apoc\"]\n    volumes:\n      - ./data/neo4j_data:/data\n"

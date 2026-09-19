@@ -23,67 +23,51 @@ LAST_CONSOLIDATION_PATH = "data/last_consolidation.txt"
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 SYNTHESIS_PROMPT = """
-You are reflecting on a set of ideas that a scientific mind absorbed today.
+You are a theoretical scientist evaluating a set of ideas absorbed into the knowledge graph today.
 
-These ideas all arrived from research and conversation:
+Nodes under review:
 {nodes}
 
-Do these ideas, taken together, imply something that none of them state explicitly?
-A synthesis is a new insight that emerges from the COMBINATION — not a summary
-or paraphrase, but something genuinely new that the combination reveals.
+Do these ideas, when synthesized, reveal an emergent principle, mechanism, or relationship that none of them express in isolation?
+A genuine synthesis is a generative leap: it connects the causal or physical dots between separate findings to produce a higher-order proposition.
 
-CRITICAL DISTINCTION:
-- A synthesis says something NEW that no individual node says.
-- A summary just restates what's already there in fewer words.
+Criteria:
+- A synthesis MUST propose a new functional mechanism, causal relationship, or cross-domain principle linking the concepts.
+- A summary or paraphrase that merely restates the concepts in fewer words is NOT a synthesis.
 
-Example of a BAD synthesis (this is just a summary):
-  Nodes: "Sleep deprivation impairs memory" + "Exercise improves sleep quality"
-  BAD: "Sleep and exercise both affect cognitive function" ← this is a summary, NOT a synthesis.
-
-Example of a GOOD synthesis (this is genuinely new):
-  Nodes: "Sleep deprivation impairs memory" + "Exercise improves sleep quality"
-  GOOD: "Exercise may serve as a cognitive enhancer specifically through its effect on sleep-dependent memory consolidation — suggesting a daily exercise → better sleep → improved memory pipeline."
-
-If a synthesis exists, respond with a JSON object:
+If a meaningful synthesis emerges, respond with a JSON object:
 {{
   "synthesis": true,
-  "statement": "the new synthesized idea as a rich 2-3 sentence statement",
-  "cluster": "which domain this synthesis belongs to",
+  "statement": "the synthesized discovery as a dense, precise 2-3 sentence scientific statement",
+  "cluster": "the most appropriate specific scientific domain",
   "source_ids": [list of node IDs that contributed to this synthesis]
 }}
 
-If no meaningful synthesis emerges (be honest — most sets of ideas do NOT synthesize), respond with:
+If no meaningful synthesis emerges, respond with:
 {{"synthesis": false}}
 
 Respond ONLY with JSON. No preamble. No markdown.
 """
 
 ABSTRACTION_PROMPT = """
-You are looking for a higher-order pattern across a cluster of ideas.
+You are a theoretical scientist identifying higher-order invariants across a cluster of ideas.
 
-These ideas all belong to the same domain cluster:
+Domain cluster: {cluster}
+Ideas in this cluster:
 {nodes}
 
-Is there a unifying principle, generalization, or abstraction that sits ABOVE
-all of these — something that explains why they all belong together?
+Is there a unifying mathematical, physical, biological, or computational principle that explains why these phenomena operate identically or belong together?
 
-A real abstraction captures a META-PATTERN, not just a category.
-Bad: "These are all about neuroscience" ← that's just a label, not a pattern.
-Also bad: a generic-sounding claim about noise, robustness, stability, or "risk"
-that could equally be pasted onto a different, unrelated cluster without
-edit — if the statement doesn't name the SPECIFIC entities or mechanisms from
-the nodes above, it isn't grounded in this cluster and should not be produced.
-A real abstraction should fail to make sense if you swap in a different
-cluster's node list.
+A genuine abstraction identifies a formal meta-pattern (e.g. conservation law, stability criterion, scaling relation, optimization trade-off, or non-equilibrium constraint) rather than a superficial topic label.
 
-If yes, respond with a JSON object:
+If a unifying principle exists, respond with a JSON object:
 {{
   "abstraction": true,
-  "statement": "the higher-order principle as a rich 2-3 sentence statement",
+  "statement": "the higher-order principle as a rich 2-3 sentence scientific statement",
   "cluster": "{cluster}"
 }}
 
-If no meaningful abstraction exists (be honest), respond with:
+If no meaningful abstraction exists, respond with:
 {{"abstraction": false}}
 
 Respond ONLY with JSON. No preamble.
@@ -222,6 +206,13 @@ class Consolidator:
                 if not node_i or not node_j:
                     continue
 
+                type_i = node_i.get('node_type')
+                type_j = node_j.get('node_type')
+                # Never merge empirical test results or missions; only merge nodes of identical type
+                exempt_types = (NodeType.EMPIRICAL.value, NodeType.MISSION.value, "empirical", "mission")
+                if type_i != type_j or type_i in exempt_types or type_j in exempt_types:
+                    continue
+
                 unified = self._llm(MERGE_NARRATION_PROMPT.format(
                     node_a=node_i['statement'],
                     node_b=node_j['statement']
@@ -296,6 +287,14 @@ class Consolidator:
 
                     node_i = self.brain.get_node(node_ids[i])
                     node_j = self.brain.get_node(node_ids[j])
+                    if not node_i or not node_j:
+                        continue
+
+                    type_i = node_i.get('node_type')
+                    type_j = node_j.get('node_type')
+                    exempt_types = (NodeType.EMPIRICAL.value, NodeType.MISSION.value, "empirical", "mission")
+                    if type_i != type_j or type_i in exempt_types or type_j in exempt_types:
+                        continue
 
                     unified = self._llm(MERGE_NARRATION_PROMPT.format(
                         node_a=node_i['statement'],

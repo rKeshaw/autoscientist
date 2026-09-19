@@ -1,6 +1,7 @@
 import uuid
 import time
 import json
+import threading
 import networkx as nx
 from dataclasses import dataclass, field, asdict
 from typing import Optional
@@ -129,6 +130,7 @@ class Brain:
         # Neuromodulators
         self.dopamine: float    = 0.5
         self.frustration: float = 0.0
+        self.lock = threading.RLock()
 
         # Episodic Memory
         self.episodic = EpisodicStrip()
@@ -403,24 +405,36 @@ class Brain:
         print(f"  [Neuromodulation] Dopamine spike! Level: {self.dopamine:.2f}")
 
     def increase_frustration(self, amount: float = 0.2):
-        self.frustration = min(1.0, self.frustration + amount)
-        print(f"  [Neuromodulation] Frustration increased. Level: {self.frustration:.2f}")
-        if self.frustration >= 0.8 and not self.is_wandering():
-            print("  [Neuromodulation] Frustration threshold reached! Suspending mission...")
-            self.suspend_mission()
-            self.frustration = 0.4  # Reset partially after abandoning
-            self.dopamine = min(self.dopamine, 0.4) # Kill motivation temporarily
+        with self.lock:
+            if self.is_wandering():
+                # In wandering mode (incubation), cap frustration so it can cool down
+                self.frustration = min(0.6, self.frustration + amount * 0.5)
+                print(f"  [Neuromodulation] Frustration in wandering mode: {self.frustration:.2f}")
+            else:
+                self.frustration = min(1.0, self.frustration + amount)
+                print(f"  [Neuromodulation] Frustration increased. Level: {self.frustration:.2f}")
+                if self.frustration >= 0.8:
+                    print("  [Neuromodulation] Frustration threshold reached! Suspending mission...")
+                    self.suspend_mission()
+                    self.frustration = 0.4  # Reset partially after abandoning
+                    self.dopamine = min(self.dopamine, 0.4) # Kill motivation temporarily
 
     def apply_neuromodulator_decay(self, elapsed_days: float = 1.0):
-        # Dopamine returns to baseline 0.5
-        if self.dopamine > 0.5:
-            self.dopamine = max(0.5, self.dopamine - (0.3 * elapsed_days))
-        elif self.dopamine < 0.5:
-            self.dopamine = min(0.5, self.dopamine + (0.3 * elapsed_days))
-            
-        # Frustration decays slowly to 0.0
-        if self.frustration > 0.0:
-            self.frustration = max(0.0, self.frustration - (0.2 * elapsed_days))
+        with self.lock:
+            # Dopamine returns to baseline 0.5
+            if self.dopamine > 0.5:
+                self.dopamine = max(0.5, self.dopamine - (0.3 * elapsed_days))
+            elif self.dopamine < 0.5:
+                self.dopamine = min(0.5, self.dopamine + (0.3 * elapsed_days))
+                
+            # Frustration decays slowly to 0.0
+            if self.frustration > 0.0:
+                self.frustration = max(0.0, self.frustration - (0.2 * elapsed_days))
+
+            # Auto-resume mission if frustration has cleared during wandering incubation
+            if self.is_wandering() and self._suspended_mission and self.frustration <= 0.4:
+                print(f"  [Neuromodulation] Frustration cleared ({self.frustration:.2f} <= 0.40) — resuming mission!")
+                self.resume_mission()
 
     # ── Decay ────────────────────────────────────────────────────────────────
 

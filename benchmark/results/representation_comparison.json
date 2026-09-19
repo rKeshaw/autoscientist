@@ -1,0 +1,304 @@
+{
+  "tasks": [
+    {
+      "task_id": "T1_analogy_quantum_dna",
+      "category": "multi_hop_analogy",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "surface code",
+            "quantum",
+            "entropy",
+            "dna",
+            "repair",
+            "lattice"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "surface code",
+            "quantum",
+            "entropy",
+            "dna",
+            "repair",
+            "lattice"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": true,
+          "matched_keywords": [
+            "quantum",
+            "entropy",
+            "dna",
+            "repair"
+          ],
+          "keyword_recall": 0.667,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T2_analogy_hartley_spiking",
+      "category": "multi_hop_analogy",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "hartley",
+            "shannon",
+            "channel",
+            "spiking",
+            "energy"
+          ],
+          "keyword_recall": 0.833,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "hartley",
+            "shannon",
+            "channel",
+            "spiking",
+            "energy"
+          ],
+          "keyword_recall": 0.833,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": true,
+          "matched_keywords": [
+            "hartley",
+            "shannon",
+            "channel",
+            "spiking",
+            "energy"
+          ],
+          "keyword_recall": 0.833,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T3_contradiction_rate_vs_temporal",
+      "category": "contradiction_preservation",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "rate coding",
+            "temporal",
+            "spike",
+            "frequency"
+          ],
+          "keyword_recall": 0.8,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "rate coding",
+            "temporal",
+            "spike",
+            "frequency"
+          ],
+          "keyword_recall": 0.8,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": true,
+          "matched_keywords": [
+            "rate coding",
+            "temporal",
+            "spike"
+          ],
+          "keyword_recall": 0.6,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T4_contradiction_soc_criticality",
+      "category": "contradiction_preservation",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "criticality",
+            "soc",
+            "fundamental",
+            "property"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "criticality",
+            "soc",
+            "fundamental",
+            "property"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": true,
+          "matched_keywords": [
+            "criticality",
+            "soc",
+            "fundamental",
+            "property"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T5_empirical_bit_erasure_threshold",
+      "category": "empirical_grounding",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "threshold",
+            "energy",
+            "simulation",
+            "storage"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "erasure",
+            "threshold",
+            "energy",
+            "simulation",
+            "storage"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": false,
+          "matched_keywords": [
+            "erasure",
+            "threshold",
+            "energy"
+          ],
+          "keyword_recall": 0.6,
+          "opposing_retained": true,
+          "empirical_retained": false,
+          "retrieved_count": 6
+        }
+      }
+    },
+    {
+      "task_id": "T6_empirical_ferritin_tunneling",
+      "category": "empirical_grounding",
+      "substrates": {
+        "BrainGraph": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "quantum dot",
+            "electron",
+            "transport",
+            "tunneling"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "VectorRAG": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "quantum dot",
+            "electron",
+            "transport",
+            "tunneling"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        },
+        "FlatFile": {
+          "success": true,
+          "matched_keywords": [
+            "ferritin",
+            "quantum dot",
+            "electron",
+            "transport",
+            "tunneling"
+          ],
+          "keyword_recall": 1.0,
+          "opposing_retained": true,
+          "empirical_retained": true,
+          "retrieved_count": 6
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "BrainGraph": {
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6,
+      "mean_keyword_recall": 0.939
+    },
+    "VectorRAG": {
+      "pass_rate": 1.0,
+      "passed": 6,
+      "total": 6,
+      "mean_keyword_recall": 0.939
+    },
+    "FlatFile": {
+      "pass_rate": 0.833,
+      "passed": 5,
+      "total": 6,
+      "mean_keyword_recall": 0.783
+    }
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "benchmark": "Track 5: Neuromodulatory Dynamics & Working Memory Constraints",
+    "author": "AutoScientist Architectural Benchmarking Suite",
+    "date": "2026-09-18",
+    "substrate_nodes": 821,
+    "substrate_edges": 4508
+  },
+  "experiment_5_1_working_memory_sweep": {
+    "3": {
+      "W_max": 3,
+      "avg_prompt_tokens": 169.6,
+      "topological_dispersion_hops": 1.412,
+      "semantic_coherence_cosine": 0.415,
+      "total_evictions": 147,
+      "thrashing_evictions": 147,
+      "thrashing_rate": 1.0,
+      "associative_hit_rate": 0.9329,
+      "context_efficiency_score": 0.5502
+    },
+    "7": {
+      "W_max": 7,
+      "avg_prompt_tokens": 391.4,
+      "topological_dispersion_hops": 1.617,
+      "semantic_coherence_cosine": 0.3787,
+      "total_evictions": 143,
+      "thrashing_evictions": 0,
+      "thrashing_rate": 0.0,
+      "associative_hit_rate": 0.9329,
+      "context_efficiency_score": 0.2383
+    },
+    "10": {
+      "W_max": 10,
+      "avg_prompt_tokens": 554.8,
+      "topological_dispersion_hops": 1.764,
+      "semantic_coherence_cosine": 0.3609,
+      "total_evictions": 140,
+      "thrashing_evictions": 0,
+      "thrashing_rate": 0.0,
+      "associative_hit_rate": 0.9329,
+      "context_efficiency_score": 0.1681
+    },
+    "25": {
+      "W_max": 25,
+      "avg_prompt_tokens": 1325.0,
+      "topological_dispersion_hops": 2.354,
+      "semantic_coherence_cosine": 0.3017,
+      "total_evictions": 125,
+      "thrashing_evictions": 0,
+      "thrashing_rate": 0.0,
+      "associative_hit_rate": 0.9396,
+      "context_efficiency_score": 0.0709
+    },
+    "100": {
+      "W_max": 100,
+      "avg_prompt_tokens": 3891.2,
+      "topological_dispersion_hops": 3.099,
+      "semantic_coherence_cosine": 0.2208,
+      "total_evictions": 50,
+      "thrashing_evictions": 0,
+      "thrashing_rate": 0.0,
+      "associative_hit_rate": 0.9463,
+      "context_efficiency_score": 0.0243
+    }
+  },
+  "experiment_5_2_neuromodulatory_dynamics": {
+    "suite_5_2a_suspension": {
+      "initial_mode": "transitional",
+      "suspension_trigger_step": 4,
+      "frustration_escalation_trace": [
+        {
+          "step": 1,
+          "frustration": 0.2,
+          "dopamine": 0.5,
+          "mode": "transitional",
+          "mission_suspended": false
+        },
+        {
+          "step": 2,
+          "frustration": 0.4,
+          "dopamine": 0.5,
+          "mode": "transitional",
+          "mission_suspended": false
+        },
+        {
+          "step": 3,
+          "frustration": 0.6,
+          "dopamine": 0.5,
+          "mode": "transitional",
+          "mission_suspended": false
+        },
+        {
+          "step": 4,
+          "frustration": 0.4,
+          "dopamine": 0.4,
+          "mode": "wandering",
+          "mission_suspended": true
+        },
+        {
+          "step": 5,
+          "frustration": 0.5,
+          "dopamine": 0.4,
+          "mode": "wandering",
+          "mission_suspended": true
+        }
+      ]
+    },
+    "suite_5_2b_incubation": {
+      "resumption_trigger_step": 2,
+      "incubation_decay_trace": [
+        {
+          "step": 1,
+          "elapsed_days": 0.25,
+          "frustration": 0.45,
+          "dopamine": 0.475,
+          "mode": "wandering",
+          "is_focused": false
+        },
+        {
+          "step": 2,
+          "elapsed_days": 0.5,
+          "frustration": 0.4,
+          "dopamine": 0.5,
+          "mode": "focused",
+          "is_focused": true
+        },
+        {
+          "step": 3,
+          "elapsed_days": 0.75,
+          "frustration": 0.35,
+          "dopamine": 0.5,
+          "mode": "focused",
+          "is_focused": true
+        },
+        {
+          "step": 4,
+          "elapsed_days": 1.0,
+          "frustration": 0.3,
+          "dopamine": 0.5,
+          "mode": "focused",
+          "is_focused": true
+        },
+        {
+          "step": 5,
+          "elapsed_days": 1.25,
+          "frustration": 0.25,
+          "dopamine": 0.5,
+          "mode": "focused",
+          "is_focused": true
+        }
+      ]
+    },
+    "suite_5_2c_dopaminergic_learning": {
+      "dopamine_0.1": {
+        "dopamine_level": 0.1,
+        "effective_learning_rate": 0.11,
+        "episodes_to_convergence": 13.7,
+        "cumulative_regret": 7.63
+      },
+      "dopamine_0.5": {
+        "dopamine_level": 0.5,
+        "effective_learning_rate": 0.15,
+        "episodes_to_convergence": 11.4,
+        "cumulative_regret": 6.67
+      },
+      "dopamine_0.9": {
+        "dopamine_level": 0.9,
+        "effective_learning_rate": 0.19,
+        "episodes_to_convergence": 11.0,
+        "cumulative_regret": 5.75
+      }
+    },
+    "suite_5_2d_frustration_pivoting": {
+      "frustration_0.0": {
+        "frustration_level": 0.0,
+        "effective_exploration_epsilon": 0.1,
+        "deadlock_escape_latency_episodes": 6,
+        "action_entropy_bits": 0.804,
+        "pivoted_to_optimal": true,
+        "action_distribution": {
+          "analogical": 1,
+          "dialectical": 1,
+          "reductive": 6,
+          "experimental": 42,
+          "integrative": 0
+        }
+      },
+      "frustration_0.2": {
+        "frustration_level": 0.2,
+        "effective_exploration_epsilon": 0.22,
+        "deadlock_escape_latency_episodes": 6,
+        "action_entropy_bits": 1.297,
+        "pivoted_to_optimal": true,
+        "action_distribution": {
+          "analogical": 5,
+          "dialectical": 4,
+          "reductive": 5,
+          "experimental": 36,
+          "integrative": 0
+        }
+      },
+      "frustration_0.5": {
+        "frustration_level": 0.5,
+        "effective_exploration_epsilon": 0.4,
+        "deadlock_escape_latency_episodes": 7,
+        "action_entropy_bits": 1.728,
+        "pivoted_to_optimal": true,
+        "action_distribution": {
+          "analogical": 3,
+          "dialectical": 7,
+          "reductive": 9,
+          "experimental": 29,
+          "integrative": 2
+        }
+      },
+      "frustration_0.8": {
+        "frustration_level": 0.8,
+        "effective_exploration_epsilon": 0.58,
+        "deadlock_escape_latency_episodes": 10,
+        "action_entropy_bits": 2.05,
+        "pivoted_to_optimal": true,
+        "action_distribution": {
+          "analogical": 4,
+          "dialectical": 7,
+          "reductive": 8,
+          "experimental": 23,
+          "integrative": 8
+        }
+      }
+    }
+  }
+}

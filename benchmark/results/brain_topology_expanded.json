@@ -1,0 +1,2043 @@
+{
+  "trajectory": [
+    {
+      "cycle": 1,
+      "timestamp": 1789560496.8480191,
+      "graph_size": {
+        "nodes": 305,
+        "edges": 1979,
+        "density": 0.02134,
+        "avg_degree": 12.98,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.029,
+        "contradiction_ratio": 0.0152,
+        "node_types": {
+          "concept": 249,
+          "hypothesis": 35,
+          "question": 3,
+          "synthesis": 2,
+          "gap": 15,
+          "empirical": 1
+        },
+        "edge_types": {
+          "supports": 670,
+          "associated": 1120,
+          "contradicts": 30,
+          "structural_analogy": 146,
+          "causes": 6,
+          "empirically_tested": 1,
+          "surface_analogy": 6
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.8592,
+        "L_actual": 5.0992,
+        "C_rand": 0.1189,
+        "L_rand": 2.046,
+        "gamma_clust": 7.2255,
+        "lambda_path": 2.4923,
+        "small_world_S": 2.8992,
+        "global_efficiency": 0.3186,
+        "local_efficiency": 0.9067,
+        "diameter": 12,
+        "radius": 6,
+        "lcc_nodes": 126,
+        "lcc_edges": 922
+      },
+      "community_structure": {
+        "num_communities": 16,
+        "modularity_Q": 0.897,
+        "community_entropy": 3.86,
+        "inter_community_edge_ratio": 0.0258,
+        "largest_community_size": 31
+      },
+      "scale_free_fit": {
+        "gamma": -0.113,
+        "r_squared": 0.007
+      },
+      "cortical_hubs": [
+        {
+          "id": "b7556d55",
+          "node_type": "concept",
+          "degree": 15,
+          "pagerank": 0.01876,
+          "betweenness": 0.0,
+          "statement": "A bit is recognized as the fundamental unit of information, representing binary choic..."
+        },
+        {
+          "id": "a3a6110a",
+          "node_type": "hypothesis",
+          "degree": 15,
+          "pagerank": 0.0161,
+          "betweenness": 0.0,
+          "statement": "Brain exercises can be as effective as drugs in treating severe mental illnesses like..."
+        },
+        {
+          "id": "9a0ac278",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01546,
+          "betweenness": 0.0,
+          "statement": "A unifying principle across these ideas is the integration of temporal dynamics and n..."
+        },
+        {
+          "id": "4a4816a9",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01533,
+          "betweenness": 0.0,
+          "statement": "The higher-order principle uniting these ideas is the statistical mechanical framewor..."
+        },
+        {
+          "id": "bc5b5a2d",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01448,
+          "betweenness": 0.0,
+          "statement": "The refinement and integration of computational tools and theoretical frameworks in m..."
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "timestamp": 1789563721.0813603,
+      "graph_size": {
+        "nodes": 348,
+        "edges": 2253,
+        "density": 0.01866,
+        "avg_degree": 12.95,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.054,
+        "contradiction_ratio": 0.0142,
+        "node_types": {
+          "concept": 277,
+          "hypothesis": 37,
+          "question": 4,
+          "synthesis": 3,
+          "gap": 25,
+          "empirical": 2
+        },
+        "edge_types": {
+          "supports": 801,
+          "associated": 1250,
+          "contradicts": 32,
+          "structural_analogy": 156,
+          "causes": 6,
+          "empirically_tested": 2,
+          "surface_analogy": 6
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7861,
+        "L_actual": 6.37,
+        "C_rand": 0.0469,
+        "L_rand": 2.483,
+        "gamma_clust": 16.7783,
+        "lambda_path": 2.5655,
+        "small_world_S": 6.5401,
+        "global_efficiency": 0.2284,
+        "local_efficiency": 0.8562,
+        "diameter": 15,
+        "radius": 8,
+        "lcc_nodes": 284,
+        "lcc_edges": 1846
+      },
+      "community_structure": {
+        "num_communities": 19,
+        "modularity_Q": 0.8914,
+        "community_entropy": 3.988,
+        "inter_community_edge_ratio": 0.0324,
+        "largest_community_size": 39
+      },
+      "scale_free_fit": {
+        "gamma": 0.135,
+        "r_squared": 0.016
+      },
+      "cortical_hubs": [
+        {
+          "id": "b7556d55",
+          "node_type": "concept",
+          "degree": 15,
+          "pagerank": 0.01653,
+          "betweenness": 0.0,
+          "statement": "A bit is recognized as the fundamental unit of information, representing binary choic..."
+        },
+        {
+          "id": "a3a6110a",
+          "node_type": "hypothesis",
+          "degree": 15,
+          "pagerank": 0.01421,
+          "betweenness": 0.0,
+          "statement": "Brain exercises can be as effective as drugs in treating severe mental illnesses like..."
+        },
+        {
+          "id": "a7b4942b",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01367,
+          "betweenness": 0.0,
+          "statement": "The unifying principle across these ideas is the statistical mechanical framework tha..."
+        },
+        {
+          "id": "432b98d9",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01296,
+          "betweenness": 0.0,
+          "statement": "The cluster embodies a higher-order principle that the precise interplay between temp..."
+        },
+        {
+          "id": "e169f06f",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01288,
+          "betweenness": 0.0,
+          "statement": "The cluster revolves around the continuous advancement of thermodynamic models and co..."
+        }
+      ]
+    },
+    {
+      "cycle": 3,
+      "timestamp": 1789568194.0391634,
+      "graph_size": {
+        "nodes": 388,
+        "edges": 2442,
+        "density": 0.01626,
+        "avg_degree": 12.59,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.051,
+        "contradiction_ratio": 0.0143,
+        "node_types": {
+          "concept": 301,
+          "hypothesis": 39,
+          "question": 7,
+          "synthesis": 4,
+          "gap": 35,
+          "empirical": 2
+        },
+        "edge_types": {
+          "supports": 912,
+          "associated": 1307,
+          "contradicts": 35,
+          "structural_analogy": 174,
+          "causes": 6,
+          "empirically_tested": 2,
+          "surface_analogy": 6
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7665,
+        "L_actual": 6.3128,
+        "C_rand": 0.0387,
+        "L_rand": 2.5581,
+        "gamma_clust": 19.8191,
+        "lambda_path": 2.4677,
+        "small_world_S": 8.0313,
+        "global_efficiency": 0.2261,
+        "local_efficiency": 0.846,
+        "diameter": 15,
+        "radius": 8,
+        "lcc_nodes": 323,
+        "lcc_edges": 2035
+      },
+      "community_structure": {
+        "num_communities": 20,
+        "modularity_Q": 0.8881,
+        "community_entropy": 3.945,
+        "inter_community_edge_ratio": 0.0319,
+        "largest_community_size": 49
+      },
+      "scale_free_fit": {
+        "gamma": 0.522,
+        "r_squared": 0.165
+      },
+      "cortical_hubs": [
+        {
+          "id": "b7556d55",
+          "node_type": "concept",
+          "degree": 15,
+          "pagerank": 0.01441,
+          "betweenness": 0.0,
+          "statement": "A bit is recognized as the fundamental unit of information, representing binary choic..."
+        },
+        {
+          "id": "a3a6110a",
+          "node_type": "hypothesis",
+          "degree": 15,
+          "pagerank": 0.01262,
+          "betweenness": 0.0,
+          "statement": "Brain exercises can be as effective as drugs in treating severe mental illnesses like..."
+        },
+        {
+          "id": "e169f06f",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01139,
+          "betweenness": 0.0,
+          "statement": "The cluster revolves around the continuous advancement of thermodynamic models and co..."
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.01137,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        },
+        {
+          "id": "a7b4942b",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01109,
+          "betweenness": 0.0,
+          "statement": "The unifying principle across these ideas is the statistical mechanical framework tha..."
+        }
+      ]
+    },
+    {
+      "cycle": 4,
+      "timestamp": 1789570625.553548,
+      "graph_size": {
+        "nodes": 424,
+        "edges": 2640,
+        "density": 0.01472,
+        "avg_degree": 12.45,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.05,
+        "contradiction_ratio": 0.0133,
+        "node_types": {
+          "concept": 323,
+          "hypothesis": 40,
+          "question": 9,
+          "synthesis": 5,
+          "gap": 45,
+          "empirical": 2
+        },
+        "edge_types": {
+          "supports": 1030,
+          "associated": 1385,
+          "contradicts": 35,
+          "structural_analogy": 176,
+          "causes": 6,
+          "empirically_tested": 2,
+          "surface_analogy": 6
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.747,
+        "L_actual": 6.2874,
+        "C_rand": 0.0348,
+        "L_rand": 2.5983,
+        "gamma_clust": 21.4869,
+        "lambda_path": 2.4199,
+        "small_world_S": 8.8794,
+        "global_efficiency": 0.225,
+        "local_efficiency": 0.8321,
+        "diameter": 15,
+        "radius": 8,
+        "lcc_nodes": 356,
+        "lcc_edges": 2228
+      },
+      "community_structure": {
+        "num_communities": 19,
+        "modularity_Q": 0.8822,
+        "community_entropy": 3.92,
+        "inter_community_edge_ratio": 0.0318,
+        "largest_community_size": 59
+      },
+      "scale_free_fit": {
+        "gamma": 0.777,
+        "r_squared": 0.338
+      },
+      "cortical_hubs": [
+        {
+          "id": "a3a6110a",
+          "node_type": "hypothesis",
+          "degree": 15,
+          "pagerank": 0.01127,
+          "betweenness": 0.0,
+          "statement": "Brain exercises can be as effective as drugs in treating severe mental illnesses like..."
+        },
+        {
+          "id": "e169f06f",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01038,
+          "betweenness": 0.0,
+          "statement": "The cluster revolves around the continuous advancement of thermodynamic models and co..."
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.01011,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        },
+        {
+          "id": "9ea502c0",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01007,
+          "betweenness": 0.0,
+          "statement": "The higher-order principle unifying these ideas is the statistical mechanical framewo..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 11,
+          "pagerank": 0.00958,
+          "betweenness": 0.0,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        }
+      ]
+    },
+    {
+      "cycle": 5,
+      "timestamp": 1789575565.4721434,
+      "graph_size": {
+        "nodes": 463,
+        "edges": 2804,
+        "density": 0.01311,
+        "avg_degree": 12.11,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.043,
+        "contradiction_ratio": 0.0171,
+        "node_types": {
+          "concept": 343,
+          "hypothesis": 47,
+          "question": 10,
+          "synthesis": 6,
+          "gap": 55,
+          "empirical": 2
+        },
+        "edge_types": {
+          "supports": 1120,
+          "associated": 1430,
+          "contradicts": 48,
+          "structural_analogy": 188,
+          "surface_analogy": 10,
+          "causes": 6,
+          "empirically_tested": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7377,
+        "L_actual": 6.6631,
+        "C_rand": 0.0275,
+        "L_rand": 2.6883,
+        "gamma_clust": 26.802,
+        "lambda_path": 2.4785,
+        "small_world_S": 10.8137,
+        "global_efficiency": 0.2091,
+        "local_efficiency": 0.8251,
+        "diameter": 15,
+        "radius": 8,
+        "lcc_nodes": 427,
+        "lcc_edges": 2602
+      },
+      "community_structure": {
+        "num_communities": 20,
+        "modularity_Q": 0.8829,
+        "community_entropy": 3.962,
+        "inter_community_edge_ratio": 0.0357,
+        "largest_community_size": 63
+      },
+      "scale_free_fit": {
+        "gamma": 0.801,
+        "r_squared": 0.341
+      },
+      "cortical_hubs": [
+        {
+          "id": "dbef26c1",
+          "node_type": "concept",
+          "degree": 12,
+          "pagerank": 0.01148,
+          "betweenness": 0.00024,
+          "statement": "The choice of logarithm base in entropy calculations varies depending on application,..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 20,
+          "pagerank": 0.01144,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "a3a6110a",
+          "node_type": "hypothesis",
+          "degree": 15,
+          "pagerank": 0.01021,
+          "betweenness": 0.0,
+          "statement": "Brain exercises can be as effective as drugs in treating severe mental illnesses like..."
+        },
+        {
+          "id": "3e3002be",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.01002,
+          "betweenness": 0.0,
+          "statement": "The unifying meta-pattern lies in the optimization of systems' efficiency and reliabi..."
+        },
+        {
+          "id": "e563e90c",
+          "node_type": "concept",
+          "degree": 16,
+          "pagerank": 0.00932,
+          "betweenness": 0.00249,
+          "statement": "Information theory aids in calculating the smallest amount of information needed to c..."
+        }
+      ]
+    },
+    {
+      "cycle": 6,
+      "timestamp": 1789616367.1067436,
+      "graph_size": {
+        "nodes": 494,
+        "edges": 2957,
+        "density": 0.01214,
+        "avg_degree": 11.97,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.039,
+        "contradiction_ratio": 0.0169,
+        "node_types": {
+          "concept": 362,
+          "hypothesis": 51,
+          "question": 10,
+          "synthesis": 7,
+          "gap": 61,
+          "empirical": 2,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1213,
+          "associated": 1454,
+          "contradicts": 50,
+          "structural_analogy": 195,
+          "toward_mission": 25,
+          "surface_analogy": 11,
+          "causes": 7,
+          "empirically_tested": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7263,
+        "L_actual": 5.0713,
+        "C_rand": 0.0269,
+        "L_rand": 2.7102,
+        "gamma_clust": 26.9541,
+        "lambda_path": 1.8712,
+        "small_world_S": 14.4047,
+        "global_efficiency": 0.2468,
+        "local_efficiency": 0.82,
+        "diameter": 12,
+        "radius": 6,
+        "lcc_nodes": 449,
+        "lcc_edges": 2729
+      },
+      "community_structure": {
+        "num_communities": 21,
+        "modularity_Q": 0.8719,
+        "community_entropy": 4.001,
+        "inter_community_edge_ratio": 0.0446,
+        "largest_community_size": 69
+      },
+      "scale_free_fit": {
+        "gamma": 0.868,
+        "r_squared": 0.37
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 25,
+          "pagerank": 0.03347,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 20,
+          "pagerank": 0.01066,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "df080f59",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.00858,
+          "betweenness": 0.0,
+          "statement": "The overarching principle that binds these ideas is the statistical mechanical framew..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 11,
+          "pagerank": 0.00853,
+          "betweenness": 0.0,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.00734,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        }
+      ]
+    },
+    {
+      "cycle": 7,
+      "timestamp": 1789619510.009297,
+      "graph_size": {
+        "nodes": 520,
+        "edges": 3104,
+        "density": 0.0115,
+        "avg_degree": 11.94,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.059,
+        "contradiction_ratio": 0.0164,
+        "node_types": {
+          "concept": 383,
+          "hypothesis": 51,
+          "question": 10,
+          "synthesis": 8,
+          "gap": 64,
+          "empirical": 3,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1273,
+          "associated": 1509,
+          "contradicts": 51,
+          "structural_analogy": 206,
+          "toward_mission": 37,
+          "surface_analogy": 18,
+          "causes": 7,
+          "empirically_tested": 3
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7115,
+        "L_actual": 4.3473,
+        "C_rand": 0.0254,
+        "L_rand": 2.7295,
+        "gamma_clust": 27.9584,
+        "lambda_path": 1.5927,
+        "small_world_S": 17.5538,
+        "global_efficiency": 0.268,
+        "local_efficiency": 0.8062,
+        "diameter": 9,
+        "radius": 5,
+        "lcc_nodes": 484,
+        "lcc_edges": 2972
+      },
+      "community_structure": {
+        "num_communities": 20,
+        "modularity_Q": 0.8582,
+        "community_entropy": 3.897,
+        "inter_community_edge_ratio": 0.0561,
+        "largest_community_size": 69
+      },
+      "scale_free_fit": {
+        "gamma": 0.913,
+        "r_squared": 0.425
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 37,
+          "pagerank": 0.04595,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 20,
+          "pagerank": 0.0103,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 12,
+          "pagerank": 0.00849,
+          "betweenness": 2e-05,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.00698,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        },
+        {
+          "id": "df080f59",
+          "node_type": "concept",
+          "degree": 5,
+          "pagerank": 0.00685,
+          "betweenness": 0.0,
+          "statement": "The overarching principle that binds these ideas is the statistical mechanical framew..."
+        }
+      ]
+    },
+    {
+      "cycle": 8,
+      "timestamp": 1789621434.7617912,
+      "graph_size": {
+        "nodes": 547,
+        "edges": 3223,
+        "density": 0.01079,
+        "avg_degree": 11.78,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.074,
+        "contradiction_ratio": 0.0158,
+        "node_types": {
+          "concept": 395,
+          "hypothesis": 54,
+          "question": 13,
+          "synthesis": 9,
+          "gap": 71,
+          "empirical": 4,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1329,
+          "associated": 1545,
+          "contradicts": 51,
+          "structural_analogy": 217,
+          "toward_mission": 40,
+          "empirically_tested": 4,
+          "surface_analogy": 29,
+          "causes": 8
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7074,
+        "L_actual": 4.3365,
+        "C_rand": 0.0234,
+        "L_rand": 2.7708,
+        "gamma_clust": 30.2857,
+        "lambda_path": 1.5651,
+        "small_world_S": 19.351,
+        "global_efficiency": 0.2658,
+        "local_efficiency": 0.8026,
+        "diameter": 9,
+        "radius": 5,
+        "lcc_nodes": 526,
+        "lcc_edges": 3191
+      },
+      "community_structure": {
+        "num_communities": 26,
+        "modularity_Q": 0.8572,
+        "community_entropy": 4.12,
+        "inter_community_edge_ratio": 0.0652,
+        "largest_community_size": 70
+      },
+      "scale_free_fit": {
+        "gamma": 0.938,
+        "r_squared": 0.439
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 40,
+          "pagerank": 0.05073,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 21,
+          "pagerank": 0.00959,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "e563e90c",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.00815,
+          "betweenness": 0.01596,
+          "statement": "Information theory aids in calculating the smallest amount of information needed to c..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 12,
+          "pagerank": 0.00812,
+          "betweenness": 9e-05,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.00666,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        }
+      ]
+    },
+    {
+      "cycle": 9,
+      "timestamp": 1789625454.4604437,
+      "graph_size": {
+        "nodes": 579,
+        "edges": 3371,
+        "density": 0.01007,
+        "avg_degree": 11.64,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.076,
+        "contradiction_ratio": 0.016,
+        "node_types": {
+          "concept": 408,
+          "hypothesis": 66,
+          "question": 13,
+          "synthesis": 10,
+          "gap": 76,
+          "empirical": 5,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1373,
+          "associated": 1616,
+          "contradicts": 54,
+          "structural_analogy": 230,
+          "toward_mission": 49,
+          "empirically_tested": 5,
+          "surface_analogy": 36,
+          "causes": 8
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.7022,
+        "L_actual": 4.2831,
+        "C_rand": 0.0208,
+        "L_rand": 2.8132,
+        "gamma_clust": 33.7749,
+        "lambda_path": 1.5225,
+        "small_world_S": 22.1838,
+        "global_efficiency": 0.267,
+        "local_efficiency": 0.7972,
+        "diameter": 9,
+        "radius": 5,
+        "lcc_nodes": 563,
+        "lcc_edges": 3354
+      },
+      "community_structure": {
+        "num_communities": 28,
+        "modularity_Q": 0.8531,
+        "community_entropy": 4.21,
+        "inter_community_edge_ratio": 0.0691,
+        "largest_community_size": 77
+      },
+      "scale_free_fit": {
+        "gamma": 1.034,
+        "r_squared": 0.495
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 50,
+          "pagerank": 0.0597,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 21,
+          "pagerank": 0.00921,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 12,
+          "pagerank": 0.00785,
+          "betweenness": 3e-05,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "e563e90c",
+          "node_type": "concept",
+          "degree": 20,
+          "pagerank": 0.00673,
+          "betweenness": 0.01082,
+          "statement": "Information theory aids in calculating the smallest amount of information needed to c..."
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.00643,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        }
+      ]
+    },
+    {
+      "cycle": 10,
+      "timestamp": 1789628056.8205397,
+      "graph_size": {
+        "nodes": 597,
+        "edges": 3478,
+        "density": 0.00977,
+        "avg_degree": 11.65,
+        "reciprocity": 0.0
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.088,
+        "contradiction_ratio": 0.0155,
+        "node_types": {
+          "concept": 417,
+          "hypothesis": 68,
+          "question": 13,
+          "synthesis": 11,
+          "gap": 81,
+          "empirical": 6,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1433,
+          "associated": 1646,
+          "contradicts": 54,
+          "structural_analogy": 232,
+          "toward_mission": 55,
+          "empirically_tested": 6,
+          "surface_analogy": 44,
+          "causes": 8
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6941,
+        "L_actual": 4.1208,
+        "C_rand": 0.0211,
+        "L_rand": 2.8219,
+        "gamma_clust": 32.8451,
+        "lambda_path": 1.4603,
+        "small_world_S": 22.4923,
+        "global_efficiency": 0.2745,
+        "local_efficiency": 0.789,
+        "diameter": 9,
+        "radius": 5,
+        "lcc_nodes": 581,
+        "lcc_edges": 3461
+      },
+      "community_structure": {
+        "num_communities": 29,
+        "modularity_Q": 0.8471,
+        "community_entropy": 4.252,
+        "inter_community_edge_ratio": 0.0773,
+        "largest_community_size": 77
+      },
+      "scale_free_fit": {
+        "gamma": 0.968,
+        "r_squared": 0.509
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 57,
+          "pagerank": 0.0577,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 21,
+          "pagerank": 0.00912,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 13,
+          "pagerank": 0.00772,
+          "betweenness": 2e-05,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "df080f59",
+          "node_type": "concept",
+          "degree": 9,
+          "pagerank": 0.00703,
+          "betweenness": 4e-05,
+          "statement": "The overarching principle that binds these ideas is the statistical mechanical framew..."
+        },
+        {
+          "id": "d8cd8350",
+          "node_type": "concept",
+          "degree": 13,
+          "pagerank": 0.00635,
+          "betweenness": 0.0,
+          "statement": "Apoptosis is a programmed cell death process that eliminates damaged or unnecessary c..."
+        }
+      ]
+    },
+    {
+      "cycle": 11,
+      "timestamp": 1789629294.9592514,
+      "graph_size": {
+        "nodes": 614,
+        "edges": 3552,
+        "density": 0.00944,
+        "avg_degree": 11.57,
+        "reciprocity": 0.0006
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.116,
+        "contradiction_ratio": 0.0155,
+        "node_types": {
+          "concept": 424,
+          "hypothesis": 69,
+          "question": 16,
+          "synthesis": 12,
+          "gap": 84,
+          "empirical": 8,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1468,
+          "associated": 1677,
+          "contradicts": 55,
+          "structural_analogy": 233,
+          "toward_mission": 57,
+          "empirically_tested": 8,
+          "surface_analogy": 46,
+          "causes": 8
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6843,
+        "L_actual": 4.09,
+        "C_rand": 0.02,
+        "L_rand": 2.8349,
+        "gamma_clust": 34.1728,
+        "lambda_path": 1.4427,
+        "small_world_S": 23.6859,
+        "global_efficiency": 0.2757,
+        "local_efficiency": 0.7806,
+        "diameter": 8,
+        "radius": 4,
+        "lcc_nodes": 595,
+        "lcc_edges": 3534
+      },
+      "community_structure": {
+        "num_communities": 32,
+        "modularity_Q": 0.844,
+        "community_entropy": 4.278,
+        "inter_community_edge_ratio": 0.0825,
+        "largest_community_size": 79
+      },
+      "scale_free_fit": {
+        "gamma": 0.996,
+        "r_squared": 0.524
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 59,
+          "pagerank": 0.05493,
+          "betweenness": 0.0,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "b1b63ff4",
+          "node_type": "concept",
+          "degree": 21,
+          "pagerank": 0.00896,
+          "betweenness": 0.0,
+          "statement": "Receptors are categorized into intracellular and extracellular types; extracellular r..."
+        },
+        {
+          "id": "d7b531a2",
+          "node_type": "hypothesis",
+          "degree": 13,
+          "pagerank": 0.00758,
+          "betweenness": 3e-05,
+          "statement": "Loss of BER could contribute to the development of cancer"
+        },
+        {
+          "id": "df080f59",
+          "node_type": "concept",
+          "degree": 9,
+          "pagerank": 0.00701,
+          "betweenness": 2e-05,
+          "statement": "The overarching principle that binds these ideas is the statistical mechanical framew..."
+        },
+        {
+          "id": "b87bb265",
+          "node_type": "hypothesis",
+          "degree": 23,
+          "pagerank": 0.00679,
+          "betweenness": 0.00018,
+          "statement": "A computational test proposes that city layout knowledge's role in hippocampal change..."
+        }
+      ]
+    },
+    {
+      "cycle": 12,
+      "timestamp": 1789635360.3066545,
+      "graph_size": {
+        "nodes": 645,
+        "edges": 3688,
+        "density": 0.00888,
+        "avg_degree": 11.44,
+        "reciprocity": 0.0005
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.133,
+        "contradiction_ratio": 0.0149,
+        "node_types": {
+          "concept": 439,
+          "hypothesis": 75,
+          "question": 19,
+          "synthesis": 13,
+          "gap": 88,
+          "empirical": 10,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1532,
+          "associated": 1727,
+          "contradicts": 55,
+          "structural_analogy": 238,
+          "toward_mission": 64,
+          "empirically_tested": 10,
+          "surface_analogy": 53,
+          "causes": 8,
+          "deep_isomorphism": 1
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6786,
+        "L_actual": 4.1291,
+        "C_rand": 0.0188,
+        "L_rand": 2.8754,
+        "gamma_clust": 36.0493,
+        "lambda_path": 1.436,
+        "small_world_S": 25.1038,
+        "global_efficiency": 0.2738,
+        "local_efficiency": 0.7751,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 629,
+        "lcc_edges": 3671
+      },
+      "community_structure": {
+        "num_communities": 27,
+        "modularity_Q": 0.8409,
+        "community_entropy": 4.032,
+        "inter_community_edge_ratio": 0.0778,
+        "largest_community_size": 100
+      },
+      "scale_free_fit": {
+        "gamma": 1.092,
+        "r_squared": 0.582
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 67,
+          "pagerank": 0.06497,
+          "betweenness": 0.19631,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 29,
+          "pagerank": 0.06056,
+          "betweenness": 0.19992,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 17,
+          "pagerank": 0.01684,
+          "betweenness": 0.02711,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "f2002567",
+          "node_type": "concept",
+          "degree": 37,
+          "pagerank": 0.01214,
+          "betweenness": 0.07323,
+          "statement": "The source coding theorem establishes that efficient encoding of information depends ..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 35,
+          "pagerank": 0.01175,
+          "betweenness": 0.13653,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 13,
+      "timestamp": 1789637608.972203,
+      "graph_size": {
+        "nodes": 662,
+        "edges": 3768,
+        "density": 0.00861,
+        "avg_degree": 11.38,
+        "reciprocity": 0.0005
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.16,
+        "contradiction_ratio": 0.0146,
+        "node_types": {
+          "concept": 445,
+          "hypothesis": 75,
+          "question": 24,
+          "synthesis": 14,
+          "gap": 91,
+          "empirical": 12,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1568,
+          "associated": 1753,
+          "contradicts": 55,
+          "structural_analogy": 238,
+          "toward_mission": 71,
+          "empirically_tested": 12,
+          "surface_analogy": 62,
+          "causes": 8,
+          "deep_isomorphism": 1
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6684,
+        "L_actual": 4.1226,
+        "C_rand": 0.0174,
+        "L_rand": 2.8908,
+        "gamma_clust": 38.3079,
+        "lambda_path": 1.4261,
+        "small_world_S": 26.8619,
+        "global_efficiency": 0.2745,
+        "local_efficiency": 0.7645,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 646,
+        "lcc_edges": 3751
+      },
+      "community_structure": {
+        "num_communities": 28,
+        "modularity_Q": 0.836,
+        "community_entropy": 4.077,
+        "inter_community_edge_ratio": 0.0842,
+        "largest_community_size": 94
+      },
+      "scale_free_fit": {
+        "gamma": 1.236,
+        "r_squared": 0.601
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 75,
+          "pagerank": 0.06886,
+          "betweenness": 0.20273,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 29,
+          "pagerank": 0.03619,
+          "betweenness": 0.01388,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 18,
+          "pagerank": 0.03404,
+          "betweenness": 0.19287,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 18,
+          "pagerank": 0.01639,
+          "betweenness": 0.00204,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "f2002567",
+          "node_type": "concept",
+          "degree": 39,
+          "pagerank": 0.01364,
+          "betweenness": 0.09923,
+          "statement": "The source coding theorem establishes that efficient encoding of information depends ..."
+        }
+      ]
+    },
+    {
+      "cycle": 14,
+      "timestamp": 1789640796.399693,
+      "graph_size": {
+        "nodes": 682,
+        "edges": 3851,
+        "density": 0.00829,
+        "avg_degree": 11.29,
+        "reciprocity": 0.001
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.195,
+        "contradiction_ratio": 0.0145,
+        "node_types": {
+          "concept": 453,
+          "hypothesis": 77,
+          "question": 26,
+          "synthesis": 14,
+          "gap": 96,
+          "empirical": 15,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1618,
+          "associated": 1770,
+          "contradicts": 56,
+          "structural_analogy": 241,
+          "toward_mission": 78,
+          "empirically_tested": 14,
+          "surface_analogy": 64,
+          "causes": 8,
+          "deep_isomorphism": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6619,
+        "L_actual": 4.1102,
+        "C_rand": 0.017,
+        "L_rand": 2.9105,
+        "gamma_clust": 39.0442,
+        "lambda_path": 1.4122,
+        "small_world_S": 27.6478,
+        "global_efficiency": 0.275,
+        "local_efficiency": 0.7587,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 667,
+        "lcc_edges": 3839
+      },
+      "community_structure": {
+        "num_communities": 30,
+        "modularity_Q": 0.8314,
+        "community_entropy": 4.054,
+        "inter_community_edge_ratio": 0.0863,
+        "largest_community_size": 110
+      },
+      "scale_free_fit": {
+        "gamma": 1.145,
+        "r_squared": 0.612
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 82,
+          "pagerank": 0.07315,
+          "betweenness": 0.22872,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 29,
+          "pagerank": 0.03846,
+          "betweenness": 0.01289,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 18,
+          "pagerank": 0.03595,
+          "betweenness": 0.21794,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 18,
+          "pagerank": 0.0169,
+          "betweenness": 0.00235,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01644,
+          "betweenness": 0.15605,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 15,
+      "timestamp": 1789642575.3589823,
+      "graph_size": {
+        "nodes": 713,
+        "edges": 3976,
+        "density": 0.00783,
+        "avg_degree": 11.15,
+        "reciprocity": 0.001
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.21,
+        "contradiction_ratio": 0.0141,
+        "node_types": {
+          "concept": 470,
+          "hypothesis": 81,
+          "question": 27,
+          "synthesis": 14,
+          "gap": 103,
+          "empirical": 17,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1690,
+          "associated": 1810,
+          "contradicts": 56,
+          "structural_analogy": 241,
+          "toward_mission": 84,
+          "empirically_tested": 15,
+          "surface_analogy": 68,
+          "causes": 10,
+          "deep_isomorphism": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6636,
+        "L_actual": 4.1372,
+        "C_rand": 0.0159,
+        "L_rand": 2.9398,
+        "gamma_clust": 41.8308,
+        "lambda_path": 1.4073,
+        "small_world_S": 29.7237,
+        "global_efficiency": 0.2727,
+        "local_efficiency": 0.7613,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 696,
+        "lcc_edges": 3964
+      },
+      "community_structure": {
+        "num_communities": 32,
+        "modularity_Q": 0.8325,
+        "community_entropy": 4.051,
+        "inter_community_edge_ratio": 0.0853,
+        "largest_community_size": 117
+      },
+      "scale_free_fit": {
+        "gamma": 1.155,
+        "r_squared": 0.617
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 88,
+          "pagerank": 0.07868,
+          "betweenness": 0.24148,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 29,
+          "pagerank": 0.04052,
+          "betweenness": 0.01524,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.03854,
+          "betweenness": 0.23578,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.01656,
+          "betweenness": 0.00296,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01602,
+          "betweenness": 0.16392,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 16,
+      "timestamp": 1789643998.3164291,
+      "graph_size": {
+        "nodes": 726,
+        "edges": 4039,
+        "density": 0.00767,
+        "avg_degree": 11.13,
+        "reciprocity": 0.001
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.247,
+        "contradiction_ratio": 0.0139,
+        "node_types": {
+          "concept": 476,
+          "hypothesis": 81,
+          "question": 27,
+          "synthesis": 15,
+          "gap": 106,
+          "empirical": 20,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1732,
+          "associated": 1814,
+          "contradicts": 56,
+          "structural_analogy": 241,
+          "toward_mission": 95,
+          "empirically_tested": 17,
+          "surface_analogy": 72,
+          "causes": 10,
+          "deep_isomorphism": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6614,
+        "L_actual": 4.0838,
+        "C_rand": 0.0161,
+        "L_rand": 2.9491,
+        "gamma_clust": 41.0735,
+        "lambda_path": 1.3847,
+        "small_world_S": 29.6614,
+        "global_efficiency": 0.2758,
+        "local_efficiency": 0.7589,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 708,
+        "lcc_edges": 4027
+      },
+      "community_structure": {
+        "num_communities": 35,
+        "modularity_Q": 0.8313,
+        "community_entropy": 4.166,
+        "inter_community_edge_ratio": 0.0894,
+        "largest_community_size": 115
+      },
+      "scale_free_fit": {
+        "gamma": 1.199,
+        "r_squared": 0.638
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 99,
+          "pagerank": 0.08638,
+          "betweenness": 0.2281,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 29,
+          "pagerank": 0.04392,
+          "betweenness": 0.01499,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.04208,
+          "betweenness": 0.21823,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.01731,
+          "betweenness": 0.00398,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01646,
+          "betweenness": 0.1761,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 17,
+      "timestamp": 1789652215.8941271,
+      "graph_size": {
+        "nodes": 753,
+        "edges": 4117,
+        "density": 0.00727,
+        "avg_degree": 10.93,
+        "reciprocity": 0.001
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.271,
+        "contradiction_ratio": 0.0136,
+        "node_types": {
+          "concept": 483,
+          "hypothesis": 85,
+          "question": 29,
+          "synthesis": 16,
+          "gap": 116,
+          "empirical": 23,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1778,
+          "associated": 1830,
+          "contradicts": 56,
+          "structural_analogy": 248,
+          "toward_mission": 97,
+          "empirically_tested": 19,
+          "surface_analogy": 77,
+          "causes": 10,
+          "deep_isomorphism": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6609,
+        "L_actual": 4.1313,
+        "C_rand": 0.0157,
+        "L_rand": 2.9779,
+        "gamma_clust": 42.2136,
+        "lambda_path": 1.3873,
+        "small_world_S": 30.4285,
+        "global_efficiency": 0.2728,
+        "local_efficiency": 0.7574,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 731,
+        "lcc_edges": 4103
+      },
+      "community_structure": {
+        "num_communities": 38,
+        "modularity_Q": 0.8305,
+        "community_entropy": 4.179,
+        "inter_community_edge_ratio": 0.0914,
+        "largest_community_size": 119
+      },
+      "scale_free_fit": {
+        "gamma": 1.19,
+        "r_squared": 0.617
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 101,
+          "pagerank": 0.08452,
+          "betweenness": 0.19347,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 30,
+          "pagerank": 0.04295,
+          "betweenness": 0.03224,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.04097,
+          "betweenness": 0.16924,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "5c7b156f",
+          "node_type": "concept",
+          "degree": 20,
+          "pagerank": 0.01648,
+          "betweenness": 0.00329,
+          "statement": "In the context of noisy channels, the probability of error quantifies how often the d..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01575,
+          "betweenness": 0.15639,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 18,
+      "timestamp": 1789653778.311689,
+      "graph_size": {
+        "nodes": 778,
+        "edges": 4267,
+        "density": 0.00706,
+        "avg_degree": 10.97,
+        "reciprocity": 0.0009
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.284,
+        "contradiction_ratio": 0.0145,
+        "node_types": {
+          "concept": 497,
+          "hypothesis": 88,
+          "question": 30,
+          "synthesis": 17,
+          "gap": 120,
+          "empirical": 25,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1830,
+          "associated": 1909,
+          "contradicts": 62,
+          "structural_analogy": 254,
+          "toward_mission": 97,
+          "empirically_tested": 21,
+          "surface_analogy": 82,
+          "causes": 10,
+          "deep_isomorphism": 2
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6564,
+        "L_actual": 4.1241,
+        "C_rand": 0.015,
+        "L_rand": 2.9854,
+        "gamma_clust": 43.7552,
+        "lambda_path": 1.3814,
+        "small_world_S": 31.6739,
+        "global_efficiency": 0.273,
+        "local_efficiency": 0.7546,
+        "diameter": 10,
+        "radius": 5,
+        "lcc_nodes": 754,
+        "lcc_edges": 4252
+      },
+      "community_structure": {
+        "num_communities": 40,
+        "modularity_Q": 0.8289,
+        "community_entropy": 4.316,
+        "inter_community_edge_ratio": 0.1032,
+        "largest_community_size": 89
+      },
+      "scale_free_fit": {
+        "gamma": 1.175,
+        "r_squared": 0.64
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 102,
+          "pagerank": 0.08139,
+          "betweenness": 0.23878,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 31,
+          "pagerank": 0.03045,
+          "betweenness": 0.04658,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.0278,
+          "betweenness": 0.14421,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "dbef26c1",
+          "node_type": "concept",
+          "degree": 14,
+          "pagerank": 0.02396,
+          "betweenness": 0.05716,
+          "statement": "The choice of logarithm base in entropy calculations varies depending on application,..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01283,
+          "betweenness": 0.12688,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 19,
+      "timestamp": 1789655644.2287962,
+      "graph_size": {
+        "nodes": 796,
+        "edges": 4392,
+        "density": 0.00694,
+        "avg_degree": 11.04,
+        "reciprocity": 0.0009
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.3,
+        "contradiction_ratio": 0.0141,
+        "node_types": {
+          "concept": 502,
+          "hypothesis": 90,
+          "question": 36,
+          "synthesis": 17,
+          "gap": 123,
+          "empirical": 27,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1865,
+          "associated": 1984,
+          "contradicts": 62,
+          "structural_analogy": 263,
+          "toward_mission": 101,
+          "empirically_tested": 22,
+          "surface_analogy": 82,
+          "causes": 10,
+          "deep_isomorphism": 3
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6488,
+        "L_actual": 4.0418,
+        "C_rand": 0.0148,
+        "L_rand": 3.0052,
+        "gamma_clust": 43.7268,
+        "lambda_path": 1.345,
+        "small_world_S": 32.5117,
+        "global_efficiency": 0.2758,
+        "local_efficiency": 0.747,
+        "diameter": 8,
+        "radius": 4,
+        "lcc_nodes": 779,
+        "lcc_edges": 4377
+      },
+      "community_structure": {
+        "num_communities": 33,
+        "modularity_Q": 0.8266,
+        "community_entropy": 4.188,
+        "inter_community_edge_ratio": 0.0986,
+        "largest_community_size": 99
+      },
+      "scale_free_fit": {
+        "gamma": 1.274,
+        "r_squared": 0.666
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 106,
+          "pagerank": 0.08258,
+          "betweenness": 0.20324,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 31,
+          "pagerank": 0.03073,
+          "betweenness": 0.04231,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.02814,
+          "betweenness": 0.11758,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "dbef26c1",
+          "node_type": "concept",
+          "degree": 14,
+          "pagerank": 0.02424,
+          "betweenness": 0.05067,
+          "statement": "The choice of logarithm base in entropy calculations varies depending on application,..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.0128,
+          "betweenness": 0.12468,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    },
+    {
+      "cycle": 20,
+      "timestamp": 1789656989.5660956,
+      "graph_size": {
+        "nodes": 821,
+        "edges": 4513,
+        "density": 0.0067,
+        "avg_degree": 10.99,
+        "reciprocity": 0.0013
+      },
+      "cognitive_ratios": {
+        "empirical_ratio": 0.333,
+        "contradiction_ratio": 0.014,
+        "node_types": {
+          "concept": 509,
+          "hypothesis": 93,
+          "question": 41,
+          "synthesis": 18,
+          "gap": 128,
+          "empirical": 31,
+          "mission": 1
+        },
+        "edge_types": {
+          "supports": 1911,
+          "associated": 2041,
+          "contradicts": 63,
+          "structural_analogy": 272,
+          "toward_mission": 104,
+          "empirically_tested": 26,
+          "surface_analogy": 82,
+          "deep_isomorphism": 4,
+          "causes": 10
+        }
+      },
+      "connectome_topology": {
+        "C_actual": 0.6422,
+        "L_actual": 4.0793,
+        "C_rand": 0.014,
+        "L_rand": 3.0204,
+        "gamma_clust": 45.9472,
+        "lambda_path": 1.3506,
+        "small_world_S": 34.0206,
+        "global_efficiency": 0.2737,
+        "local_efficiency": 0.7403,
+        "diameter": 9,
+        "radius": 5,
+        "lcc_nodes": 803,
+        "lcc_edges": 4496
+      },
+      "community_structure": {
+        "num_communities": 35,
+        "modularity_Q": 0.8266,
+        "community_entropy": 4.195,
+        "inter_community_edge_ratio": 0.0933,
+        "largest_community_size": 136
+      },
+      "scale_free_fit": {
+        "gamma": 1.326,
+        "r_squared": 0.659
+      },
+      "cortical_hubs": [
+        {
+          "id": "568f368d",
+          "node_type": "mission",
+          "degree": 110,
+          "pagerank": 0.08255,
+          "betweenness": 0.26169,
+          "statement": "In spiking neuromorphic architectures functioning near self-organized criticality, no..."
+        },
+        {
+          "id": "4f70b78a",
+          "node_type": "concept",
+          "degree": 31,
+          "pagerank": 0.03064,
+          "betweenness": 0.0493,
+          "statement": "Shannon's limit defines the upper boundary for error-free data transmission over a no..."
+        },
+        {
+          "id": "b12b2ac9",
+          "node_type": "concept",
+          "degree": 19,
+          "pagerank": 0.02808,
+          "betweenness": 0.15871,
+          "statement": "In a communication system, the message W to be transmitted is encoded into a sequence..."
+        },
+        {
+          "id": "dbef26c1",
+          "node_type": "concept",
+          "degree": 14,
+          "pagerank": 0.02418,
+          "betweenness": 0.06445,
+          "statement": "The choice of logarithm base in entropy calculations varies depending on application,..."
+        },
+        {
+          "id": "78d71dfb",
+          "node_type": "concept",
+          "degree": 36,
+          "pagerank": 0.01254,
+          "betweenness": 0.14967,
+          "statement": "Error-correction techniques in coding theory are designed to counteract noise in comm..."
+        }
+      ]
+    }
+  ]
+}

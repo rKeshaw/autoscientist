@@ -1,0 +1,205 @@
+{
+  "timestamp": "2026-09-17T22:50:00+05:30",
+  "connectome_stats": {
+    "nodes": 821,
+    "edges": 4513,
+    "contradictions": 63
+  },
+  "suite_1_path_discovery": {
+    "aggregate": {
+      "brain_graph": {
+        "target_found_rate": 1.0,
+        "intermediate_recall": 0.7,
+        "step_continuity": 1.0,
+        "full_path_reconstruction_rate": 0.6
+      },
+      "vec_iterative": {
+        "target_found_rate": 0.367,
+        "intermediate_recall": 0.05,
+        "step_continuity": 0.377,
+        "full_path_reconstruction_rate": 0.0
+      },
+      "vec_single": {
+        "target_found_rate": 0.833,
+        "intermediate_recall": 0.067,
+        "step_continuity": 0.171,
+        "full_path_reconstruction_rate": 0.067
+      },
+      "flat_file": {
+        "target_found_rate": 0.967,
+        "intermediate_recall": 0.0,
+        "step_continuity": 0.09,
+        "full_path_reconstruction_rate": 0.0
+      }
+    },
+    "per_hop_reconstruction": {
+      "2_hop": {
+        "brain_graph": 0.7,
+        "vec_iterative": 0.0,
+        "vec_single": 0.2,
+        "flat_file": 0.0
+      },
+      "3_hop": {
+        "brain_graph": 0.8,
+        "vec_iterative": 0.0,
+        "vec_single": 0.0,
+        "flat_file": 0.0
+      },
+      "4_hop": {
+        "brain_graph": 0.3,
+        "vec_iterative": 0.0,
+        "vec_single": 0.0,
+        "flat_file": 0.0
+      },
+      "5_hop": {
+        "brain_graph": 0.0,
+        "vec_iterative": 0.0,
+        "vec_single": 0.0,
+        "flat_file": 0.0
+      }
+    }
+  },
+  "suite_2_context_coherence": {
+    "brain_graph": {
+      "mean_edge_count": 11.45,
+      "mean_density": 0.204,
+      "mean_connected_components": 1.85,
+      "mean_giant_ratio": 0.875,
+      "mean_clustering": 0.551,
+      "mean_relational_coverage": 0.906
+    },
+    "vector_rag": {
+      "mean_edge_count": 7.0,
+      "mean_density": 0.125,
+      "mean_connected_components": 3.65,
+      "mean_giant_ratio": 0.637,
+      "mean_clustering": 0.31,
+      "mean_relational_coverage": 0.688
+    },
+    "flat_file": {
+      "mean_edge_count": 4.4,
+      "mean_density": 0.079,
+      "mean_connected_components": 5.05,
+      "mean_giant_ratio": 0.475,
+      "mean_clustering": 0.181,
+      "mean_relational_coverage": 0.5
+    }
+  },
+  "suite_3_contradictions": {
+    "cosine_similarity_distribution": {
+      "mean": 0.5034,
+      "median": 0.4961,
+      "min": 0.2357,
+      "max": 0.9702,
+      "fraction_above_0_70": 0.0635,
+      "fraction_above_0_50": 0.4921
+    },
+    "substrates": {
+      "brain_graph": {
+        "antithesis_recall_rate": 0.984,
+        "sign_disambiguation_accuracy": 1.0,
+        "falsification_error_rate": 0.0,
+        "empirical_resolution_recall": 0.121
+      },
+      "vector_rag": {
+        "antithesis_recall_rate": 0.349,
+        "sign_disambiguation_accuracy": 0.0,
+        "falsification_error_rate": 1.0,
+        "empirical_resolution_recall": 0.394
+      },
+      "flat_file": {
+        "antithesis_recall_rate": 0.159,
+        "sign_disambiguation_accuracy": 0.0,
+        "falsification_error_rate": 1.0,
+        "empirical_resolution_recall": 0.394
+      }
+    }
+  },
+  "suite_4_token_budget_efficiency": {
+    "250": {
+      "brain_graph": {
+        "verified_relational_facts": 1.0,
+        "tokens_consumed": 108.7,
+        "relational_density_per_1k_tokens": 9.2,
+        "disconnected_noise_ratio": 0.667
+      },
+      "vector_rag": {
+        "verified_relational_facts": 1.7,
+        "tokens_consumed": 111.0,
+        "relational_density_per_1k_tokens": 15.02,
+        "disconnected_noise_ratio": 0.667
+      },
+      "flat_file": {
+        "verified_relational_facts": 0.7,
+        "tokens_consumed": 120.0,
+        "relational_density_per_1k_tokens": 5.56,
+        "disconnected_noise_ratio": 0.75
+      }
+    },
+    "500": {
+      "brain_graph": {
+        "verified_relational_facts": 7.0,
+        "tokens_consumed": 153.3,
+        "relational_density_per_1k_tokens": 45.65,
+        "disconnected_noise_ratio": 0.667
+      },
+      "vector_rag": {
+        "verified_relational_facts": 3.0,
+        "tokens_consumed": 132.7,
+        "relational_density_per_1k_tokens": 22.61,
+        "disconnected_noise_ratio": 0.667
+      },
+      "flat_file": {
+        "verified_relational_facts": 0.7,
+        "tokens_consumed": 257.0,
+        "relational_density_per_1k_tokens": 2.59,
+        "disconnected_noise_ratio": 0.833
+      }
+    },
+    "1000": {
+      "brain_graph": {
+        "verified_relational_facts": 29.3,
+        "tokens_consumed": 464.3,
+        "relational_density_per_1k_tokens": 63.17,
+        "disconnected_noise_ratio": 0.195
+      },
+      "vector_rag": {
+        "verified_relational_facts": 8.3,
+        "tokens_consumed": 494.7,
+        "relational_density_per_1k_tokens": 16.85,
+        "disconnected_noise_ratio": 0.286
+      },
+      "flat_file": {
+        "verified_relational_facts": 1.7,
+        "tokens_consumed": 356.0,
+        "relational_density_per_1k_tokens": 4.68,
+        "disconnected_noise_ratio": 0.783
+      }
+    },
+    "2000": {
+      "brain_graph": {
+        "verified_relational_facts": 38.0,
+        "tokens_consumed": 692.7,
+        "relational_density_per_1k_tokens": 54.86,
+        "disconnected_noise_ratio": 0.111
+      },
+      "vector_rag": {
+        "verified_relational_facts": 18.0,
+        "tokens_consumed": 687.7,
+        "relational_density_per_1k_tokens": 26.18,
+        "disconnected_noise_ratio": 0.139
+      },
+      "flat_file": {
+        "verified_relational_facts": 1.7,
+        "tokens_consumed": 392.7,
+        "relational_density_per_1k_tokens": 4.24,
+        "disconnected_noise_ratio": 0.806
+      }
+    }
+  },
+  "suite_5_distraction_robustness": {
+    "vector_rag_mean_decoy_contamination": 0.292,
+    "brain_graph_mean_decoy_contamination": 0.0,
+    "topological_noise_rejection_factor": 291666.67
+  }
+}

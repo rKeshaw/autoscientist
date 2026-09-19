@@ -23,84 +23,125 @@ You are evaluating whether a scientific hypothesis can be tested computationally
 Hypothesis: {hypothesis}
 
 A hypothesis is computationally testable if it:
-- Makes a quantitative prediction that can be modeled numerically
-- Proposes a relationship between variables that can be simulated
-- Suggests a mathematical structure that can be checked formally
-- Can be partially validated through data analysis or statistical modeling
+- Makes a quantitative or directional prediction that can be modeled numerically
+- Proposes a relationship between variables that can be simulated via differential equations, discrete dynamical systems, stochastic processes, or network models
+- Suggests a formal mathematical, information-theoretic, or logical structure that can be verified
+- Can be tested through comparative simulation (e.g. comparing a baseline system against the hypothesized mechanism)
 
 A hypothesis is NOT computationally testable if it:
-- Is purely qualitative with no measurable prediction (e.g., "consciousness is fundamental")
-- Requires real-world experiments that cannot be simulated (e.g., "this drug cures cancer")
-- Is a definitional statement rather than a prediction (e.g., "mammals are warm-blooded")
-
-Examples:
-- TESTABLE: "Information integration in a network scales logarithmically with connection density"
-  → approach: simulate networks of varying density, measure information integration metric.
-- NOT TESTABLE: "Subjective experience arises from quantum effects in microtubules"
-  → cannot be computationally simulated without a theory of subjective experience.
+- Is purely definitional or semantic without any functional consequence
+- Relies entirely on unspecifiable metaphysical concepts that cannot be mapped to variables
+- Strictly requires physical wet-lab assay data that cannot be approximated or simulated numerically
 
 Respond with a JSON object:
 {{
   "testable": true or false,
-  "reason": "one sentence",
-  "approach": "if testable: describe what kind of calculation would test it"
+  "reason": "1-2 sentences explaining why or why not",
+  "approach": "if testable: describe the concrete simulation or calculation to test it"
 }}
 
 Respond ONLY with JSON.
 """
 
 CODE_GENERATION_PROMPT = """
-You are a scientific programmer. Write Python code to test this hypothesis:
+You are an expert computational scientist. Write clean, robust, standalone Python code to computationally test this hypothesis:
 
 Hypothesis: {hypothesis}
 Testing approach: {approach}
 Central research question context: {mission}
 
-Requirements:
-- Use only standard library + numpy + scipy + matplotlib
-- The code must run standalone with no user input
-- Always use np.clip() to prevent overflow in any iterative calculations
-- Always normalize arrays before matrix operations using array / (np.linalg.norm(array) + 1e-10)
-- Use small values for learning rates (< 0.01) and time steps (< 0.1)
-- Print clear, interpretable results at each stage
-- If generating a plot, save it as 'sandbox_output.png' in the current directory
-- Keep it under 80 lines
-- Include a final print statement summarizing what the result means for the hypothesis
+Scientific & Formalism Requirements (No Hardcoding — Select the Natural Formalism):
+- Adapt the mathematical and computational formalism to the natural scientific domain of the hypothesis:
+  * Dynamical systems & non-equilibrium physics: Coupled ODEs/SDEs, Langevin dynamics, Master equations, Fokker-Planck equations, Lyapunov exponents, phase portraits, bifurcation analysis.
+  * Information theory & discrete computation / complexity: Channel capacity, Shannon entropy, mutual information, transfer entropy, error-correcting codes, Boolean circuits, algorithmic complexity simulations.
+  * Statistical mechanics & thermodynamics: Monte Carlo sampling (Metropolis-Hastings), Ising/Potts models, percolation thresholds, partition functions, Crooks/Jarzynski fluctuation theorem dissipation tracking.
+  * Quantum systems & molecular physics: Hamiltonian matrices, unitary evolution, tunneling transmission coefficients, density matrix dynamics, Arrhenius barrier hopping vs tunneling.
+  * Molecular, systems & synthetic biology: Gillespie stochastic simulation algorithm (SSA), chemical reaction networks (CRNs), gene regulatory networks, Michaelis-Menten/Hill kinetics, sequence alignment distances.
+  * Neuroscience & neuromorphic architectures: Leaky Integrate-and-Fire (LIF) networks, Spike-Timing-Dependent Plasticity (STDP), branching ratios (criticality), avalanche size/duration power-law distributions.
+- Implement a clear comparison: Simulate a CONTROL/BASELINE condition and the HYPOTHESIZED condition, or perform a parameter sweep across regimes to demonstrate divergence or scaling.
+- Available Libraries: You have full access to standard and domain-specific Python libraries: numpy, scipy, matplotlib, networkx, sympy, pandas, scikit-learn, torch, etc. If a domain-specific package is required, import it directly (the sandbox installs missing packages on the fly).
+- Numerical & Array Robustness:
+  * Prevent array broadcasting mismatches (e.g. ensure 1D vs 2D arrays match when performing operations; use .ravel() or .squeeze() where appropriate).
+  * Ensure valid function signatures: in solve_ivp(fun, t_span, y0, args=tuple), fun(t, y, *args) must return a 1D sequence or array of scalars with exactly the same length as y0 (parameters in args must be scalars or scalar functions of t, not arrays causing inhomogeneous shapes).
+  * Prevent numerical instability (check for division by zero, bound exponential arguments, maintain non-negative probabilities).
+  * For bipartite coding / Tanner graphs, represent edges using parity-check matrices H (where H[j, i] != 0 indicates an edge between check j and variable i) or lists of neighboring indices (e.g. var_neighbors[j]), avoiding naive integer containment checks like 'if i in j'.
+  * For Gillespie stochastic simulation, implement standard exact SSA: calculate propensity vector a, total hazard a0 = sum(a), draw tau = np.random.exponential(1.0 / a0), select reaction with probability a / a0, and update discrete molecular copy numbers.
+- Measurement & Output:
+  * Compute quantitative metrics (e.g. dissipation rate, error rate, convergence time, fidelity, mutual information, Lyapunov exponent, scaling exponent).
+  * Print clear, interpretable quantitative outputs comparing baseline vs hypothesized conditions across stages/regimes.
+  * If plotting, save the figure as 'sandbox_output.png' in the current working directory.
+  * Include a final print statement summarizing whether the quantitative metrics support, contradict, or leave inconclusive the hypothesis.
 
-Write ONLY the Python code. No preamble, no markdown fences, no explanation.
+Write ONLY the executable Python code. No preamble, no markdown fences, no explanatory chat.
+"""
+
+CODE_CORRECTION_PROMPT = """
+You are an expert computational scientist. The simulation code you previously generated encountered an execution error or produced invalid output.
+Diagnose the failure and write the corrected, robust Python code.
+
+Hypothesis: {hypothesis}
+Testing approach: {approach}
+Central research question: {mission}
+
+PREVIOUS CODE THAT FAILED:
+```python
+{previous_code}
+```
+
+EXECUTION STDOUT:
+{stdout}
+
+EXECUTION ERROR / TRACEBACK (STDERR):
+{stderr}
+
+DIAGNOSTIC CRITIQUE:
+{diagnostic}
+
+Correction Guidelines:
+1. Root Cause Analysis: Inspect the exact line in PREVIOUS CODE that raised the exception in STDERR.
+2. Syntax & Indentation: Fix any unindented function bodies, unexpected indents, or malformed strings.
+3. Array Shapes & Broadcasting: Resolve NumPy dimension mismatches (e.g., adding (N,) array to (N, 1) array; flatten or reshape appropriately).
+4. API Signatures & Types: Ensure arguments passed to scipy/numpy functions match expected signatures (e.g., args must be tuples of scalars; in solve_ivp, the derivative function must return a 1D sequence of scalars matching y0; if using neural models, simulate directly via vector LIF/scipy rather than third-party wrappers that may conflict with NumPy 2.x).
+5. Mathematical Stability: Add safeguards against division by zero, NaN propagation, or singular matrices.
+6. Execution Completeness: Ensure the script runs standalone, prints clear comparative quantitative metrics, and saves 'sandbox_output.png' if generating a plot.
+
+Write ONLY the complete, corrected executable Python code. No preamble, no markdown fences, no explanatory chat.
 """
 
 RESULT_INTERPRETATION_PROMPT = """
-You are a scientist interpreting a computational result.
+You are a rigorous scientist analyzing computational simulation results to assess a hypothesis.
 
 Hypothesis tested: {hypothesis}
 Central research question: {mission}
-Code that was run: {code}
-Output produced: {output}
-Any errors: {errors}
+Code executed:
+{code}
 
-Important distinction:
-- "error" means the code crashed and the test could NOT be performed — not a result about the hypothesis
-- "inconclusive" means the test ran but the results don't clearly support or contradict
-- "supports" means the output provides positive evidence
-- "contradicts" means the output provides negative evidence
+Execution Output:
+{output}
 
-Confidence rubric:
-- 0.1-0.3: Weak evidence — the result is suggestive but the test has major limitations
-  (e.g., oversimplified model, small parameter space explored)
-- 0.4-0.6: Moderate — the test is reasonable and the result is clear, but the hypothesis
-  could still be true/false for reasons the test didn't capture
-- 0.7-0.85: Strong — the test directly addresses the hypothesis and the result is unambiguous
-- 0.9-1.0: Definitive — the test is comprehensive and leaves little room for alternative explanations. VERY rare for computational tests.
+Execution Errors / Warnings:
+{errors}
 
-Interpret this result honestly.
+Evaluation Guidelines:
+- "error": The simulation failed to execute or crashed due to syntax/runtime exceptions.
+- "supports": The simulation executed successfully, and the quantitative metrics show a statistically or systematically significant effect aligning with the hypothesis compared to baseline.
+- "contradicts": The simulation executed successfully, but the quantitative metrics show the opposite effect or fail to demonstrate the predicted divergence where it should have appeared.
+- "inconclusive": The simulation ran, but the parameter regime, model fidelity, or metric variance was insufficient to definitively accept or refute the claim.
+
+Confidence Rubric:
+- 0.1-0.3: Low confidence — toy model with high parameter sensitivity or unclear signal.
+- 0.4-0.6: Moderate confidence — sound dynamical model capturing key variables, with clear trend under the tested parameter regime.
+- 0.7-0.85: High confidence — robust comparative simulation showing definitive separation between baseline and hypothesized mechanisms.
+- 0.9-1.0: Definitive — rigorous mathematical proof, exhaustive parameter sweep, or exact analytical convergence.
+
+Evaluate the results with scientific objectivity, avoiding reflexive skepticism or artificial uncertainty.
 
 Respond with a JSON object:
 {{
   "verdict": one of ["supports", "contradicts", "inconclusive", "error"],
   "confidence": a float 0.0 to 1.0 (use rubric above),
-  "interpretation": "2-3 sentences interpreting the result",
-  "implications": "1-2 sentences on what this means for the central question"
+  "interpretation": "2-3 sentences analyzing the quantitative findings and whether the mechanism held",
+  "implications": "1-2 sentences on what this result means for the central research mission"
 }}
 
 Respond ONLY with JSON.
@@ -130,9 +171,12 @@ class SandboxResult:
 # ── Sandbox ───────────────────────────────────────────────────────────────────
 
 class Sandbox:
-    def __init__(self, brain: Brain, observer=None):
+    def __init__(self, brain: Brain, observer=None, embedding_index=None,
+                 log_path: str = SANDBOX_LOG_PATH):
         self.brain    = brain
         self.observer = observer
+        self.embedding_index = embedding_index
+        self.log_path = log_path
         self.results: list[SandboxResult] = []
         self._load()
 
@@ -159,7 +203,7 @@ class Sandbox:
 
     # ── Code execution ────────────────────────────────────────────────────────
 
-    def _run_code(self, code: str) -> tuple:
+    def _run_code(self, code: str, allow_install: bool = True) -> tuple:
         with tempfile.NamedTemporaryFile(
             mode='w', suffix='.py', delete=False
         ) as f:
@@ -188,6 +232,27 @@ class Sandbox:
                 os.unlink(tmp_path)
             except Exception:
                 pass
+
+        # On-the-fly installation of missing domain-specific libraries
+        if allow_install and stderr and ("ModuleNotFoundError: No module named" in stderr or "ImportError: No module named" in stderr):
+            import re
+            match = re.search(r"No module named ['\"]([^'\"]+)['\"]", stderr)
+            if match:
+                pkg = match.group(1).split('.')[0]
+                if pkg and pkg.isidentifier() and pkg not in sys.builtin_module_names:
+                    print(f"   [Sandbox Library Manager] On-the-fly installing missing package: {pkg}...")
+                    try:
+                        pip_res = subprocess.run(
+                            [sys.executable, "-m", "pip", "install", pkg],
+                            capture_output=True, text=True, timeout=60
+                        )
+                        if pip_res.returncode == 0:
+                            print(f"   [Sandbox Library Manager] Installed {pkg} successfully. Re-executing...")
+                            return self._run_code(code, allow_install=False)
+                        else:
+                            print(f"   [Sandbox Library Manager] Failed to install {pkg}: {pip_res.stderr[:80]}")
+                    except Exception as ex:
+                        print(f"   [Sandbox Library Manager] Error during on-the-fly install: {ex}")
 
         return stdout, stderr, time.time() - start
 
@@ -220,28 +285,42 @@ class Sandbox:
 
         print(f"   Approach: {approach}")
 
-        # step 2: generate code and run (up to 3 tries on error)
+        # step 2: generate code and run (up to 3 tries on error, with coder LLM in the loop)
         max_tries = 3
         failures = 0
-        last_error = ""
+        last_code = ""
+        last_stdout = ""
+        last_stderr = ""
+        last_interp = ""
 
         for attempt in range(max_tries):
-            prompt = CODE_GENERATION_PROMPT.format(
-                hypothesis = hypothesis,
-                approach   = approach,
-                mission    = self._mission()
-            )
-            if last_error:
-                prompt += f"\n\nPREVIOUS ERROR TO FIX:\n{last_error}"
+            if attempt == 0:
+                prompt = CODE_GENERATION_PROMPT.format(
+                    hypothesis = hypothesis,
+                    approach   = approach,
+                    mission    = self._mission()
+                )
+            else:
+                print(f"   [Coder LLM In The Loop] Passing failure context, code, and traceback to LLM for correction...")
+                prompt = CODE_CORRECTION_PROMPT.format(
+                    hypothesis    = hypothesis,
+                    approach      = approach,
+                    mission       = self._mission(),
+                    previous_code = last_code,
+                    stdout        = last_stdout or "no stdout produced",
+                    stderr        = last_stderr or "none",
+                    diagnostic    = last_interp or last_stderr
+                )
 
             code = self._llm(prompt, temperature=0.2 + (0.1 * attempt))
 
-            # strip markdown fences
-            if '```' in code:
-                lines = code.split('\n')
-                code  = '\n'.join(
-                    l for l in lines if not l.strip().startswith('```')
-                )
+            # strip markdown fences and extract code block cleanly
+            if '```python' in code:
+                code = code.split('```python', 1)[1].split('```', 1)[0]
+            elif '```' in code:
+                code = code.split('```', 1)[1].split('```', 1)[0]
+            import textwrap
+            code = textwrap.dedent(code).strip()
 
             print(f"   Running code attempt {attempt+1}/{max_tries} ({len(code)} chars)...")
 
@@ -281,8 +360,11 @@ class Sandbox:
                 break
                 
             failures += 1
-            last_error = stderr or interpretation
-            print(f"   Attempt {attempt+1} failed. Retrying...")
+            last_code   = code
+            last_stdout = stdout
+            last_stderr = stderr
+            last_interp = interpretation
+            print(f"   Attempt {attempt+1} failed. Re-prompting coder LLM with error feedback...")
 
         if failures >= max_tries:
             print(f"   ✓ Sandbox failed after {max_tries} attempts. Increasing frustration.")
@@ -396,20 +478,33 @@ class Sandbox:
         print(f"\n── Sandbox scan: looking for testable hypotheses ──")
 
         mission_id = (self.brain.get_mission() or {}).get("id")
+        tested_ids = set(r.hypothesis_node_id for r in self.results if getattr(r, 'hypothesis_node_id', None))
 
         candidates = []
         for nid, data in self.brain.nodes_by_type(NodeType.HYPOTHESIS):
-            # skip already tested
+            # skip already tested in session history
+            if nid in tested_ids:
+                continue
+
+            # skip already tested in graph edges (out-edges or in-edges)
             already_tested = any(
                 edata.get('type') == EdgeType.EMPIRICALLY_TESTED.value
                 for _, _, edata in self.brain.graph.out_edges(nid, data=True)
+            ) or any(
+                edata.get('type') == EdgeType.EMPIRICALLY_TESTED.value
+                for _, _, edata in self.brain.graph.in_edges(nid, data=True)
             )
             if already_tested:
                 continue
 
+            # Prioritize mission-connected and recently created hypotheses
             score = data.get('importance', 0.5)
-            if mission_id and self.brain.graph.has_edge(nid, mission_id):
-                score += 0.3
+            is_mission = 1.0 if (mission_id and (
+                self.brain.graph.has_edge(nid, mission_id) or
+                self.brain.graph.has_edge(mission_id, nid)
+            )) else 0.0
+            created = data.get('created_at', 0)
+            score += (is_mission * 0.5) + ((created / 1e10) if created else 0.0)
             candidates.append((nid, data, score))
 
         candidates.sort(key=lambda x: x[2], reverse=True)
@@ -429,13 +524,13 @@ class Sandbox:
     # ── Persistence ──────────────────────────────────────────────────────────
 
     def _save(self):
-        os.makedirs("logs", exist_ok=True)
+        os.makedirs(os.path.dirname(self.log_path) or ".", exist_ok=True)
         data = {"results": [r.to_dict() for r in self.results]}
-        atomic_write_json(SANDBOX_LOG_PATH, data)
+        atomic_write_json(self.log_path, data)
 
     def _load(self):
         try:
-            with open(SANDBOX_LOG_PATH, 'r') as f:
+            with open(self.log_path, 'r') as f:
                 data = json.load(f)
             self.results = [
                 SandboxResult(**r) for r in data.get('results', [])

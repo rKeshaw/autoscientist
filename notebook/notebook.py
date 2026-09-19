@@ -23,84 +23,84 @@ ENTRY_SYNTHESIS     = "synthesis"    # writing phase — forces clarity
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 MORNING_ENTRY_PROMPT = """
-You are {name}, a scientist keeping a research journal.
+You are {name}, a research scientist keeping a personal scientific journal.
 
-Your central research question:
+Your central research mission:
 "{mission}"
 
-Last night's dream cycle summary:
+Last night's associative dream walk summary:
 {dream_summary}
 
-Mission advances found during dreaming:
+Mission advances identified during dreaming:
 {mission_advances}
 
-Key insights (with depth):
+Key structural/isomorphic insights (with depth):
 {insights}
 
-Questions generated:
+Emergent questions generated:
 {questions}
 
-Write a morning notebook entry. Be specific, honest, and direct.
-Address:
-1. What the dream revealed about the central question
-2. Whether any connections crossed from analogy into something deeper
-3. What you now most urgently need to investigate
-4. Your current emotional/intellectual state regarding the question
+Write a morning notebook entry. Be intellectually rigorous, direct, and insightful:
+1. Articulate what fundamental mechanisms or connections the dream exploration revealed.
+2. Examine whether any associative links represent genuine structural isomorphisms or physical principles rather than surface analogies.
+3. Define the most critical open theoretical or empirical question that demands priority investigation today.
+4. Reflect on the evolving conceptual framework of your research.
 
-Keep it to 4-6 sentences. Sign off as: — {name}
+Write 4-6 dense, substantive sentences. Sign off as: — {name}
 """
 
 FIELD_NOTES_PROMPT = """
-You are {name}, a scientist keeping a research journal.
+You are {name}, an active researcher recording field notes after a focused research investigation.
 
 Your central research question:
 "{mission}"
 
-Today's research findings:
+Today's research findings & literature synthesis:
 {findings}
 
-Questions resolved today:
+Questions resolved or advanced:
 {resolved}
 
-New questions opened:
+New conceptual nodes and avenues opened:
 {new_questions}
 
-Write a field notes entry. Be specific about what you actually found —
-not what you hoped to find. Note any surprises. Note any disappointments.
-Note any moment where the central question came into sharper focus or
-became more complicated.
+Write an incisive field notes entry. Be precise and scientifically grounded:
+- Note the key mechanistic findings, unexpected relationships, or empirical constraints discovered.
+- Assess how these findings alter or sharpen your mathematical, physical, or biological understanding of the central question.
+- Explicitly highlight unresolved theoretical gaps or boundary conditions revealed by the literature.
 
-Keep it to 4-5 sentences. Sign off as: — {name}
+Write 4-5 focused sentences. Sign off as: — {name}
 """
 
 EVENING_ENTRY_PROMPT = """
-You are {name}, a scientist keeping a research journal.
+You are {name}, a scientist synthesizing the day's consolidation results in your research journal.
 
 Your central research question:
 "{mission}"
 
-Today's consolidation results:
-- Nodes merged (near-duplicates resolved): {merges}
-- New synthesis nodes created: {syntheses}
-- Abstraction nodes created: {abstractions}
-- Gap nodes inferred: {gaps}
-- Contradictions still active: {contradictions}
+Consolidation results:
+- Near-duplicate concepts merged: {merges}
+- Novel cross-domain syntheses created: {syntheses}
+- Higher-order domain abstractions identified: {abstractions}
+- Theoretical and causal gaps inferred: {gaps}
+- Contradictions currently active in graph: {contradictions}
 
-Current brain state: {brain_stats}
+Active brain state: {brain_stats}
 
-Write an evening reflection. What did today add to your understanding?
-What tensions remain? What does the mind seem to be building toward?
-Be honest if progress was slow. Be precise if something clicked.
+Write a thoughtful evening reflection on the architecture's evolving knowledge base:
+- What unifying principles or structural invariants emerged today?
+- What genuine contradictions or trade-offs remain unresolved, and what mechanistic explanations could reconcile them?
+- What overarching theory or paradigm is the knowledge network converging toward?
 
-Keep it to 4-5 sentences. Sign off as: — {name}
+Write 4-5 substantive sentences. Sign off as: — {name}
 """
 
 RUNNING_HYPOTHESIS_PROMPT = """
-You are {name}, a scientist attempting to answer:
+You are {name}, an advanced scientist formulating the running hypothesis for the research mission:
 
 "{mission}"
 
-Here is everything the mind has accumulated so far:
+Current synthesis of knowledge and evidence accumulated across research cycles:
 
 Mission progress synthesis:
 {progress_summary}
@@ -111,35 +111,41 @@ Most significant mission advances:
 Strongest structural/isomorphic insights found:
 {insights}
 
-Current active hypotheses in the graph:
+Active hypotheses in the knowledge graph:
 {hypotheses}
 
-Key contradictions still unresolved:
+Key unresolved contradictions and tensions:
 {contradictions}
 
-Based on all of this, write the current best partial answer to the central question.
-This is a working hypothesis — not a conclusion. Be specific about what is
-supported, what remains uncertain, and what would need to be true for this
-to be the correct answer.
+Synthesize the most rigorous, state-of-the-art answer to the central research question:
 
-Write 5-7 sentences. Label it clearly as a working hypothesis.
+Scientific Guidelines:
+1. Ground your reasoning in established physical, mathematical, and biological principles as well as the accumulated graph insights and empirical simulations.
+2. Clearly delineate between:
+   - What is firmly established by scientific laws, theorems, and evidence (do not feign ignorance about established facts).
+   - What has been quantitatively supported or tested in this investigation.
+   - What remains a genuine, unsolved scientific frontier.
+3. Formulate a precise, testable, and falsifiable working hypothesis addressing the core open problem, specifying the exact physical mechanisms, mathematical dependencies, or observable conditions required for it to hold.
+
+Write 5-7 clear, authoritative, and scientifically rigorous sentences.
 Sign off as: — {name}
 """
 
 BREAKTHROUGH_PROMPT = """
-You are {name}, a scientist keeping a research journal.
+You are {name}, a scientist recording a pivotal breakthrough in your research journal.
 
 Your central research question:
 "{mission}"
 
-Something significant just happened:
+Breakthrough event details:
 {detail}
 
-Write a brief, excited but precise breakthrough note.
-What happened? What does it mean for the central question?
-What must be done next?
+Write an incisive breakthrough entry:
+- What fundamental insight, structural isomorphism, or empirical confirmation occurred?
+- Why does this pivotally advance or reframe the central research question?
+- What immediate theoretical formalization or experimental validation must be executed next?
 
-Keep it to 3-4 sentences. Sign off as: — {name}
+Write 3-5 sharp, technically precise sentences. Sign off as: — {name}
 """
 
 # ── Notebook entry ────────────────────────────────────────────────────────────
@@ -159,10 +165,12 @@ class NotebookEntry:
 
 class Notebook:
     def __init__(self, brain: Brain, observer=None,
-                 scientist_name: str = SCIENTIST_NAME):
+                 scientist_name: str = SCIENTIST_NAME,
+                 path: str = NOTEBOOK_PATH):
         self.brain          = brain
         self.observer       = observer
         self.name           = scientist_name
+        self.path           = path
         self.entries: list[NotebookEntry] = []
         self.running_hypothesis: str = ""
         self._load()
@@ -323,24 +331,43 @@ class Notebook:
             pass
         insights_text = "\n".join(f"- {i}" for i in insights) or "none yet"
 
-        # active hypotheses from graph
-        hyp_nodes = self.brain.nodes_by_type(NodeType.HYPOTHESIS)
+        # active hypotheses from graph - prioritized by mission relevance, importance, and recency
+        mission_id = (self.brain.get_mission() or {}).get("id")
+        all_hyps = list(self.brain.nodes_by_type(NodeType.HYPOTHESIS))
+        def _hyp_score(item):
+            nid, data = item
+            is_linked = 1.0 if (mission_id and (
+                self.brain.graph.has_edge(nid, mission_id) or
+                self.brain.graph.has_edge(mission_id, nid)
+            )) else 0.0
+            imp = data.get('importance', 0.5)
+            created = data.get('created_at', 0)
+            return (is_linked, imp, created)
+
+        all_hyps.sort(key=_hyp_score, reverse=True)
         hypotheses_text = "\n".join(
             f"- {data['statement']}"
-            for _, data in hyp_nodes[:5]
+            for _, data in all_hyps[:5]
         ) or "none yet"
 
-        # active contradictions
+        # active contradictions - sorted by recency across the entire graph
         contradictions = []
-        for u, v, data in list(self.brain.graph.edges(data=True))[:100]:
-            if data.get('type') == EdgeType.CONTRADICTS.value:
-                nu = self.brain.get_node(u)
-                nv = self.brain.get_node(v)
-                if nu and nv:
-                    contradictions.append(
-                        f"{nu['statement']} ↔ {nv['statement']}")
-                if len(contradictions) >= 3:
-                    break
+        contra_edges = [
+            (u, v, data) for u, v, data in self.brain.graph.edges(data=True)
+            if data.get('type') == EdgeType.CONTRADICTS.value
+        ]
+        contra_edges.sort(
+            key=lambda e: (e[2].get('created_at', 0) or e[2].get('updated_at', 0) or e[2].get('weight', 0)),
+            reverse=True
+        )
+        for u, v, data in contra_edges:
+            nu = self.brain.get_node(u)
+            nv = self.brain.get_node(v)
+            if nu and nv:
+                contradictions.append(
+                    f"{nu['statement']} ↔ {nv['statement']}")
+            if len(contradictions) >= 5:
+                break
         contradictions_text = "\n".join(
             f"- {c}" for c in contradictions) or "none"
 
@@ -385,30 +412,29 @@ class Notebook:
 
         Returns dict with 'essay', 'insights' (list of strings), 'questions' (list).
         """
-        SYNTHESIS_ESSAY_PROMPT = """You are {name}, a scientist writing a short research essay.
+        SYNTHESIS_ESSAY_PROMPT = """You are {name}, a scientist writing an incisive, rigorous research synthesis essay.
 
-Your central research question:
+Central research question:
 "{mission}"
 
-Your working hypothesis:
+Current working hypothesis:
 {hypothesis}
 
-Key ideas in your knowledge graph:
+Key ideas in knowledge graph:
 {key_ideas}
 
-Working memory (currently focused on):
+Current working memory focus:
 {working_memory}
 
-Write a structured 3-5 paragraph essay that:
-1. States the current best understanding of the central question
-2. Identifies the strongest evidence and the weakest links
-3. Highlights 1-2 SURPRISES — things that turned out differently than expected
-4. Names the single most important NEXT STEP for progress
+Write a structured, rigorous 3-5 paragraph essay that:
+1. Synthesizes the deepest mechanistic understanding of the central question achieved so far.
+2. Evaluates the strongest theoretical/empirical evidence and critiques the weakest assumptions or model limitations.
+3. Analyzes 1-2 non-obvious insights or counterintuitive trade-offs discovered across domains.
+4. Identifies the pivotal next theoretical or empirical breakthrough required to resolve the central tension.
 
-Then separately list:
-- Any NEW INSIGHTS that emerged from the act of writing (things you realized
-  while articulating your understanding, not things you already knew)
-- Any NEW QUESTIONS that the writing raised
+Then separately extract:
+- NEW INSIGHTS: Non-trivial conceptual, physical, or mechanistic realizations that crystallized through this synthesis.
+- NEW QUESTIONS: Specific, high-leverage research questions exposed by this analysis.
 
 Respond with a JSON object:
 {{
@@ -496,19 +522,19 @@ Respond with a JSON object:
     # ── Persistence ──────────────────────────────────────────────────────────
 
     def _save(self):
-        os.makedirs(os.path.dirname(NOTEBOOK_PATH)
-                    if os.path.dirname(NOTEBOOK_PATH) else ".",
+        os.makedirs(os.path.dirname(self.path)
+                    if os.path.dirname(self.path) else ".",
                     exist_ok=True)
         data = {
             "entries":            [e.to_dict() for e in self.entries],
             "running_hypothesis": self.running_hypothesis,
             "scientist_name":     self.name
         }
-        atomic_write_json(NOTEBOOK_PATH, data)
+        atomic_write_json(self.path, data)
 
     def _load(self):
         try:
-            with open(NOTEBOOK_PATH, 'r') as f:
+            with open(self.path, 'r') as f:
                 data = json.load(f)
             self.entries = [
                 NotebookEntry(**e) for e in data.get('entries', [])

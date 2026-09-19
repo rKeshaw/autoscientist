@@ -150,16 +150,16 @@ class EmbeddingIndex:
         # batch cosine similarity via matrix multiply (vectors are normalized)
         sim_matrix = matrix @ matrix.T
 
-        pairs = []
+        # Vectorized upper-triangle extraction avoiding O(n^2) Python loop
         n = len(node_ids)
-        for i in range(n):
-            for j in range(i + 1, n):
-                if sim_matrix[i, j] >= threshold:
-                    pairs.append((
-                        node_ids[i], node_ids[j],
-                        float(sim_matrix[i, j])
-                    ))
+        triu_i, triu_j = np.triu_indices(n, k=1)
+        sim_values = sim_matrix[triu_i, triu_j]
+        mask = sim_values >= threshold
 
+        pairs = [
+            (node_ids[i], node_ids[j], float(val))
+            for i, j, val in zip(triu_i[mask], triu_j[mask], sim_values[mask])
+        ]
         return pairs
 
     # ── Persistence ──────────────────────────────────────────────────────────
@@ -229,3 +229,18 @@ class EmbeddingIndex:
 
         print(f"EmbeddingIndex built from brain — {idx.size} vectors")
         return idx
+
+    def sync_with_brain(self, brain, embed_fn):
+        """Ensure all nodes in the brain have corresponding embeddings in the index."""
+        nodes = brain.all_nodes()
+        synced = 0
+        for nid, data in nodes:
+            if nid not in self._embeddings:
+                stmt = data.get("statement", "")
+                if stmt:
+                    emb = embed_fn(stmt)
+                    self.add(nid, emb)
+                    synced += 1
+        if synced > 0:
+            print(f"  [EmbeddingIndex] Synced {synced} new nodes from brain into index.")
+
